@@ -1,0 +1,8 @@
+斗罗大陆：武魂模拟器
+
+原创程序源码使用 GNU General Public License, version 3 only。
+源码及构建方法：https://github.com/www7346/douluo-simulator
+随包 GPL 全文见同目录 GPL-3.0.txt。
+
+第三方依赖按各自许可证分发。游戏图片、音乐、第三方写作预设、
+人物设定与商标不在原创程序源码许可证的授权范围内。

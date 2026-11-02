@@ -28,7 +28,9 @@ export class ModelGatewayError extends Error {
 export const MODEL_PRESETS=Object.freeze({deepseek:{label:'DeepSeek',baseUrl:'https://api.deepseek.com/v1'},openaiCompatible:{label:'自定义兼容服务',baseUrl:''}});
 function statusError(response:Response,profile:ModelProfile,body=''){
  const status=response.status,raw=response.headers.get('retry-after'),seconds=Number(raw),parsed=raw?Math.max(0,Number.isFinite(seconds)?seconds*1000:Date.parse(raw)-Date.now()):undefined,retryAfterMs=Number.isFinite(parsed)?parsed:undefined;
- let message='';try{const p=JSON.parse(body);const e=p.error??p;message=String(e.message??e.detail??e.code??'');}catch{message=/<(?:html|!doctype)/i.test(body)?'服务返回了网页或验证页面，请检查 API 地址及该站点的 API 访问设置':body;}
+ let message='',code='';try{const p=JSON.parse(body);const e=p.error??p;code=String(e.code??'');message=String(e.message??e.detail??e.code??'');}catch{message=/<(?:html|!doctype)/i.test(body)?'服务返回了网页或验证页面，请检查 API 地址及该站点的 API 访问设置':body;}
+ if(profile.channelMode==='chatgpt'&&code==='subscription_sharing_usage_limit_exceeded')return new ModelGatewayError('quota','本次 ChatGPT 套餐额度已用尽，可在模型设置中打开“管理 ChatGPT 用量”。',{status,retryable:false});
+ if(profile.channelMode==='chatgpt'&&code==='subscription_sharing_usage_unavailable')return new ModelGatewayError('permission','当前 ChatGPT 账号或工作区暂时无法使用套餐，请在模型设置中查看连接。',{status,retryable:false});
  message=redactModel(message,profile).replace(/https?:\/\/[^\s<>]+/g,'[服务地址]').slice(0,700);
  const suffix=message?'：'+message:'';
  let kind:ModelErrorKind='server',title=`模型服务拒绝了请求（${status}）`,retryable=status>=500;

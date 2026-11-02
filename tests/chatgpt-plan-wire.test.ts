@@ -22,4 +22,6 @@ test('ChatGPT 更早的部分文本、[DONE]、incomplete 不能替代 response.
  }
  const g=new ModelGateway(profile,async()=>lines([delta,{type:'response.completed',response:{status:'completed',output:[]}}]));
  assert.equal((await g.chat([{role:'user',content:'hello'}])).content,'visible');
+ const limited=new ModelGateway(profile,async()=>lines([delta,{type:'response.failed',response:{error:{code:'subscription_sharing_usage_limit_exceeded',message:'Unavailable'}}}]));
+ await assert.rejects(limited.chat([{role:'user',content:'hello'}]),/管理 ChatGPT 用量/);
 });

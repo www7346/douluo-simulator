@@ -79,7 +79,7 @@ function createChatGPTPlan({directory,encryption,openBrowser,fetcher=fetch}){
         if(req.method!=='GET'||req.headers.host!==host||u.pathname!=='/auth/callback'||!same(u.searchParams.get('state'),state))return respond(400,'无效的登录回调。');
         if(u.searchParams.has('error')){respond(200,'登录已取消，可以返回游戏。');result.reject(Error('你取消了本次 ChatGPT 授权。'));return;}
         const code=u.searchParams.get('code'),issued=u.searchParams.get('client_id')??prior?.client;
-        if(!code||code.length>8192||!issued||!/^oaiapp_[A-Za-z0-9_-]{1,240}$/.test(issued)||(prior&&prior.client!==issued)){respond(400,'本次授权信息不匹配。');result.reject(accountError());return;}
+        if(!code||code.length>8192||!issued||issued==='dynamic_agent_client'||!/^[A-Za-z0-9._~-]{1,255}$/.test(issued)||(prior&&prior.client!==issued)){respond(400,'本次授权信息不匹配。');result.reject(accountError());return;}
         respond(200,'登录信息已送达，请返回斗罗大陆查看结果。');result.resolve({code,client:issued});
       });
       await new Promise((ok,fail)=>{server.once('error',fail);server.listen(0,'127.0.0.1',ok);});
@@ -88,6 +88,9 @@ function createChatGPTPlan({directory,encryption,openBrowser,fetcher=fetch}){
       u.search=new URLSearchParams({client_id:prior?.client??'dynamic_agent_client',ext_agent_host_id:data.host,
         ...(prior?{...(prior.idToken?{id_token_hint:prior.idToken}:{}),...(prior.email?{login_hint:prior.email}:{}),...(!canGenerate(prior)?{prompt:'consent'}:{})}:{agent_name_hint:'斗罗大陆：武魂模拟器'}),
         response_type:'code',redirect_uri:redirect,scope:scopes,resource,state,nonce,code_challenge_method:'S256',code_challenge:createHash('sha256').update(verifier).digest('base64url')}).toString();
+      // Windows may reject long shell URLs. The issued client still identifies
+      // the registration when its optional ID-token hint cannot fit.
+      if(u.href.length>2048)u.searchParams.delete('id_token_hint');
       signal.throwIfAborted();signal.addEventListener('abort',()=>result.reject(Error('登录已取消或超时。')),{once:true});
       await openBrowser(u.href);const {code,client}=await result.promise;signal.throwIfAborted();
       return await locked(async()=>{
@@ -96,6 +99,7 @@ function createChatGPTPlan({directory,encryption,openBrowser,fetcher=fetch}){
         if(!prior&&!current.profiles.includes(row)){await replace(current,row);current=await read();}
         const tokens=await tokenGrant({grant_type:'authorization_code',client_id:client,code,code_verifier:verifier,redirect_uri:redirect},signal);
         const claims=await identity(tokens.id_token,client,nonce);
+        signal.throwIfAborted();
         if(row.sub&&row.sub!==claims.sub)throw accountError();
         const p={...row,...fields(tokens,{},[]),idToken:tokens.id_token,sub:claims.sub,email:typeof claims.email==='string'?claims.email:''};
         await replace(current,p);return safeProfile(p);
