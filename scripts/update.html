@@ -1,0 +1,26 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>斗罗大陆 · 准备旅程</title><link rel="icon" href="/icons/soul-sigil.svg" type="image/svg+xml">
+<style>body{margin:0;background:linear-gradient(#f8f4e6db,#edf0dbe8),url('/art/fantasy-v3/garden.png') center/cover fixed;color:#3d352c;font-family:system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}main{width:min(650px,85vw);padding:42px 0}small{color:#876329;letter-spacing:.25em}h1{font-family:serif;font-weight:400;font-size:48px}p{line-height:1.9;color:#625b4d}button,a{font:inherit;cursor:pointer;border:1px solid #af9156;border-radius:6px;padding:12px 22px;background:#eed69c;color:#514329;text-decoration:none;display:inline-block;margin:12px 12px 0 0}a{background:#fffbec;color:#76582e}#status{border-left:2px solid #b8944c;padding:12px 20px;background:#fffaf0db}#detail{font-size:13px;overflow-wrap:anywhere}</style>
+<main><small>斗罗大陆</small><h1>准备新的旅程</h1><p>正在核对游戏版本并准备完整资源。你的世界、存档与模型设置会保留。</p><p id="status" role="status">正在检查…</p><p id="detail"></p><p>其他游戏页面会保留已有进度；请保存后刷新这些页面，让它们也进入新版。</p><button id="retry" hidden>重新检查</button><a href="/#/home">返回游戏</a></main>
+<style>[hidden]{display:none!important}</style>
+<script>
+const status=document.getElementById('status'),detail=document.getElementById('detail'),retry=document.getElementById('retry');
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function workerBuild(worker){if(!worker)return null;return new Promise(resolve=>{const channel=new MessageChannel();const timer=setTimeout(()=>resolve(null),1500);channel.port1.onmessage=e=>{clearTimeout(timer);channel.port1.close();resolve(e.data?.build??null);};worker.postMessage({type:'DOULUO_OFFLINE_STATUS'},[channel.port2]);});}
+async function run(){retry.hidden=true;status.textContent='正在检查游戏版本…';try{
+ const response=await fetch('/version.json',{cache:'no-store'});if(!response.ok)throw Error('暂时无法连接本地游戏入口，请重新启动游戏后再试。');const version=await response.json();if(version.app!=='douluo-independent-web'||!/^[a-f0-9]{20}$/.test(version.build))throw Error('游戏版本信息不完整，请重新启动游戏。');
+ const expected=new URL(location.href).searchParams.get('expected');if(expected&&expected!==version.build)throw Error('当前入口与启动的游戏包版本不同，请关闭旧入口并重新启动目标游戏包。');
+ detail.textContent='目标版本：'+version.build;
+ if(!('serviceWorker'in navigator)){location.replace('/#/home');return;}
+ const registration=await navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'});let installationFailed=false;
+ const trackInstallation=()=>{const worker=registration.installing;if(worker){const check=()=>{if(worker.state==='redundant')installationFailed=true;};worker.addEventListener('statechange',check);check();}};
+ registration.addEventListener('updatefound',trackInstallation);trackInstallation();if(!registration.installing&&!registration.waiting){await registration.update();trackInstallation();}status.textContent='正在准备完整的新版资源，请保持这个页面打开…';
+ const until=Date.now()+180000;
+ while(Date.now()<until){
+  const active=await workerBuild(registration.active);if(active===version.build&&!registration.waiting&&!registration.installing){status.textContent='新版已就绪，正在进入首页…';location.replace('/#/home');return;}
+  const waiting=registration.waiting;if(waiting&&await workerBuild(waiting)===version.build){status.textContent='资源校验完成，正在启用新版…';waiting.postMessage({type:'DOULUO_ACTIVATE',build:version.build});}
+  if(installationFailed)throw Error('新版资源尚不完整，原版本仍保留；请重新启动后再试。');await pause(400);
+ }
+ throw Error('新版资源尚未准备完成，原进度仍保留。可以重新检查或返回游戏。');
+}catch(error){status.textContent=error.message||'更新暂未完成，请重新检查。';retry.hidden=false;}}
+retry.addEventListener('click',run);run();
+</script></html>

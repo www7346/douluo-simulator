@@ -1,0 +1,20 @@
+.topbar__tools,.combat-header__tools{display:flex;align-items:center;gap:18px}
+.quick-sound-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:44px;min-height:40px;padding:8px 12px;border:1px solid rgba(167,132,70,0.3);border-radius:8px;background:#faf5e6;color:var(--gold);font-size:12px;cursor:pointer;flex-shrink:0}
+.quick-sound-button:hover{border-color:var(--gold);background:#faf5e6}
+.quick-sound-button small{color:var(--muted);min-width:28px}
+.quick-sound-modal{width:min(440px,100%)}
+.quick-sound-modal .sound-sliders{gap:20px;margin:26px 0}
+.quick-sound-switch-row{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--line)}
+.quick-sound-switch-row>span{display:grid;gap:6px}
+.quick-sound-switch-row small{color:var(--muted);font-size:12px}
+.quick-sound-switch{display:flex;align-items:center;gap:9px;min-height:44px;padding:8px 12px;border:1px solid rgba(169,151,115,0.4);border-radius:24px;background:#faf5e6;color:#6e6858;cursor:pointer}
+.quick-sound-switch i{display:block;width:22px;height:22px;border-radius:50%;background:currentColor}
+.quick-sound-switch[aria-checked=true]{flex-direction:row-reverse;border-color:var(--gold);background:#e7d3a4;color:#6e6858}
+.quick-sound-result{min-height:24px;margin:18px 0 0;font-size:13px;color:var(--gold)}
+@media(max-width:720px){.topbar__tools{gap:10px}.topbar__tools .topbar__status{display:none}.quick-sound-button{padding:8px;gap:5px}.combat-header__tools{gap:8px}.combat-header__tools .quick-sound-button>span,.combat-header__tools .quick-sound-button>small{display:none}.combat-header__tools .combat-log-toggle{white-space:nowrap;margin-left:0}}
+@media(max-width:380px){.combat-header{flex-wrap:wrap}.combat-header__tools{margin-left:auto;margin-bottom:8px}}
+@media(max-width:480px){
+ .app-shell .topbar{height:auto;flex-wrap:wrap;gap:8px}
+ .app-shell .topbar__tools{flex-wrap:wrap;justify-content:flex-end;gap:8px;min-width:0;max-width:100%}
+ .app-shell .topbar__tools>.text-link{min-height:40px}
+}

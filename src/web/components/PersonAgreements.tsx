@@ -1,0 +1,17 @@
+import PersonContracts from './PersonContracts';
+import {playerCopy} from '../../runtime/player-copy';
+import {useGame} from '../game-context';
+import {useState} from 'react';
+import {useServerQuery} from '../use-game-query';
+import {Button} from '../components';
+import QueryStatus from './QueryStatus';
+const labels:Record<string,string>={pending:'等待回应',accepted:'已接受',active:'进行中',rejected:'未接受',completed:'已履行',expired:'已过期',cancelled:'已取消',ended:'已结束'};
+const kinds:Record<string,string>={'give-gold':'赠款','give-item':'赠物',meeting:'会面',relationship:'确认关系',party:'自愿同行',contact:'魂导联络',loot:'收获分配','loot-resolution':'暂存收获协商'};
+const status=(kind:string,value:string)=>value==='completed'&&['party','contact','relationship','loot','loot-resolution'].includes(kind)?'已确认':labels[value]??value;
+export default function PersonAgreements({personId,initialCategory='commitments',showContracts=true}:{personId:string;initialCategory?:string;showContracts?:boolean}){
+ const {state}=useGame();
+ const templates=useServerQuery('story.loot-templates');
+ const [historyId,setHistoryId]=useState('');
+ const [category,setCategory]=useState(initialCategory),[before,setBefore]=useState(-1),q=useServerQuery('character.history',{characterId:personId,category,before});
+ return <section aria-label="约定与履行"><h4>约定记录</h4>{showContracts&&<PersonContracts personId={personId}/>}<div className="field-actions">{[['commitments','社交约定'],['agreements','雇佣账目']].map(([id,label])=><Button key={id} variant="ghost" onClick={()=>{setCategory(id);setBefore(-1);}} disabled={category===id}>{label}</Button>)}</div>{!q.data?<QueryStatus query={q}/>:<>{!q.data.total&&<p className="muted">尚无这类记录。</p>}{q.data.records.map(({record:r}:any)=><article className="person-history-record" key={r.id}><h4>{kinds[r.kind]??'雇佣同行'} · {status(r.kind,r.status)}</h4><p>{r.amount!==undefined?`承诺金额 ${r.amount} 金魂币`:r.fee!==undefined?`雇佣费用 ${r.fee} 金魂币`:r.itemName?`${r.itemName} × ${r.quantity}`:r.membership?`${r.membership==='long-term'?'长期':'临时'}同行`:r.relationship==='friends'?'朋友':r.relationship==='partners'?'伴侣':''}</p><>{r.kind==='loot-resolution'&&<p>{r.terms.name} × {r.terms.quantity}，拟分给{state.人物.列表[r.terms.recipientId]?.name}。</p>}{r.kind==='loot'&&<p>{Object.entries(r.terms.shares).map(([id,n])=>`${state.人物.列表[id]?.name??'一位队员'} ${n}份`).join('、')}；未约定物品另议，余数{r.terms.remainderOwner?`归${state.人物.列表[r.terms.remainderOwner]?.name}`:'暂存协商'}。</p>}</>{(r.terms?.itemTargets??[]).map((t:any)=><p key={t.templateId+':'+(t.name??'')}>{t.name??templates.data?.[t.templateId]??'指定物品'}：取得时最多 {t.quantity} 件归{state.人物.列表[t.personId]?.name}。</p>)}{r.terms?.nextPriority&&<p>本次交付后，下次这些队员共同取得一件{r.terms.nextPriority.name??templates.data?.[r.terms.nextPriority.templateId]??'对应物品'}，先向{state.人物.列表[r.terms.nextPriority.personId]?.name}协商。</p>}<Button variant="ghost" onClick={()=>setHistoryId(historyId===r.id?'':r.id)}>{historyId===r.id?'收起经过':'查看约定经过'}</Button>{historyId===r.id&&<ol>{r.events.map((e:any,i:number)=><li key={i}>第 {e.time.day} 日 · {status(r.kind,e.status)}{e.paid!==undefined&&<p>已支付 {e.paid} 金魂币</p>}{e.refund!==undefined&&<p>已退还 {e.refund} 金魂币</p>}{e.deliveredItemId&&<p>已交付 {e.quantity} 件</p>}{e.reason&&<p>{playerCopy(e.reason)}</p>}</li>)}</ol>}</article>)}{q.data.nextBefore!==null&&<Button variant="ghost" onClick={()=>setBefore(q.data.nextBefore)}>更早的约定</Button>}{before!==-1&&<Button variant="ghost" onClick={()=>setBefore(-1)}>返回最新约定</Button>}</>}</section>;
+}

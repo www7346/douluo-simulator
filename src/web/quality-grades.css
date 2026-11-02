@@ -1,0 +1,21 @@
+/* Shared by martial souls and item value grades; ring age colors remain independent. */
+[data-grade="waste"]{--grade-color:#dce3ee;--grade-ink:#62665b}
+[data-grade="common"]{--grade-color:#80d7a0;--grade-ink:#37734b}
+[data-grade="rare"]{--grade-color:#7bbaff;--grade-ink:#356c9a}
+[data-grade="top"]{--grade-color:#c39aff;--grade-ink:#81569e}
+[data-grade="divine"]{--grade-color:#f3cf78;--grade-ink:#916719}
+.grade-badge{display:inline-flex;align-items:center;gap:6px;color:var(--grade-ink);font-size:12px;font-weight:600;line-height:1.65;letter-spacing:.06em;white-space:nowrap}
+.grade-badge>span{font-size:8px}
+.grade-name[data-grade], [data-grade]>.grade-name{color:var(--grade-ink)}
+.relic-card[data-grade]{border-color:color-mix(in srgb,var(--grade-color) 55%,transparent);background:radial-gradient(ellipse at 50% 10%,color-mix(in srgb,var(--grade-color) 12%,transparent),transparent 65%),#fffaf0}
+.relic-card[data-grade] .relic-card__name,.relic-loadout__name[data-grade],.relic-inspection__hero[data-grade] h2,.supply-catalog article[data-grade] h3,.stored-catalog article[data-grade] h3{color:var(--grade-ink)}
+.relic-card[data-grade].is-selected{border-color:var(--grade-ink);box-shadow:inset 0 0 0 1px var(--grade-color),0 0 22px color-mix(in srgb,var(--grade-color) 15%,transparent)}
+[data-grade] .relic-art{filter:drop-shadow(0 0 12px color-mix(in srgb,var(--grade-color) 20%,transparent))}
+.choice-card[data-grade]{--choice-accent:var(--grade-color);border-color:var(--grade-ink);box-shadow:inset 0 0 0 4px #fff9eb,inset 0 0 0 5px color-mix(in srgb,var(--grade-color) 45%,transparent),0 16px 28px #72603526}
+.choice-card[data-grade]:before,.choice-card[data-grade] h3{border-color:color-mix(in srgb,var(--grade-color) 40%,transparent)}
+.choice-card[data-grade] h3,.choice-card[data-grade] .choice-card__ordinal{color:var(--grade-ink)}
+.choice-card[data-grade] .choice-card__crown{background:linear-gradient(145deg,var(--grade-color),color-mix(in srgb,var(--grade-color) 50%,#a58e59))}
+.choice-card[data-grade].is-selected{outline:2px solid var(--grade-color);outline-offset:5px;box-shadow:inset 0 0 0 4px #fff9eb,inset 0 0 0 5px var(--grade-color),0 0 32px color-mix(in srgb,var(--grade-color) 30%,transparent)}
+.choice-card__grade{display:flex;justify-content:center;margin:0 0 8px}
+.choice-reward[data-grade] h3{color:var(--grade-ink)}
+.archive-item summary[data-grade]{color:var(--grade-ink)}

@@ -1,0 +1,9 @@
+import {useState} from 'react';
+import {Button,Modal} from './components';
+import OpeningRelations from './OpeningRelations';
+
+export default function OpeningActions({workbench,preview,disabled,onCustomize,onEditSouls,onOpenWorkshop}:{workbench:any;preview:any;disabled:boolean;onCustomize:()=>void;onEditSouls:()=>void;onOpenWorkshop:()=>void}){
+ const [relations,setRelations]=useState(false),draft=workbench.workspace.config,unlimited=draft.difficulty==='unlimited';
+ const update=(patch:any)=>workbench.change((v:any)=>({...v,config:{...v.config,...patch}}));
+ return <section className="opening-actions" aria-label="开局定制"><p><strong>{preview.background.definition.name}</strong> · {draft.name} · {preview.ledger.level}级</p><div className="opening-actions__buttons"><Button data-testid="opening-customize" disabled={disabled} onClick={onCustomize}>自定义角色</Button><Button data-testid="opening-edit-souls" variant="secondary" disabled={disabled} onClick={onEditSouls}>武魂配置 · {draft.martialSoulCount}个武魂</Button><Button data-testid="opening-relations" variant="secondary" disabled={disabled} onClick={()=>setRelations(true)}>开局关系</Button><Button data-testid="opening-unlimited" variant={unlimited?'primary':'secondary'} aria-pressed={unlimited} disabled={disabled} onClick={()=>update({difficulty:unlimited?'normal':'unlimited'})}>{unlimited?'无限点数已开启':'无限点数'}</Button><Button data-testid="opening-workshop" variant="secondary" disabled={disabled} onClick={()=>{if(!unlimited)update({difficulty:'unlimited'});onOpenWorkshop();}}>{unlimited?'创意工坊':'开启无限点数以使用工坊'}</Button></div><p>已用{preview.ledger.spent}／{preview.ledger.total}点 · 剩余{preview.ledger.remaining}点</p><Modal open={relations} title="开局关系" onClose={()=>setRelations(false)}><OpeningRelations draft={draft} update={update} disabled={disabled}/><Button onClick={()=>setRelations(false)}>保存并返回</Button></Modal></section>;
+}

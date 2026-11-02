@@ -1,0 +1,75 @@
+.soul-ring-palette {
+  --ring-color:#f0f3f8; --ring-edge:#ffffff; --ring-shadow:#bbc3cf; --ring-outline:#929cac;
+  --ring-glow:#d2deef; --ring-glyph:#e8eef7;
+  color:var(--ring-color);
+}
+.soul-ring-palette[data-tier='百年'] { --ring-color:#edda26; --ring-edge:#fffba0; --ring-shadow:#d5c013; --ring-outline:#b3a126; --ring-glow:#f0df36; --ring-glyph:#fff9a8; }
+.soul-ring-palette[data-tier='千年'] { --ring-color:#9346e4; --ring-edge:#dcb6ff; --ring-shadow:#6525a5; --ring-outline:#69359c; --ring-glow:#a052ff; --ring-glyph:#e0b9ff; }
+.soul-ring-palette[data-tier='万年'] { --ring-color:#19151f; --ring-edge:#aaa2b5; --ring-shadow:#09080d; --ring-outline:#8d859a; --ring-glow:#908498; --ring-glyph:#8b7c96; }
+.soul-ring-palette[data-tier='十万年'] { --ring-color:#d91536; --ring-edge:#ff91a5; --ring-shadow:#930d2c; --ring-outline:#960f30; --ring-glow:#ed3051; --ring-glyph:#ff8399; }
+.soul-ring-palette[data-tier='百万年'] { --ring-color:#d79b32; --ring-edge:#fff2ce; --ring-shadow:#995916; --ring-outline:#985917; --ring-glow:#e9ae4b; --ring-glyph:#ffe6ac; }
+.soul-ring-palette[data-color='淡金'] { --ring-color:#e9d9a3; --ring-edge:#fffbed; --ring-shadow:#ac9867; --ring-outline:#c7b887; --ring-glow:#f5e9c5; --ring-glyph:#fff6db; }
+.soul-ring { width:48px; height:48px; position:relative; display:grid; place-items:center; flex-shrink:0; isolation:isolate; container: soul-ring / inline-size; }
+.soul-ring-art { display:block; width:100%; height:100%; overflow:visible; pointer-events:none; filter:drop-shadow(0 0 2px color-mix(in srgb,var(--ring-glow) 30%,transparent)); }
+.soul-ring>.soul-ring-art { position:absolute; inset:0; }
+.soul-ring>span { position:relative; z-index:1; font-size:9px; line-height:1; white-space:nowrap; color:var(--ink); letter-spacing:-.03em; }
+.soul-ring .ring-sigil__sparks { display:none; }
+.ring-sigil__runes,.ring-sigil__rims,.ring-sigil__crowns,.ring-sigil__corona { transform-box:view-box; transform-origin:center; }
+.ring-sigil__sparks { opacity:.55; }
+.ring-sigil__band { opacity:1; }
+.ring-sigil__contour { opacity:.65; }
+.soul-ring-palette[data-tier='万年'] .ring-sigil__runes { opacity:.65; }
+@container soul-ring (max-width:64px) { .ring-sigil__detail { display:none; } }
+.soul-ring.is-active { animation:ring-pulse .65s ease-in-out 2; }
+@keyframes ring-pulse { 50% { transform:scale(1.08); } }
+
+/* A single inscribed ring seen in perspective, with a separate stationary label. */
+.ring-inspection__halo { position:relative; display:grid; place-items:center; width:100%; max-width:230px; height:220px; flex-shrink:0; justify-self:center; isolation:isolate; perspective:700px; background:transparent; }
+.ring-inspection__plane { position:absolute; width:215px; max-width:100%; aspect-ratio:1; transform:rotateX(32deg) rotateZ(-12deg); container: soul-ring / inline-size; }
+.ring-inspection__plane .soul-ring-art { filter:drop-shadow(0 0 3px color-mix(in srgb,var(--ring-glow) 28%,transparent)); }
+.ring-inspection__halo>span { position:absolute; bottom:2px; z-index:1; font:600 21px var(--serif); letter-spacing:.16em; color:var(--ink); }
+.relic-card>.ring-inspection__halo { height:calc(100% - 22px); flex:none; }
+.relic-card .ring-inspection__plane { width:calc(100% - 24px); max-width:120px; }
+.relic-card .ring-inspection__halo>span { bottom:0; font-size:10px; letter-spacing:0; }
+.relic-inspection__hero>.ring-inspection__halo { order:2; }
+.ring-details__art .soul-ring { width:230px; height:230px; max-width:100%; perspective:700px; background:transparent; }
+.ring-details__art .soul-ring>.soul-ring-art { transform:rotateX(32deg) rotateZ(-12deg); filter:drop-shadow(0 0 3px color-mix(in srgb,var(--ring-glow) 28%,transparent)); }
+.ring-details__art .soul-ring>span { align-self:end; margin-bottom:0; font:600 19px var(--serif); letter-spacing:.14em; color:var(--ink); }
+.ring-details__art .ring-sigil__sparks { display:initial; }
+
+html:is([data-performance='standard'],[data-performance='cinematic']) :is(.ring-inspection__halo,.ring-details__art) .ring-sigil__runes { animation:soul-sigil-turn 50s linear infinite; }
+html[data-performance='cinematic'] :is(.ring-inspection__halo,.ring-details__art) .ring-sigil__rims { animation:soul-sigil-turn 80s linear infinite reverse; }
+html[data-performance='cinematic'] :is(.ring-inspection__halo,.ring-details__art) .ring-sigil__sparks { animation:soul-sigil-spark 4s ease-in-out infinite alternate; }
+html:is([data-performance='smooth'],[data-performance='reduced']) .soul-ring-art { filter:none; }
+@keyframes soul-sigil-turn { to { transform:rotate(360deg); } }
+@keyframes soul-sigil-spark { from { opacity:.2; } to { opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .soul-ring,.soul-ring-art * { animation:none!important; } }
+@media(max-width:600px) { .ring-details__art .soul-ring { width:190px; height:190px; }.ring-inspection .ring-inspection__halo { height:200px; }.ring-inspection__plane { width:185px; }.ring-inspection__halo>span { font-size:19px; } }
+
+/* Shared by field rings and inventory items; available before any expedition visit. */
+.ring-design-advisor{display:grid;gap:12px;margin:18px 0;padding:16px;border:1px solid var(--line);border-radius:8px;min-width:0;font-size:15px;line-height:1.65}
+.ring-design-advisor label{display:grid;gap:8px;min-width:0}
+.ring-design-advisor textarea{width:100%;max-width:100%;min-height:112px;font-size:16px}
+.ring-design-advisor button,.soul-editor__section select,.ring-design-advisor select{min-height:44px;font-size:16px}
+.ring-design-advisor :is(p,.ability-effects span,.ability-costs,.ability-context dd,.ability-details p),.soul-editor__section .ring-plan-overview p,.soul-editor__section [aria-label="当前魂技设计预览"] :is(p,.ability-effects span,.ability-costs,.ability-context dd){font-size:15px;line-height:1.65}
+.ring-design-proposal{min-width:0;padding:16px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+.ring-plan-overview{font-size:15px;line-height:1.65;overflow-wrap:anywhere}
+.modal--ring-designer .ability-details{font-size:15px}
+.ring-inspection{display:grid;grid-template-columns:180px minmax(0,1fr);gap:28px;align-items:center}
+.ring-inspection h3{font:600 28px var(--serif);margin:12px 0}
+.ring-inspection label{display:grid;gap:8px}
+.ring-qualification{display:grid;grid-template-columns:1fr 1fr;gap:0 26px;margin:22px 0}
+.ring-qualification>div{border-bottom:1px solid #b4bcc735;padding:14px 0}
+.ring-qualification dt{font-size:12px;margin-bottom:7px;color:var(--muted)}
+.ring-qualification dd{margin:0;line-height:1.8;color:var(--ink)}
+@media(max-width:620px){.ring-inspection{grid-template-columns:1fr;gap:0}.ring-inspection__halo{height:150px}.ring-qualification{gap:0 16px}.ring-qualification dd{font-size:14px}}
+.modal--ring-item{width:min(1120px,100%)}
+.opening-ring-years{padding:16px;margin:12px 0;border:1px solid var(--border-color,#d7c3a1);border-radius:8px;background:var(--panel-bg,#fffaf0)}
+.opening-ring-years input{font-size:16px;min-height:44px;width:min(100%,280px)}
+.opening-ring-years button,.ring-design-advisor button,.ring-adopted-design button{min-height:44px;white-space:normal}
+.opening-ring-years p,.ring-design-advisor .ability-context dd span,.ring-adopted-design p{font-size:15px;line-height:1.65;overflow-wrap:anywhere}
+.ring-exchange-editor.soul-editor__section select{font-size:16px;min-height:44px;max-width:100%}
+.opening-ring-years .field-actions{display:flex;flex-wrap:wrap;gap:8px}
+.background-ring .ability-details :is(.ability-effects span,.ability-context dd span,.ability-costs),.ring-adopted-design .ability-details :is(.ability-effects span,.ability-context dd span,.ability-costs){font-size:15px;line-height:1.65}
+.opening-ring-years select,.opening-ring-years textarea{font-size:16px;min-height:44px;max-width:100%;width:100%}
+.ring-exchange-editor [aria-label="当前魂技设计预览"] .ability-context dd span{font-size:15px;line-height:1.65}

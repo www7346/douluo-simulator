@@ -1,0 +1,19 @@
+(function(root,factory){const api=factory();if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.SoulPractice=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+ 'use strict';
+ const providers=new Map(),minute=t=>t.day*1440+t.hour*60+t.minute;
+ function registerProvider(name,read){if(providers.has(name)||typeof read!=='function')throw Error('练习来源重复或无效');providers.set(name,read);}
+ registerProvider('long-action',s=>(s.世界?.longActions??[]).filter(a=>a.kind==='cultivation').flatMap(a=>a.steps.map((step,i)=>({id:`${a.id}:${i}`,personId:a.ownerId,sourceId:a.id,from:minute(step.before),through:minute(step.before)+step.progress.minutes,progress:step.progress}))));
+ registerProvider('performance-agreement',s=>(s.扩展?.performanceAgreements?.events??[]).filter(e=>e.type==='cultivated').map(e=>({id:e.id,personId:e.subjectId,sourceId:e.agreementId,from:e.from,through:e.through,progress:e.progress})));
+ function history(s,personId){return [...providers.entries()].flatMap(([provider,read])=>read(s).map(row=>({...row,provider}))).filter(row=>!personId||row.personId===personId).sort((a,b)=>a.from-b.from||a.through-b.through||a.id.localeCompare(b.id));}
+ function carryAt(s,personId,at=Infinity){return history(s,personId).filter(e=>e.through<=at).reduce((sum,e)=>sum+e.progress.minutes,0)%globalThis.SoulCycleEngine.CULTIVATION_MINUTES_PER_EXPERIENCE;}
+ function exclusiveReason(s,personId,sourceId=null){if((s.世界?.longActions??[]).some(a=>a.kind==='cultivation'&&a.ownerId===personId&&a.id!==sourceId&&a.status==='interrupted'))return '本人仍有未完成的修炼，请先继续或放弃原安排';if((s.扩展?.performanceAgreements?.records??[]).some(r=>r.subjectId===personId&&r.id!==sourceId&&r.status==='active'&&r.practice))return '本人正在履行另一项修炼约定，请先完成或结束原安排';return '';}
+ const sameGrowth=(a,b)=>['level','experience','requirement'].every(k=>a?.[k]===b?.[k]);
+ function growthTransitionValid(s,personId,before,after,at){if(sameGrowth(before,after))return true;
+  // Other growth can occur at the boundary, but must retain its actual source.
+  for(const encounter of Object.values(s.遭遇?.列表??{}).flatMap(e=>e.expeditionReward?[e.expeditionReward,...(e.expeditionReward.companions??[])]:[])){const r=encounter,p=r?.receipt;if(r?.recipientId!==personId||r.at!==at||r.status!=='paid'||p.level!==after.level||p.experience!==after.experience||p.requirement!==after.requirement)continue;let consumed=0;for(let level=before.level;level<after.level;level++)consumed+=100+level*25;if(before.experience+p.experienceGained-consumed===after.experience)return true;}
+  if(before.level%10===0&&before.experience===before.requirement&&after.level===before.level+1&&after.experience===0&&after.requirement===100+after.level*25)return Object.values(s.魂环?.operations??{}).some(o=>o.kind==='absorb'&&o.request.actorId===personId&&o.receipt.absorptionMode==='突破'&&o.receipt.ringOrdinal===before.level/10&&o.receipt.releasedStoredExperience?.levelsGained===1&&s.魂环.列表[o.receipt.ringId]?.持有者单位ID===personId);
+  return false;
+ }
+ function validate(s){const errors=[],byPerson=new Map();for(const e of history(s)){const previous=byPerson.get(e.personId),carry=previous?.carry??0;if(!Number.isSafeInteger(e.from)||!Number.isSafeInteger(e.through)||e.through<e.from||e.progress.minutes!==e.through-e.from||previous&&e.from<previous.through||e.progress.carryBefore!==carry||e.progress.carryAfter!==(carry+e.progress.minutes)%globalThis.SoulCycleEngine.CULTIVATION_MINUTES_PER_EXPERIENCE||previous&&e.from===previous.through&&!growthTransitionValid(s,e.personId,previous.after,e.progress.before,e.from))errors.push(`人物${e.personId}的实际练习区间、成长承接或共用余时无效`);byPerson.set(e.personId,{through:e.through,carry:e.progress.carryAfter,after:e.progress.after});}return errors;}
+ return Object.freeze({registerProvider,history,carryAt,exclusiveReason,growthTransitionValid,validate});
+});

@@ -1,0 +1,17 @@
+.story-action-choices{margin-top:24px;padding-top:18px;border-top:1px solid #b99a5b55;min-width:0}
+.story-action-choices__heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px 16px;flex-wrap:wrap;margin-bottom:12px}
+.story-action-choices__heading h3{margin:0;color:#6b5130;font:19px var(--serif,serif)}
+.story-action-choices__heading>span{font-size:11px;color:#897452;line-height:1.6}
+.story-action-choices__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.story-action-choice{appearance:none;display:flex;align-items:flex-start;gap:12px;width:100%;min-width:0;min-height:84px;padding:15px 14px;border:1px solid #c9b68e;border-radius:10px;background:linear-gradient(125deg,#fffdf7,#f6efdf);box-shadow:inset 0 0 0 3px #fffdf680;color:#594a34;text-align:left;font:14px/1.8 var(--serif,serif);cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+.story-action-choice__number{flex:none;width:25px;color:#ac8950;font:20px/1.4 Georgia,serif}
+.story-action-choice__text{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.story-action-choice__mark{flex:none;color:#a28a5f;font:17px/1.5 sans-serif}
+.story-action-choice:not(:disabled):not([aria-pressed=true]):hover{background:#fff8e5;border-color:#a97d3c;box-shadow:0 3px 12px #90703a18,inset 0 0 0 3px #fffdf680}
+.story-action-choice:focus-visible{outline:2px solid #8b652b;outline-offset:3px}
+.story-action-choice[aria-pressed=true]{border-color:#9b7135;background:#efe0bb;box-shadow:inset 0 0 0 1px #bb945b}
+.story-action-choice[aria-pressed=true] .story-action-choice__number,.story-action-choice[aria-pressed=true] .story-action-choice__mark{color:#80571f}
+.story-action-choice:disabled{cursor:default;opacity:.55}
+@media(max-width:600px){.story-action-choices{margin-top:18px;padding-top:14px}.story-action-choices__heading{gap:4px;margin-bottom:10px}.story-action-choices__heading h3{font-size:17px}.story-action-choices__grid{grid-template-columns:minmax(0,1fr);gap:8px}.story-action-choice{min-height:62px;padding:11px 12px;gap:9px;font-size:14px}.story-action-choice__number{font-size:18px;width:23px}}
+@media(prefers-reduced-motion:reduce){.story-action-choice{transition:none}}
+@media(max-width:600px){.story-message--narrator .story-action-choices{margin-left:-43px}}

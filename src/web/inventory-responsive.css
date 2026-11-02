@@ -1,0 +1,110 @@
+/* The workshop owns its scroll area; maps and other play details keep theirs. */
+.modal.play-detail--workshop > .modal__body {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 56px 24px;
+}
+.atelier-submit {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding-block: 8px;
+}
+.atelier-submit > .button { width: min(330px, 100%); min-height: 48px; font-size: 21px; }
+.atelier-submit > small { font-size: 12px; color: #79694f; text-align: center; }
+.atelier-materials > .atelier-quantity { flex: none; margin-block: 12px; gap: 8px; }
+.atelier-material-facts { line-height: 1.7; overflow-wrap: anywhere; }
+.atelier-material-facts summary { cursor: pointer; padding-block: 10px; color: #785829; }
+.atelier-material-facts .material-facts { display: flex; flex-direction: column; gap: 10px; }
+.inventory-detail-modal .relic-inspection { height: auto; overflow: visible; }
+.inventory-detail-modal .relic-actions { position: static; }
+
+@media (min-width: 801px) and (max-height: 500px) {
+  /* Short landscape still uses the desktop details sidebar; scroll the complete row. */
+  .relic-library { flex: none; min-height: 400px; }
+  .relic-library .relic-collection { min-height: 400px; }
+}
+
+@media (max-width: 800px), (max-height: 500px) {
+  .modal.play-detail--workshop {
+    height: 96dvh;
+    max-height: 96dvh;
+  }
+  .modal.play-detail--workshop > .modal__body { padding: 0; }
+  .atelier-page {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+    padding: 52px 10px max(20px, env(safe-area-inset-bottom));
+  }
+  .atelier-heading {
+    display: flex;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 0;
+    gap: 12px;
+    padding: 0;
+    margin-bottom: 16px;
+  }
+  .atelier-heading h1 { font-size: 36px; }
+  .atelier-heading small { display: none; }
+  .atelier-heading nav { flex: 1; min-width: 210px; min-height: 44px; }
+  .atelier-heading nav button { font-size: 16px; min-height: 44px; }
+  .atelier-workbench { display: block; height: auto; overflow: visible; }
+  .atelier-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; min-height: 0; gap: 12px; }
+  .atelier-grid .fantasy-panel { height: auto; max-height: none; padding: 10px; overflow: visible; }
+  /* Undo the desktop canvas scroll owner when a short landscape uses this flow. */
+  .atelier-grid .atelier-canvas { overflow: visible !important; }
+  .atelier-materials .atelier-search { display: block; }
+  .atelier-material-grid { flex: none; grid-template-columns: repeat(4, minmax(0, 1fr)); max-height: 180px; margin-top: 8px; }
+  .atelier-material-grid > button { width: 100%; height: 92px; min-height: 0; aspect-ratio: auto; }
+  .atelier-materials > .atelier-quantity { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .atelier-quantity label { gap: 8px; white-space: nowrap; }
+  .atelier-quantity input { width: 64px; min-width: 0; flex: 0 1 64px; min-height: 44px; }
+  .atelier-quantity .button { padding: 8px 12px; font-size: 15px; }
+  .atelier-materials footer { padding-top: 0; }
+  .atelier-categories { flex-wrap: wrap; }
+  .atelier-categories > button { flex-basis: calc(50% - 6px); font-size: 17px; min-height: 44px; }
+  .atelier-display { flex: none; height: 112px; min-height: 0; max-height: 112px; margin-top: 8px; }
+  .atelier-material-title { font-size: 20px; overflow-wrap: anywhere; }
+  .atelier-attributes { flex-wrap: wrap; gap: 5px; }
+  .atelier-attributes span { padding: 3px 10px; font-size: 13px; }
+  .atelier-selected-heading { align-items: center; margin-block: 8px 4px; gap: 6px; }
+  .atelier-selected-heading button { min-height: 44px; }
+  .atelier-selected { height: auto; min-height: 48px; flex-wrap: wrap; }
+  .atelier-intent textarea { font-size: 16px !important; resize: vertical; scroll-margin-block: 60px 100px; }
+  .atelier-quote { max-height: none; overflow: visible; font-size: 14px; }
+  .atelier-submit {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    background: #fcf9f0f5;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .atelier-inspection { display: block; }
+  .atelier-inspection .atelier-closeup, .atelier-inspection .atelier-note { display: none; }
+  .atelier-inspection > h3 { font-size: 18px; margin: 6px 0; }
+}
+
+@media (max-width: 800px) {
+  /* One scrolling collection instead of a zero-height grid clipped by its parent. */
+  .relic-library, .relic-library:has(.relic-loadout) { flex: none; min-height: auto; }
+  .relic-library .relic-collection { flex: none; min-height: 0; overflow: visible; }
+  .relic-library .relic-grid { height: auto; flex: none; overflow: visible; max-height: none; }
+  .relic-collection__tools { flex-wrap: wrap; }
+  .relic-collection__tools label { flex: 1; min-width: 130px; }
+  .relic-loadout .button { min-height: 40px; }
+}
+
+/* Registered preset cards share the existing illustrated workbench. */
+.preset-soul-preview,.research-preset-preview { display: flow-root; margin: 8px 0 14px; }
+.preset-soul-preview > .portrait-art,.research-preset-preview > .portrait-art { float: left; width: 110px; height: 130px; object-fit: contain; margin: 0 14px 8px 0; }
+.research-preset-preview h3,.preset-soul-preview h3 { font-size: 20px; }
+.atelier-categories { flex-wrap: wrap; }
+.research-design-advisor { margin: 12px 0; padding: 14px; border: 1px solid #bb9a5c; border-radius: 6px; background: #fffaf0; overflow-wrap: anywhere; }
+.research-design-advisor h3 { margin: 0 0 8px; }
+.research-design-advisor > label { display: grid; gap: 6px; }
+.research-design-advisor textarea { width: 100%; min-height: 100px; resize: vertical; font-size: 16px; }
+.research-design-advisor .field-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.research-design-advisor .button { min-height: 44px; }
+.research-design-advisor article { border-top: 1px solid #cbb58a; margin-top: 12px; padding-top: 8px; }

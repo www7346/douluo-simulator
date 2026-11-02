@@ -1,0 +1,12 @@
+node_modules/
+build/
+dist/
+output/
+desktop/dist/
+*.tsbuildinfo
+.env
+.env.*
+*.log
+*.pem
+*.pfx
+*.json.gz

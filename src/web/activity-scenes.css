@@ -1,0 +1,113 @@
+/* Persistent five-bout activity: existing mechanics, one presentation surface. */
+.world-scene--slaughter{max-width:1600px;margin:auto;padding:24px;color:var(--ink);background:linear-gradient(#fffaf0db,#f4e8d2e8);border:1px solid #b6a078;border-radius:10px}
+.world-scene--slaughter .world-masthead{margin:0 0 20px}
+.world-scene--slaughter .world-masthead h1{font-size:clamp(30px,4vw,48px)}
+.world-scene--slaughter .world-masthead p{font-size:16px;line-height:1.7}
+.world-scene--slaughter .world-trial{grid-template-columns:minmax(0,1fr) 300px;gap:32px;padding:24px;background:#fffaf0bd;border:1px solid #cbb68e;border-radius:8px}
+.world-trial h3{font:25px var(--serif);margin:12px 0}
+.world-trial .trial-stages{gap:8px;margin:24px 0}
+.trial-stages>div{background:#f2eadb;border:1px solid #d1c1a1;border-radius:6px;min-width:0}
+.trial-stages .is-current{background:#fff0cb;border-color:#ad8130;box-shadow:0 0 0 2px #e2c47f80}
+.trial-stages .is-complete{background:#ecf1df;border-color:#9ea67c}
+.trial-stages .is-failed{background:#f9e3e0;border-color:#b75a54}
+.trial-stages span{font-size:14px;line-height:1.5}
+.trial-next{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:18px 0;border-block:1px solid #d4c29d}
+.trial-next>strong{font:24px var(--serif)}
+.world-trial .button{min-height:44px;font-size:16px}
+.world-trial .trial-status-note{font-size:15px}
+.trial-earnings,.trial-history{margin-top:24px;padding-top:14px;border-top:1px solid #d4c29d}
+.world-trial .trial-experience{margin:6px 0 12px;font-size:16px}.trial-experience b{font:32px var(--serif);color:#825f27}
+.trial-earnings ul{padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px}
+.trial-earnings li{display:flex;justify-content:space-between;gap:16px;padding:10px 12px;background:#f6efdf;border:1px solid #dacbac;border-radius:5px;font-size:16px;line-height:1.6}
+.trial-history details{border:1px solid #d4c29d;border-radius:5px;margin:10px 0;background:#fffaf0}
+.trial-history summary{padding:14px;cursor:pointer;font-size:16px;line-height:1.6}.trial-history summary b{margin:0 15px;color:#7e5f2b}.trial-history summary span{color:#736752}
+.trial-history details>p,.trial-history details>ul{margin:10px 20px;font-size:15px;line-height:1.8}
+.trial-player{display:flex;align-items:center;gap:16px;margin-bottom:24px}.trial-player>.battle-unit-portrait{width:78px;height:78px;border:1px solid #baa371;border-radius:50%;flex:none}.trial-player h3{font-size:25px;overflow-wrap:anywhere}.trial-player p{margin:4px 0}
+.trial-shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:24px 0}.world-trial__road .trial-shortcuts .button{margin:0}
+.trial-road{border-top:1px solid #d4c29d;padding-top:20px}
+.world-endgame-grid .button{min-height:44px;font-size:14px;line-height:1.5}.world-endgame-grid small{font-size:14px;line-height:1.6}
+
+/* Single-duel records stay in their existing list, with room for readable names. */
+.world-scene--endgame .world-masthead{padding:0 0 10px}
+.world-scene--endgame .world-masthead h1{font-size:32px;margin:0}
+.world-scene--endgame .world-masthead p{margin:4px 0 0}
+.world-scene--endgame .world-tabs{margin:10px 0;flex-wrap:wrap}
+.world-scene--endgame .world-tabs button{font-size:16px;padding:8px 16px;min-height:44px}
+.world-scene--endgame .world-section-heading{margin:14px 0 8px;gap:12px}
+.world-scene--endgame .endgame-introduction{font-size:14px;line-height:1.7;margin:8px 0 12px}
+.world-endgame-grid{gap:16px;margin-top:12px;align-items:start}
+.world-endgame-grid>article{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:8px;min-width:0}
+.endgame-card-heading{display:flex;align-items:center;gap:16px;min-width:0}
+.endgame-card-heading .endgame-insignia{width:88px;height:88px;flex:none;align-self:center;border:1px solid #b9a071;border-radius:50%;overflow:hidden;background:#fbf5e8}
+.endgame-insignia>.battle-unit-portrait{width:100%;height:100%}
+.endgame-identity{min-width:0}
+.world-endgame-grid .endgame-identity h3{font-size:25px;line-height:1.3;margin:3px 0 5px;overflow-wrap:anywhere}
+.world-endgame-grid .endgame-identity p{font-size:15px;margin:0 0 2px;line-height:1.5}
+.world-endgame-grid .endgame-identity .eyebrow{font-size:13px}
+.world-endgame-grid .endgame-requirements{margin:0;padding-left:18px;font-size:14px;line-height:1.6}
+.world-endgame-grid .field-actions{margin:0;gap:8px;flex-wrap:wrap}
+.world-endgame-grid .field-actions>.button{padding:9px 14px;min-height:44px;font-size:14px}
+.endgame-record-summary{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:14px;line-height:1.6;color:#65543b}
+.endgame-history{border-top:1px solid #ddcfb5;padding-top:4px;font-size:14px}
+.endgame-history summary{cursor:pointer;min-height:44px;line-height:44px;color:#785722}
+.endgame-history ol{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto}
+.endgame-history li{display:flex;gap:12px;justify-content:space-between;padding:8px 0;border-top:1px solid #e7dcc7;line-height:1.6;flex-wrap:wrap}
+.endgame-record-summary .is-win,.endgame-history .is-win{color:#396c47}.endgame-record-summary .is-loss,.endgame-history .is-loss{color:#974c3c}
+@media(max-width:600px){
+ .world-scene--endgame .world-masthead h1{font-size:28px}
+ .world-scene--endgame .world-tabs button{font-size:14px;padding:8px}
+ .world-endgame-grid>article{padding:14px;gap:10px}
+ .endgame-card-heading{gap:12px}
+ .endgame-card-heading .endgame-insignia{width:70px;height:70px}
+ .world-endgame-grid .endgame-identity h3{font-size:22px}
+ .world-endgame-grid .field-actions>.button{padding:9px 11px}
+}
+
+/* Keep small portraits on the same reviewed crop in every scene. */
+.play-hero__portrait{aspect-ratio:1;flex-shrink:0;overflow:hidden}
+.play-hero__portrait>.battle-unit-portrait{width:100%;height:100%}
+
+/* The action order must remain reachable at both ends, even with ten actors. */
+.play-scene--battle .combat-order{justify-content:flex-start;min-width:0;scroll-padding-inline:8px;scrollbar-width:thin;padding:5px 4px 12px}
+.play-scene--battle .combat-order>button:first-child{margin-left:auto}.play-scene--battle .combat-order>button:last-child{margin-right:auto}
+.play-scene--battle .combat-order button{min-height:50px}
+.play-scene--battle .combat-order button>b{font-size:14px}
+.play-scene--battle .combat-scene{grid-template-rows:60px 76px minmax(360px,1fr) 230px;height:calc(100svh - 90px);min-height:830px}
+.play-scene--battle .combat-stage__viewport{overflow:hidden;isolation:isolate}
+.play-scene--battle .combat-stage__viewport:has(.is-zoomed){overflow:auto}
+.play-scene--battle .combat-board{overflow:hidden}
+.play-scene--battle .combat-unit{transition:none}
+.combat-marker-group__badge rect{fill:#fff8e9;stroke:#a78446;stroke-width:2;pointer-events:all}
+.combat-marker-group__badge text{fill:#5c4020;font:700 17px var(--serif);pointer-events:all}
+.combat-marker-group:focus-visible .combat-marker-group__badge rect{stroke:#83551f;stroke-width:4}
+.combat-group-choices button small{font-size:14px;line-height:1.5}
+.play-scene--battle .combat-roster{max-width:100%;scrollbar-width:thin}
+.play-scene--battle .combat-roster button{min-height:44px}.play-scene--battle .combat-roster button>span{font-size:14px}
+@media(max-width:1000px){
+ .world-scene--slaughter .world-trial{grid-template-columns:minmax(0,1fr) 250px;gap:20px;padding:18px}.world-trial__road{padding-left:18px}
+ .play-scene--battle .combat-scene{display:flex;flex-direction:column;height:auto;min-height:0;gap:12px}
+ .play-scene--battle .combat-order{flex:none;min-height:72px;margin:0}
+ .play-scene--battle .combat-layout{display:contents;height:auto;min-height:0}
+ .play-scene--battle .combat-main{order:2;min-height:0}
+ .play-scene--battle .combat-stage{flex:none;height:460px;min-height:460px}
+ .play-scene--battle .combat-layout>.battle-intel{order:4;height:auto;max-height:none;overflow:hidden}
+ .play-scene--battle .combat-sidebar{order:5;height:auto;max-height:none;overflow:visible}
+ .play-scene--battle .combat-sidebar:has(.combat-plan){order:3}
+ .play-scene--battle .combat-actions{order:3;width:100%;margin:0;position:static;min-height:0;max-height:none}
+ .play-scene--battle .combat-board{height:100%;min-height:0}
+ .play-scene--battle .combat-header{order:0;min-height:70px;flex:none;flex-wrap:wrap}
+ .play-scene--battle .combat-order{order:1}
+ .play-scene--battle .combat-turn-message>span{font-size:14px;line-height:1.6}
+}
+@media(max-width:600px){
+ .world-scene--slaughter{padding:12px}.world-scene--slaughter .world-masthead{display:block}.world-scene--slaughter .world-masthead__level{display:none}
+ .world-scene--slaughter .world-trial{grid-template-columns:1fr;padding:14px}.world-trial__road{padding:20px 0 0}
+ .trial-stages>div{padding:12px 3px;gap:6px}.trial-stages b{font-size:26px}.trial-stages span{font-size:14px}.world-trial .trial-stages{gap:4px}
+ .trial-earnings ul{grid-template-columns:1fr}.trial-next .button{width:100%}.trial-next>strong{font-size:22px}
+ .trial-history summary span{display:block;margin-left:18px}
+ .play-scene--battle .combat-stage{height:420px;min-height:420px}
+ .play-scene--battle .combat-stage__top{font-size:14px;gap:12px}
+ .play-scene--battle .combat-stage__top button{min-height:44px;flex:none;font-size:14px}
+ .play-scene--battle .combat-order>button:first-child{margin-left:0}.play-scene--battle .combat-order>button:last-child{margin-right:0}
+ .play-scene--battle .combat-layout>.battle-intel{display:block}.play-scene--battle .combat-layout>.battle-intel .battle-intel__art{height:240px}
+}

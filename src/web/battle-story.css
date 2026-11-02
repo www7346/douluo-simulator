@@ -1,0 +1,17 @@
+/* Variable-length story and controls must not consume the battlefield's grid row. */
+.play-scene--battle .combat-scene.combat-scene--story {
+  display:flex;
+  flex-direction:column;
+  height:auto;
+  min-height:0;
+  gap:12px;
+}
+.combat-scene--story .combat-story { order:6; min-width:0; width:100%; }
+@media(min-width:1081px) {
+  .play-scene--battle .combat-scene--story .combat-layout {
+    display:grid;
+    flex:none;
+    height:clamp(420px,calc(100svh - 400px),760px);
+    min-height:420px;
+  }
+}

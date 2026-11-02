@@ -1,0 +1,11 @@
+.worn-restraints{margin:1rem 0;padding:1rem;border:1px solid var(--border,#d7c9ab);border-radius:12px;background:rgba(255,252,244,.88);min-width:0}
+.worn-restraints>header{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.5rem}
+.worn-restraints h2{font-size:1.15rem;margin:0}.worn-restraints>header>span{font-size:.85rem;color:var(--muted,#756a55)}
+.worn-restraints__item+.worn-restraints__item{border-top:1px solid var(--border,#d7c9ab)}
+.worn-restraints__summary{display:flex;align-items:center;gap:.8rem;width:100%;min-height:72px;padding:.65rem 0;text-align:left;border:0;background:transparent;color:inherit;cursor:pointer}
+.worn-restraints__summary>.relic-art{width:58px;height:58px;flex:0 0 58px}.worn-restraints__summary>span:first-of-type{display:grid;gap:.25rem;min-width:0;flex:1}
+.worn-restraints__summary b,.worn-restraints__summary small,.worn-restraints__detail p{overflow-wrap:anywhere}.worn-restraints__summary small{color:var(--muted,#756a55)}
+.worn-restraints__detail{padding:.5rem 0 1rem;min-width:0}.worn-restraints__actions{display:flex;flex-wrap:wrap;gap:.65rem;align-items:end}.worn-restraints__actions>p,.worn-restraints__actions>details{flex-basis:100%}
+.worn-restraints select,.worn-restraints input{min-height:44px;max-width:100%}.worn-restraints button.button{min-height:44px}
+@media(max-width:600px){.worn-restraints{padding:.8rem}.worn-restraints__summary{gap:.6rem}.worn-restraints__actions>label{width:100%}}
+.play-custody-dialog input:not([type=checkbox]),.play-custody-dialog select{min-height:44px;max-width:100%;min-width:0}.play-custody-dialog label{min-width:0}

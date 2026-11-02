@@ -1,0 +1,27 @@
+.workshop-page{padding:20px;min-width:0;color:var(--fantasy-ink)}
+.workshop-modes{display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #d2c1a0;padding-bottom:14px}
+.workshop-modes .button{min-width:140px;min-height:44px}
+.workshop-page>.atelier-categories{display:flex;flex-wrap:wrap;margin:0 0 20px;gap:6px;width:100%;padding:0;background:none;border:0}
+.workshop-page>.atelier-categories button{flex:1;min-width:85px;min-height:44px;border:1px solid #d2c1a0;border-radius:5px;background:#f7f1e6;color:#6b5534}
+.workshop-page>.atelier-categories button.is-active{background:#ad8740;color:#fff}
+.workshop-page .workshop-flow__columns{margin-top:0}
+.workshop-blueprints>header{display:flex;justify-content:space-between;align-items:start;gap:16px;margin-bottom:16px}
+.workshop-blueprints h2{font:24px var(--serif);margin:0 0 10px}
+.workshop-blueprints>header p{font-size:14px;color:#806d51;margin:0}
+.workshop-blueprints>header input{width:220px;max-width:100%;margin:0}
+.workshop-blueprint-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.workshop-blueprint-filters .button{min-height:42px;padding:8px 12px}
+.workshop-blueprints-layout{display:grid;grid-template-columns:minmax(280px,.7fr) minmax(0,1.3fr);gap:20px;align-items:start}
+.workshop-blueprint-list{display:grid;gap:8px;max-height:650px;overflow:auto;padding:2px}
+.workshop-blueprint-list>button{display:flex;align-items:center;gap:12px;text-align:left;min-height:90px;padding:10px;border:1px solid #d1bd96;border-radius:6px;color:#5e482c;background:#faf6ed}
+.workshop-blueprint-list>button.is-selected{background:#f0e2c1;border-color:#a4772e;box-shadow:inset 3px 0 #a4772e}
+.workshop-blueprint-list .relic-art{width:64px;height:64px;min-height:0;flex:none}
+.workshop-blueprint-list span{display:grid;gap:8px;min-width:0}
+.workshop-blueprint-list strong{font-size:17px;overflow-wrap:anywhere}
+.workshop-blueprint-list small{font-size:12px;color:#8b7350}
+.workshop-blueprint-details{padding:20px;border:1px solid #d1bd96;background:#fffaf0;border-radius:7px;min-width:0;overflow-wrap:anywhere}
+.workshop-blueprint-details>.relic-art{display:block;width:160px;height:160px;min-height:0;margin:16px auto}
+.workshop-blueprint-details p,.workshop-blueprint-details li{font-size:15px;line-height:1.8}
+.workshop-blueprint-action{position:sticky;bottom:0;background:#fffaf0f5;padding:14px 0 0;margin-top:18px;border-top:1px solid #ddccb0}
+.workshop-blueprint-action>.button{width:100%;min-height:46px}
+.workshop-blueprint-cost{background:#f0e7d5;border-radius:4px;padding:10px}
+@media(max-width:800px){.workshop-page{padding:12px}.workshop-modes .button{min-width:0;flex:1}.workshop-blueprints>header{display:block}.workshop-blueprints>header label{display:block;margin-top:12px}.workshop-blueprints>header input{width:100%}.workshop-blueprints-layout{display:block}.workshop-blueprint-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:260px;margin-bottom:16px}.workshop-blueprint-list>button{display:grid;justify-items:center;text-align:center;gap:6px;padding:8px}.workshop-blueprint-list strong{font-size:15px}.workshop-blueprint-list span{gap:4px}.workshop-blueprint-details{padding:14px}.workshop-page>.atelier-categories button{min-width:calc(33% - 6px);font-size:14px}}

@@ -1,0 +1,35 @@
+import {useServerQuery} from '../use-game-query';
+import QueryStatus from './QueryStatus';
+import {useState} from 'react';
+import {Button} from '../components';
+import {useGame} from '../game-context';
+import {useActionFeedback} from '../use-action-feedback';
+import ActionFeedback from './ActionFeedback';
+const actions:Record<string,{name:string;domain:string;key:string}>={travel:{name:'前往地点',domain:'移动',key:'destinationId'},'resume-travel':{name:'继续途中行程',domain:'移动',key:'actionId'},equip:{name:'装备魂导器',domain:'物品',key:'itemId'},unequip:{name:'卸下魂导器',domain:'物品',key:'slot'},'use-restorative-item':{name:'使用恢复物品',domain:'物品',key:'itemId'},'use-prebattle-pill':{name:'服用战前丹药',domain:'物品',key:'itemId'},'use-field-ability':{name:'施放场外能力',domain:'战斗',key:'skillId'},'stop-maintenance':{name:'停止维持',domain:'战斗',key:'maintenanceSourceId'},'switch-martial-soul':{name:'切换武魂',domain:'战斗',key:'martialSoulId'}};
+actions['speak-person']={name:'向人物说话',domain:'言语',key:'targetId'};
+actions['propose-gift']={name:'提出赠物承诺',domain:'物品',key:'itemId'};
+actions['fulfill-gift']={name:'尝试交付已约定的赠物',domain:'物品',key:'commitmentId'};
+export default function FieldControlPanel({facts,active=true}:{facts:any;active?:boolean}){
+ const {view,controller,state}=useGame(),[executorId,setExecutor]=useState(facts.selectedPersonId??''),[type,setType]=useState(''),[resource,setResource]=useState(''),[targetId,setTarget]=useState(''),[modeId,setMode]=useState(''),[pathMode,setPathMode]=useState('balanced'),[speech,setSpeech]=useState(''),[quantity,setQuantity]=useState(1),[dueDay,setDueDay]=useState(0),[purposeId,setPurpose]=useState('');
+ const options=facts.fieldControlOptions??[],detail=useServerQuery<any>('scene.control-options',{executorId,actionType:type},{enabled:active&&Boolean(executorId)}),target=detail.data?.find((p:any)=>p.executorId===executorId),spec=actions[type];
+ const rows=!target||!spec?[]:spec.key==='commitmentId'?target.giftPromises:spec.key==='targetId'?[{id:facts.social.viewerId,name:'我'},...facts.social.nearby].filter((p:any)=>p.id!==executorId):spec.key==='destinationId'?target.destinations:spec.key==='actionId'?target.trips:spec.key==='itemId'?target.items.filter((i:any)=>type==='equip'?i.type==='魂导器':true):spec.key==='skillId'?target.abilities:spec.key==='martialSoulId'?target.souls:spec.key==='maintenanceSourceId'?target.maintenance:Object.entries(target.slots).filter(([,v])=>v).map(([id])=>({id,name:id}));
+ const selected=rows.find((r:any)=>r.id===resource),modes=selected?.modes??[],purpose=type==='use-field-ability'?(selected?.uses?.find((v:any)=>v.id===purposeId)??selected?.uses?.[0]):null;
+ const feedback=useActionFeedback(),run=async()=>{await feedback.run(()=>controller.dispatch('world.intent',{type:'issue-field-control',executorId,action:{type,[spec.key]:resource,...(purpose?purpose.scope:{}),...(type==='speak-person'?{text:speech}:{}),...(type==='propose-gift'?{targetId,quantity,dueDay:dueDay||state.世界.时间.day}:{}),...(type==='travel'?{mode:pathMode}:{}),...(targetId&&['use-restorative-item','use-field-ability'].includes(type)?{targetId}:{}),...(modeId&&['use-restorative-item','use-field-ability','use-prebattle-pill'].includes(type)?{modeId}:{})}}));};
+ if(!options.length&&!(facts.fieldOrders??[]).length)return null;
+ return <section><h3>场外控制命令</h3><p>需具备精神或灵魂控制。受控者使用自己的物品并承担费用；其行动限制和距离要求仍需满足。</p>
+  <ActionFeedback feedback={feedback}/>
+  <label>受控者<select value={executorId} onChange={e=>{setExecutor(e.target.value);setType('');setResource('');setTarget('');setMode('');}}><option value="">选择有命令权的受控者</option>{options.map((p:any)=><option key={p.executorId} value={p.executorId}>{p.name}</option>)}</select></label>
+  {executorId&&<QueryStatus query={detail}/>}
+  {target&&<><label>具体行动<select value={type} onChange={e=>{setType(e.target.value);setResource('');setTarget('');setMode('');}}><option value="">选择已获命令权的行动</option>{Object.entries(actions).filter(([id,a])=>id==='use-field-ability'?target.abilities.length>0:target.domains.includes(a.domain)).map(([id,a])=><option key={id} value={id}>{a.name}</option>)}</select></label>
+  {spec&&<><label>使用内容<select value={resource} onChange={e=>{setResource(e.target.value);setMode('');}}><option value="">选择持有的物品或能力</option>{rows.map((r:any)=><option key={r.id} value={r.id}>{r.name}{r.quantity?` ×${r.quantity}`:''}</option>)}</select></label>
+  {['use-restorative-item','use-field-ability'].includes(type)&&<label>目标<select value={targetId} onChange={e=>setTarget(e.target.value)}><option value="">受控者本人</option><option value={facts.logistics.viewerId}>我</option>{facts.social.nearby.filter((p:any)=>p.id!==executorId).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
+  {type==='use-field-ability'&&selected&&<><label>本次用途<select value={purpose?.id??''} disabled={view.busy} onChange={e=>setPurpose(e.target.value)}>{selected.uses?.map((use:any)=><option key={use.id} value={use.id}>{use.name}{use.available?'':` · ${use.reason}`}</option>)}</select></label>{purpose&&<p>受控者消耗：魂力 {purpose.cost??'—'}{purpose.materials?.length?`；${purpose.materials.map((m:any)=>`${m.name} ×${m.quantity}`).join('、')}`:''}</p>}</>}
+  {type==='travel'&&<label>路线偏好<select value={pathMode} onChange={e=>setPathMode(e.target.value)}><option value="balanced">均衡</option><option value="fastest">最快</option><option value="cheapest">最省钱</option></select></label>}
+  {type==='speak-person'&&<label>让受控者说出的原话<textarea value={speech} maxLength={2000} onChange={e=>setSpeech(e.target.value)}/></label>}
+  {type==='propose-gift'&&<><label>接收人<select value={targetId} onChange={e=>setTarget(e.target.value)}><option value="">选择在场接收人</option>{[{id:facts.social.viewerId,name:'我'},...facts.social.nearby].filter((p:any)=>p.id!==executorId).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>数量<input type="number" min={1} max={Math.min(selected?.quantity??999,999)} value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label><label>截止世界日<input type="number" min={state.世界.时间.day} max={state.世界.时间.day+365} value={dueDay||state.世界.时间.day} onChange={e=>setDueDay(Number(e.target.value))}/></label></>}
+  {type==='fulfill-gift'&&<p>按先前约定尝试交付。接收人须已同意，物品须齐备，控制效果也须仍在持续。</p>}
+  {modes.length>0&&<label>施放方式<select value={modeId} onChange={e=>setMode(e.target.value)}><option value="">默认模式</option>{modes.map((m:any)=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>}
+  <Button disabled={view.busy||!selected||type==='use-field-ability'&&(!purpose||!purpose.available)||type==='speak-person'&&!speech.trim()||type==='propose-gift'&&(!targetId||!Number.isSafeInteger(quantity)||quantity<1)} onClick={()=>void run()}>下达命令</Button></>}</>}
+  {(facts.fieldOrders??[]).slice(-12).reverse().map((r:any)=><article key={r.id}><p>{r.executorName} · {actions[r.action.type]?.name??r.action.type} · {r.status==='executed'?'已执行':r.status==='interrupted'?`途中暂停：${r.reason}`:`未能执行：${r.reason}`}</p></article>)}
+ </section>;
+}

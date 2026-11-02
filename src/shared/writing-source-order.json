@@ -1,0 +1,2000 @@
+{
+ "ny": [
+  {
+   "name": "⚠️使用介绍",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Tips：总结方式",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "main prompt",
+   "id": "preset-20261030-ny-global-2",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "<user>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Persona Description",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "真实感",
+   "id": "preset-20261030-ny-extra-2",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "</user>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "<info>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "防正能量",
+   "id": "preset-20261030-ny-global-1",
+   "enabled": true,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "World Info (before)",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "</info>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "<character>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Char Description",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "Char Personality",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "Scenario",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "</character>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "World Info (after)",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "NSFW Prompt",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Enhance Definitions",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "Chat Examples",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "<background>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "图片",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "repeat-",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "<history>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🗳Sigon-前情提要",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🗳Sogon-前情提要",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Chat History",
+   "id": "",
+   "enabled": true,
+   "role": "marker",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "🎞 平行故事-多视角",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🎞 平行故事-单角色",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "</history>",
+   "id": "",
+   "enabled": true,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "</background>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⚜️自由创建前端(开启小白x渲染可互动)",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🕰时间框",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🕰时间框简略版",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "👀心理透视",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📋动态状态栏",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪四个选项涩涩版本",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪user视角的四个选项",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪全篇实时总结（字多）",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪全篇实时总结（压缩）",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪文风-男性向1",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪文风1-感知特化",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪文风2-感情特化",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪文风3-语言特化",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪文风4-漫画轻小说",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🖋Sigon-专属定制文风",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🩹 Sogon-角色补丁",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 1,
+   "depth": 0
+  },
+  {
+   "name": "<Order>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "💭Sigon-剧情建议",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📋Sogon-状态贴片",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪防全知",
+   "id": "preset-20261030-ny-extra-1",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🎨图片生成(需小白X)",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📞实时语音互动(需小白x)",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪涩涩特化",
+   "id": "",
+   "enabled": true,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "👤user第一人称视角",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "👤第二人称user视角",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "👤第二人称char视角",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "👤第三人称",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "➡️防抢话 严格",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "↪️防抢话 宽松 可转述",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "➡️抢话",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "↪️转述",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "本体-长段落",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "本体-短段落",
+   "id": "preset-20261030-ny-extra-0",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "防重复",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪ 英&汉 双语输出",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪ 日&汉 双语输出",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪字数-严格 分段少字少",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪字数-宽松 分段多字多",
+   "id": "",
+   "enabled": true,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪格式加强",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "</Order>",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "❓克制重复cot",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "❓剧情cot",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📌衔接加强",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪扩写模式",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪扩写后推进剧情模式",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▪续写模式",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🎲情景剧场生成器",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Ny预设",
+   "id": "preset-20261030-ny-global-0",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  }
+ ],
+ "dream": [
+  {
+   "name": "Gemini随机开头",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦境思客Gemini",
+   "id": "preset-20261030-dream-global-0",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦境思客",
+   "id": "preset-20261030-dream-global-1",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "变量初始化",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "schema初始化-thinking",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "schema初始化",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "===预设定===",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "MVU强制 - 掉格式打开",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "MVU不更新 - 额外模型解析打开",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "===预设定结束===",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "预定义对话",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "预定义回答",
+   "id": "",
+   "enabled": true,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "开始设定",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "世界设定开始",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🔵===蓝灯内容与世界历史===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Char Description",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Char Personality",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "World Info (before)",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Persona Description",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "World Info (after)",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Scenario",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "世界设定结束",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "常驻蓝灯设定",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "对话历史开始",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Chat Examples",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "Chat History",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "对话历史结束",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===后置绿灯与变动设定===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "后置DX设定开始",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "绿灯与变量条目",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📚===主要文风（选一开启）===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "无文风",
+   "id": "preset-20261030-dream-style-0",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "新实验文风",
+   "id": "preset-20261030-dream-style-1",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦白话文风",
+   "id": "preset-20261030-dream-style-2",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "萌系轻小说文风",
+   "id": "preset-20261030-dream-style-3",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "自定义文风",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📚===次要文风（可多开，请适度）===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "保持信息差",
+   "id": "preset-20261030-dream-extra-0",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "色色防回避",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "色色软强化",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "禁止霸总",
+   "id": "preset-20261030-dream-extra-1",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "杀解释欲",
+   "id": "preset-20261030-dream-extra-2",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "结尾控制",
+   "id": "preset-20261030-dream-extra-3",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "NSFW-感官刺激",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "NSFW-古风",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🫵===角色设定===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "用户是user",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "用户是char",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "用户是上帝视角",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "用户是自定义角色",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🥷===人称设定===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "第一人称",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "第二人称",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "第三人称",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🔫===抢话设定(选开)===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "深度扮演",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "转述抢话",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "转述不抢话",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "严禁抢话",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "大纲模式",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "▶️===思客人格===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "思客：温和叙者",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "思客：自定义思维链",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "🖌️===字数要求===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "1000 字",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "2500 字",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "动态字数短",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "动态字数长",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "自定义字数",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===模型禁词===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "DeepSeek禁词",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Glm/Gemini禁词",
+   "id": "preset-20261030-dream-wording",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "自定义禁词",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===渠道适配===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "KimiK3思考",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Deepseek官方",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "硅基流动或其他",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Gemini思考适配",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===思考强度===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "普通思考",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "超短思考",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===角色分析===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "通用角色分析",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "同人角色分析",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "自定义角色分析",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===思维链===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "默认思维链",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "发散思维链",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "隐式发散思维链",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "DeepseekV4pro思维链",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "自定义思维链",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===选开功能===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "八股超杀（V2版本）",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦境选项 - 正常推进",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦境选项 - NSFW推进",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "思客说书（旧） - 剧情推进指导",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "思客大调查 - 展现你的剧情理解吧",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦鲸摘要 - 小总结（建议Gemini使用）",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦境场景信息",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦境平行事件",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "梦境自检修复 - 反八股",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "自定义缝合处",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===数据库兼容===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "SP黑科技数据库兼容",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "柚月の记忆表格兼容",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "柏宝书兼容",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Ruby分析兼容",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===设定结束===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "后置DX设定结束",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===输出模式(仅开启一个)===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "写作模式",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "大总结模式",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "聊天模式",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⭐===预填充===",
+   "id": "",
+   "enabled": false,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "☆Gemini预填充对话",
+   "id": "",
+   "enabled": true,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "☆Gemini预填充回复",
+   "id": "",
+   "enabled": true,
+   "role": "user",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "☆混元3预填充",
+   "id": "",
+   "enabled": false,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "☆KimiK3预填充",
+   "id": "",
+   "enabled": false,
+   "role": "assistant",
+   "position": 0,
+   "depth": 4
+  }
+ ],
+ "meow": [
+  {
+   "name": "（不要关）token重定义+初始化",
+   "id": "preset-20261030-meow-global-1",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "（必看）免责声明",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "用户角色",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "（不要关）召唤术",
+   "id": "preset-20261030-meow-global-0",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Persona Description",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "别关",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "World Info (before)",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "char",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Char Description",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Char Personality",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "/char",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Scenario",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "World Info (after)",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "（不要关）上下文构造-衔接",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "Chat Examples",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "Chat History",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "继续游戏",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "----角色控制----",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "😸情绪别太激烈",
+   "id": "preset-20261030-meow-extra-0",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "😸活人感加强",
+   "id": "preset-20261030-meow-extra-1",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "----涩涩内容----",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⛔️关闭NSFW",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "❤️防发情",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "❤️nsfw风格|色色！",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "❤️nsfw风格|正常",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "❤️nsfw风格|更舒缓",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "❤️ASMR对话",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "----文风要求----",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "要转述",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "不要转述",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📝文风（选一）丨s喵特调一",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📝文风（选一）|五感",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📝|文风（偷）",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "📝人称控制",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📝防投石",
+   "id": "preset-20261030-meow-extra-2",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📝字数要求",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "----额外设定----",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⚙️我不是主角（可以改）",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⚙️防抢话",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⚙️背景npc发展",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⚙️多视角（智能）",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⚙️多视角（全局）",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "⚙️内心话",
+   "id": "",
+   "enabled": false,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "🧪历史回顾",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "----格式要求----",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📏<game>标签（别关）",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📏行动选项",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📏小总结",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📏猫猫留言~",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "📏其它格式",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 0
+  },
+  {
+   "name": "【别关】",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  },
+  {
+   "name": "长思考",
+   "id": "",
+   "enabled": true,
+   "role": "system",
+   "position": 0,
+   "depth": 4
+  }
+ ]
+}

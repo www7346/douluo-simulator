@@ -1,0 +1,9 @@
+/* One full-screen selection surface shared by rings and research. */
+@keyframes choice-arrive{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes choice-reveal{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:none}}
+
+.choice-availability{flex:none;margin:8px 0 12px;padding:10px 14px;border-left:2px solid #a78446;background:rgba(250,245,230,0.85);color:#3d352c;font-size:13px;text-align:left}
+.choice-availability summary{cursor:pointer;color:#855f2a;line-height:1.6}
+.choice-availability summary span{margin-left:12px;font-size:12px;color:#6e6858}
+.choice-availability>div{max-height:160px;overflow:auto;line-height:1.75}
+.choice-availability p{margin:8px 0}

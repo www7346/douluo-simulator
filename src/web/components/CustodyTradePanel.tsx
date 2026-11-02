@@ -1,0 +1,24 @@
+import {useState} from 'react';
+import {ActionSection,Button} from '../components';
+import {useGame} from '../game-context';
+import {useActionFeedback} from '../use-action-feedback';
+import ActionFeedback from './ActionFeedback';
+const labels:Record<string,string>={pending:'等待买主答复',completed:'已成交',rejected:'已拒绝',cancelled:'已撤回',expired:'已过期',invalidated:'已失效'};
+function Proposal({target}:{target:any}){
+ const {view,controller}=useGame(),[buyerId,setBuyer]=useState(''),[gold,setGold]=useState('0'),[minutes,setMinutes]=useState('60'),[terms,setTerms]=useState<Record<string,{transferOwnership:boolean;transferControl:boolean}>>({});
+ const change=(id:string,key:'transferOwnership'|'transferControl',checked:boolean)=>setTerms({...terms,[id]:{...(terms[id]??{transferOwnership:false,transferControl:false}),[key]:checked}});
+ const feedback=useActionFeedback();
+ const submit=async()=>{await feedback.run(()=>controller.dispatch('world.intent',{type:'propose-custody-transfer',targetId:target.personId,buyerId,gold:Number(gold),expiresInMinutes:Number(minutes),deviceTerms:target.devices.filter((d:any)=>terms[d.itemId]?.transferOwnership||terms[d.itemId]?.transferControl).map((d:any)=>({itemId:d.itemId,...terms[d.itemId]}))}));};
+ return <ActionSection title={<>出售或转交{target.name}</>}><ActionFeedback feedback={feedback}/><label>买主<select value={buyerId} onChange={e=>setBuyer(e.target.value)}><option value="">选择现场人物</option>{target.buyers.map((p:any)=><option key={p.id} value={p.id} disabled={!!p.reason}>{p.name}{p.reason?` · ${p.reason}`:''}</option>)}</select></label><label>价款（金魂币，0为无偿转交）<input type="number" min="0" max="1000000000" step="1" value={gold} onChange={e=>setGold(e.target.value)}/></label><label>报价有效分钟<input type="number" min="1" max="1440" step="1" value={minutes} onChange={e=>setMinutes(e.target.value)}/></label><fieldset><legend>随同交付的拘束器</legend>{target.devices.map((d:any)=><div key={d.itemId}><p>{d.name}</p><label><input type="checkbox" disabled={!d.canTransferOwnership} checked={!!terms[d.itemId]?.transferOwnership} onChange={e=>change(d.itemId,'transferOwnership',e.target.checked)}/>器具一并交给买主</label><label><input type="checkbox" disabled={!d.canTransferControl} checked={!!terms[d.itemId]?.transferControl} onChange={e=>change(d.itemId,'transferControl',e.target.checked)}/>把我的操控权限交给买主</label></div>)}</fieldset><p>买主同意后成交。移交操控权限时，你为该拘束器设下的定时复锁也会取消。</p><Button disabled={view.busy||!buyerId} onClick={()=>void submit()}>提出报价</Button></ActionSection>;
+}
+export function CustodyTradeResponse({offerId,continueStory=false}:{offerId:string;continueStory?:boolean}){
+ const {view,controller}=useGame(),[reason,setReason]=useState('');
+ const feedback=useActionFeedback();
+ const respond=async(accept:boolean)=>{const saved=await feedback.run(()=>controller.dispatch('character.respond-custody-trade',{offerId,decision:{accept,reason:reason.trim()||(accept?'同意这次交易的价款与条款':'拒绝这次交易')}}));if(saved&&continueStory&&view.modelEnabled)await feedback.run(async()=>{try{await controller.continueStory();}catch{throw Error('回应已保存，故事暂未继续。请重试生成。');}});};
+ return <div><ActionFeedback feedback={feedback}/><label>回应理由（可选）<input value={reason} maxLength={600} onChange={e=>setReason(e.target.value)}/></label><Button disabled={view.busy} onClick={()=>void respond(true)}>同意并成交</Button><Button variant="ghost" disabled={view.busy} onClick={()=>void respond(false)}>拒绝</Button></div>;
+}
+export default function CustodyTradePanel({facts}:{facts:any}){
+ const {view,state,controller}=useGame(),playerId=state.角色.主控单位ID,feedback=useActionFeedback();
+ if(!facts.tradeOptions?.length&&!facts.trades?.length)return null;
+ return <ActionSection title={<>奴隶买卖</>}><ActionFeedback feedback={feedback}/>{facts.tradeOptions.map((t:any)=><Proposal key={t.personId} target={t}/>)}{facts.trades.slice(-16).reverse().map((r:any)=><ActionSection title={<>{r.personName} · {labels[r.status]}</>} key={r.id} defaultOpen={r.status==='pending'}><p>{r.sellerName} → {r.buyerName} · {r.gold>0?`${r.gold}金魂币`:'无偿转交'}</p><p>报价截止：第{Math.floor(r.expiresAt/1440)}日 {Math.floor(r.expiresAt%1440/60)}:{String(r.expiresAt%60).padStart(2,'0')}</p>{r.deviceTerms.map((t:any)=><p key={t.itemId}>{t.name}：{[t.transferOwnership?'器具归属':'',t.transferControl?'操控权限':''].filter(Boolean).join('、')}</p>)}{!r.deviceTerms.length&&<p>此次不转让拘束器，器具仍归原主。</p>}{r.response&&<p>{r.response.reason}</p>}{r.status==='pending'&&r.buyerId===playerId&&(r.responseReason?<p>{r.responseReason}</p>:<CustodyTradeResponse offerId={r.id}/>)}{r.status==='pending'&&r.buyerId!==playerId&&<Button disabled={view.busy||!view.modelEnabled} onClick={()=>void feedback.run(()=>controller.respondCustodyTrade(r.id))}>等待对方回应</Button>}{r.canCancel&&<Button variant="ghost" disabled={view.busy} onClick={()=>void feedback.run(()=>controller.dispatch('world.intent',{type:'cancel-custody-transfer',offerId:r.id}))}>撤回报价</Button>}</ActionSection>)}</ActionSection>;
+}

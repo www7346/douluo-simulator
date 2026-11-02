@@ -1,0 +1,27 @@
+{
+  "name": "斗罗大陆：武魂模拟器",
+  "short_name": "武魂模拟器",
+  "description": "本地优先、规则裁定的魂师成长网页游戏",
+  "start_url": "/#/home",
+  "display": "standalone",
+  "background_color": "#f5eed7",
+  "theme_color": "#f5eed7",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/soul-sigil.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+/* Primary actions stay outside modal content; only the actual content scrolls. */
+.modal__action-host{display:contents}
+.modal>footer:not([data-has-actions]):has(>.modal__action-host:empty){display:none}
+.modal>footer{background:#fcf8ee;max-height:40dvh;overflow:auto;overscroll-behavior:contain}
+.modal-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;padding:10px 0;background:#fcf8ee;position:sticky;bottom:0;z-index:6;flex:none}
+.modal-actions--docked{position:static;padding:0;flex:1;min-width:0}
+.modal-actions[inert]{opacity:.55;pointer-events:none}
+.modal-actions>strong,.modal-actions>small,.modal-actions>span{margin-right:auto;min-width:0;overflow-wrap:anywhere}
+.modal-actions>.button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;white-space:normal}
+.modal-actions .dungeon-symbol{width:24px;height:24px;flex:0 0 24px}
+.modal-actions .ui-icon{width:20px;height:20px;flex:0 0 20px}
+.modal__body{scrollbar-width:auto;scrollbar-gutter:stable;scroll-padding-block:16px}
+
+/* The recovery shortcut remains easy to find when the services rail scrolls. */
+.play-hero .play-world-tools{position:sticky;top:0;z-index:7;background:#faf5e7;padding:8px 0}
+.play-world-tools .play-world-tools__recover{grid-column:1/-1;min-height:62px;background:linear-gradient(120deg,#e6edcf,#f9f5df);border:2px solid #7a9156;color:#375c3d;white-space:normal;text-align:left}
+.play-world-tools__recover>span{display:grid;gap:3px}
+.play-world-tools__recover small{font:12px/1.5 var(--serif);color:inherit}
+.play-world-tools__recover:disabled{cursor:default;opacity:.7}
+.play-world-tools__recover:focus-visible{outline:3px solid #55783e;outline-offset:2px}
+
+/* Do not scroll the tournament's next-match action out with its bracket. */
+.play-competition-dialog>.modal__body{overflow:hidden}
+.play-competition-dialog .competition-scene{height:100%;min-height:0;overflow:hidden}
+.play-competition-dialog .competition-body{overflow:auto;overscroll-behavior:contain}
+.play-competition-dialog .competition-action,.play-competition-dialog .competition-masthead{flex:none}
+.play-competition-dialog .competition-lobby{overflow:auto;min-height:0}
+.competition-action .competition-compact-links{flex-basis:100%;order:3;margin:0}
+.play-battle-dialog .combat-header{position:sticky;top:-14px;z-index:8;background:#fcf8ee}
+
+/* The route and acquired loot have independent scroll areas, never the exit. */
+.play-expedition-dialog>.modal__body{display:flex;overflow:hidden}
+.play-expedition-dialog .play-activity-dialog__scene{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0}
+.play-expedition-dialog .dungeon-atlas{display:flex;flex-direction:column;flex:1;min-height:0;height:auto;overflow:hidden}
+.play-expedition-dialog .dungeon-chart{display:flex;flex-direction:column;flex:1;min-height:0}
+.play-expedition-dialog .dungeon-heading{flex:none;padding:10px 14px;gap:12px}
+.play-expedition-dialog .dungeon-heading h1{font-size:23px}
+.play-expedition-dialog .dungeon-heading>p{display:none}
+.play-expedition-dialog .dungeon-heading>.dungeon-symbol{width:40px;height:40px;flex:none}
+.play-expedition-dialog .dungeon-map{height:auto;min-height:100px;flex:1}
+.play-expedition-dialog .dungeon-legend{flex:none;max-height:40px;overflow:auto;padding:6px}
+.play-expedition-dialog .dungeon-room{height:auto;min-height:0;max-height:36%;flex:0 1 auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:10px 14px;overflow:hidden}
+.play-expedition-dialog .dungeon-room__story{height:auto;min-height:0;padding-left:0}
+.play-expedition-dialog .dungeon-room__vignette{display:none}
+.play-expedition-dialog .dungeon-room__title h2{white-space:normal;font-size:20px}
+.play-expedition-dialog .dungeon-room__controls{min-height:0;justify-content:flex-start;overflow:auto}
+.play-expedition-dialog .dungeon-loot{overflow:auto;min-height:0}
+.play-expedition-dialog .dungeon-room__controls:empty{display:none}
+
+.play-map-dialog .atlas__canvas{min-height:120px}
+.play-map-dialog .atlas__details{max-height:25dvh;scrollbar-width:auto}
+.modal-actions .atlas__services{display:contents}
+.modal-actions .atlas-action-mode{display:flex;align-items:center;gap:8px;font-size:14px;margin:0}
+.atlas-action-mode select{min-height:44px;width:auto;max-width:150px}
+.modal-actions .atlas__services>.button{width:auto;margin:0}
+
+.creation-quick>.creation-quick-launch{position:sticky;top:0;z-index:9;padding:12px 16px;border:1px solid #cbb98c;border-radius:8px;background:#fcf8eef5;box-shadow:0 4px 12px #49361415}
+
+.communication-content .conversation-rooms{height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0}
+.conversation-rooms>.communication-view__head{flex:none;margin:0;padding:8px 16px}
+.conversation-rooms__setup{flex:0 1 auto;min-height:0;max-height:40%;overflow:auto;overscroll-behavior:contain}
+.conversation-rooms__setup>.field-actions,.conversation-rooms__setup>h3,.conversation-rooms__setup>.muted{margin:0;padding:8px 16px}
+.conversation-rooms__setup>p{margin:0;padding:6px 16px;font-size:13px}
+.conversation-rooms__list{flex:none;max-height:100px;overflow:auto;margin:0;padding:8px 16px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.conversation-rooms__list button{padding:6px 10px}
+.conversation-rooms__messages{flex:1;min-height:0;max-height:none;overflow:auto;padding:10px 16px;scrollbar-width:auto}
+.conversation-rooms__composer{flex:none;display:flex;align-items:flex-end;gap:10px;padding:10px 16px;border-top:1px solid var(--line);background:#f4f1e7}
+.conversation-rooms__composer>label{flex:1;min-width:0;display:grid;gap:4px;font-size:12px}
+.conversation-rooms__composer textarea{min-height:60px;max-height:120px;resize:vertical}
+.conversation-rooms__composer>p{font-size:12px;max-width:150px}
+
+@media(max-width:800px){
+ .play-mobile-tools{position:sticky;top:0;z-index:12;background:#faf5e7;padding-top:4px}
+ .play-mobile-tools .play-world-tools{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+ .play-mobile-tools .play-world-tools .play-world-tools__recover{flex-direction:row;justify-content:center;min-height:46px;font-size:15px;padding:6px 10px}
+ .play-mobile-tools .play-world-tools__recover>span{display:flex;align-items:center;gap:12px}
+ .play-world-tools .play-world-tools__map{grid-column:auto}
+ .modal>footer{padding:10px 12px}
+ .modal-actions{gap:6px}
+ .modal-actions>.button{flex:1 1 auto;padding:8px 12px}
+ .modal-actions>strong,.modal-actions>small,.modal-actions>span{font-size:13px}
+ .play-expedition-dialog .dungeon-room{grid-template-columns:minmax(0,1fr)}
+ .play-expedition-dialog .dungeon-room__story>p{display:none}
+ .play-expedition-dialog .dungeon-room__title{margin:0}
+ .play-expedition-dialog .dungeon-heading h1{font-size:18px}
+ .play-expedition-dialog .dungeon-room__title h2{font-size:17px}
+ .play-expedition-dialog .dungeon-legend{display:none}
+ .play-competition-dialog .competition-masthead{padding-bottom:6px}
+ .play-competition-dialog .competition-masthead h1{font-size:24px}
+ .play-competition-dialog .competition-action{padding:8px;margin-top:6px}
+ .play-competition-dialog .competition-action strong{font-size:14px;line-height:1.4}
+ .play-competition-dialog .competition-chart__legend{display:none}
+ .creation-quick>.creation-quick-launch{top:0;padding:8px 12px;gap:6px}
+}

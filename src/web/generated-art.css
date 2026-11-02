@@ -1,0 +1,17 @@
+/* Atlas crops share the same semantic selection across every game surface. */
+.generated-art{display:block;aspect-ratio:1;object-fit:contain;border-radius:12px;background:#eee9d7;border:1px solid #cbb780;box-shadow:0 4px 15px #07120d26;flex-shrink:0;overflow:hidden}
+.generated-art--small{width:54px;height:54px}
+.generated-art--soul{width:112px;height:112px;float:left;margin:4px 20px 12px 0}
+.ability-art-heading{display:flex;align-items:center;gap:14px}
+.choice-card__art .generated-art--choice{margin:auto;width:min(100%,180px);height:auto;max-height:100%;border-radius:32px 32px 12px 12px;box-shadow:0 6px 18px #8e744323;border:1px solid #bcab7d}
+.choice-card__art{overflow:visible}
+.choice-reward .generated-art--reward{width:180px;height:180px;margin:0 auto 24px}
+.combat-action-list>button{position:relative}
+.combat-action-list>button:has(.generated-art--action){padding-right:46px}
+.generated-art--action{position:absolute;right:8px;top:8px;width:30px;height:30px;margin:0;border-radius:8px}
+.item-details__art .relic-art{width:90px;height:90px;margin:0 0 16px}
+.relic-inspection .item-details__art{display:none}
+.relic-art.generated-art{padding:0;max-width:100%}
+@media(max-width:600px){.generated-art--small{width:44px;height:44px}.choice-card__art .generated-art--choice{width:88px;height:88px}}
+.choice-card.is-multi .generated-art--choice{width:64px;height:64px;border-radius:12px}
+.choice-card.is-four .generated-art--choice{width:48px;height:48px}

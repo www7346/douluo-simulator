@@ -1,0 +1,158 @@
+{
+  "ah-yin-human": {
+    "name": "阿银·人形",
+    "src": "/art/character-figures-v2/ah-yin-human-v3.webp",
+    "band": "adult",
+    "head": [
+      1024,
+      1536,
+      425,
+      45,
+      280
+    ]
+  },
+  "xiao-wu-notting": {
+    "name": "小舞·诺丁",
+    "src": "/art/character-figures-v2/xiao-wu-notting-v3.webp",
+    "band": "child",
+    "head": [
+      1024,
+      1536,
+      390,
+      185,
+      320
+    ]
+  },
+  "meng-yiran": {
+    "name": "孟依然",
+    "src": "/art/character-figures-v2/meng-yiran-v6.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      400,
+      20,
+      320
+    ]
+  },
+  "xiao-wu-shrek": {
+    "name": "小舞·史莱克",
+    "src": "/art/character-figures-v2/xiao-wu-shrek-v3.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      420,
+      170,
+      300
+    ]
+  },
+  "zhu-zhuqing-shrek": {
+    "name": "朱竹清·史莱克",
+    "src": "/art/character-figures-v2/zhu-zhuqing-shrek-v3.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      440,
+      55,
+      280
+    ]
+  },
+  "ning-rongrong-sect": {
+    "name": "宁荣荣·九宝",
+    "src": "/art/character-figures-v2/ning-rongrong-sect-v3.webp",
+    "band": "adult",
+    "head": [
+      1024,
+      1536,
+      395,
+      30,
+      280
+    ]
+  },
+  "xiao-wu-tournament": {
+    "name": "小舞·大赛",
+    "src": "/art/character-figures-v2/xiao-wu-tournament-v3.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      430,
+      170,
+      320
+    ]
+  },
+  "zhu-zhuqing-tournament": {
+    "name": "朱竹清·大赛",
+    "src": "/art/character-figures-v2/zhu-zhuqing-tournament-v3.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      430,
+      50,
+      280
+    ]
+  },
+  "shui-binger": {
+    "name": "水冰儿",
+    "src": "/art/character-figures-v2/shui-binger-v3.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      270,
+      50,
+      280
+    ]
+  },
+  "shui-yuer": {
+    "name": "水月儿",
+    "src": "/art/character-figures-v2/shui-yuer-v3.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      325,
+      55,
+      280
+    ]
+  },
+  "zhu-zhuqing-title": {
+    "name": "朱竹清·幽冥斗罗",
+    "src": "/art/character-figures-v2/zhu-zhuqing-title-v3.webp",
+    "band": "adult",
+    "head": [
+      1024,
+      1536,
+      425,
+      65,
+      280
+    ]
+  },
+  "tang-tiantian": {
+    "name": "唐甜甜",
+    "src": "/art/character-figures-v2/tang-tiantian-v3.webp",
+    "band": "teen",
+    "head": [
+      1024,
+      1536,
+      365,
+      65,
+      290
+    ]
+  },
+  "bai-chenxiang": {
+    "name": "白沉香",
+    "src": "/art/character-figures-v2/bai-chenxiang-v3.webp",
+    "band": "adult",
+    "head": [
+      1024,
+      1536,
+      425,
+      100,
+      300
+    ]
+  }
+}

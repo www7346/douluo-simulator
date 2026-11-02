@@ -1,0 +1,8 @@
+.field-item-use { display:grid; gap:.65rem; width:100%; min-width:0; }
+.field-item-use label { display:grid; gap:.45rem; min-width:0; }
+.field-item-use select { width:100%; max-width:100%; min-width:0; padding:.65rem; font:inherit; color:inherit; border:1px solid #cbb88b; border-radius:4px; background:#fffdf5; }
+.field-item-use p,.prepared-pills p { margin:.25rem 0; font-size:.88rem; line-height:1.6; }
+.field-item-use ul,.prepared-pills ul { margin:.35rem 0; padding-left:1.2rem; }
+.prepared-pills { margin:.8rem 0; padding:.8rem 1rem; border:1px solid #cbb88b; border-radius:6px; background:#f5f1e4; color:#655333; overflow-wrap:anywhere; }
+.prepared-pills h3 { margin:0 0 .4rem; font-size:1rem; }
+.prepared-pills > div+div { margin-top:.6rem; border-top:1px solid #ded2b9; padding-top:.5rem; }

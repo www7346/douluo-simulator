@@ -1,0 +1,27 @@
+export type UiIconName='chat'|'group'|'store'|'lock'|'close'|'back'|'forward'|'reroll'|'check'|'equip'|'sound'|'muted'|'forest'|'battle'|'ring'|'book'|'settings'|'bag'|'person'|'craft'|'cup'|'chest'|'camp'|'boss'|'coin'|'plus'|'minus'|'move'|'escape'|'wait'|'shield'|'beast'|'elite'|'flag';
+const PATHS:Record<UiIconName,string>={
+  chat:'M4 3h16v13H9l-5 5V3ZM8 7h8M8 11h6',
+  group:'M8 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM16 5a3 3 0 1 1 0 6M2 21v-3a6 6 0 0 1 12 0v3M16 14a6 6 0 0 1 6 6v1',
+  store:'M3 10l2-7h14l2 7M3 10a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0M5 13v8h14v-8M10 21v-6h4v6',
+  lock:'M5 10h14v12H5ZM8 10V6a4 4 0 0 1 8 0v4M12 15v3',
+  plus:'M12 5v14M5 12h14',minus:'M5 12h14',move:'M12 2v20M2 12h20M8 6l4-4 4 4M8 18l4 4 4-4M6 8l-4 4 4 4M18 8l4 4-4 4',escape:'M9 3H3v18h6M8 12h13M16 7l5 5-5 5',wait:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 6v6l4 3',shield:'M12 2l9 4v6c0 5-9 10-9 10S3 17 3 12V6ZM8 12l3 3 5-6',beast:'M4 3l4 5h8l4-5-1 12-7 7-7-7ZM8 12h1m6 0h1M10 17h4',elite:'M3 3l4 3 5-4 5 4 4-3-2 6H5ZM5 11l1 7 6 4 6-4 1-7M8 13h1m6 0h1M10 18h4',flag:'M5 22V3h13l-3 5 3 5H5',
+  coin:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20ZM12 5a7 7 0 1 0 0 14 7 7 0 0 0 0-14ZM12 7l3 5-3 5-3-5ZM8 12h8',
+  close:'M6 6l12 12M18 6L6 18',back:'M14 5l-7 7 7 7M7 12h14',forward:'M10 5l7 7-7 7M17 12H3',
+  reroll:'M20 10a8 8 0 0 0-14-4L3 9m0-5v5h5M4 14a8 8 0 0 0 14 4l3-3m0 5v-5h-5',
+  check:'M4 12l5 5L20 6',equip:'M8 4l4 2 4-2 5 5-4 3v8H7v-8L3 9Z',
+  sound:'M3 9h4l5-5v16l-5-5H3ZM16 8q5 4 0 8M19 4q8 8 0 16',
+  muted:'M3 9h4l5-5v16l-5-5H3ZM16 9l6 6M22 9l-6 6',
+  forest:'M12 22V10M12 17C2 16 3 7 4 4c6 0 9 4 8 13ZM12 13C12 4 17 2 21 2c1 7-1 11-9 11Z',
+  battle:'M4 3l4 1 11 14-2 2L4 7ZM4 21l5-5M2 17l5 5M20 3l-4 1-4 5M20 7l-5 6M15 17l5 4M17 22l5-5',
+  ring:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM12 6l4 6-4 6-4-6ZM3 12h3m12 0h3',
+  book:'M12 5C8 2 4 3 2 4v16c3-2 7-2 10 0 3-2 7-2 10 0V4c-2-1-6-2-10 1Zm0 0v15M5 7l4 1M15 8l4-1',
+  settings:'M10 2h4l1 3 3 2 3 1v4l-3 1-2 3-1 3h-4l-1-3-3-2-3-1V9l3-1 2-3ZM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z',
+  bag:'M5 7h14l2 14H3ZM8 7V5a4 4 0 0 1 8 0v2M8 12h8M10 12v3h4v-3',
+  person:'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM4 21v-2a8 8 0 0 1 16 0v2',
+  craft:'M3 3l4 1 2 5-4 2-3-4ZM8 10l11 11 3-3L11 7M15 3l6 1-3 3-2 4M3 21l6-6',
+  cup:'M7 3h10v7a5 5 0 0 1-10 0ZM7 5H3v3q0 5 5 5M17 5h4v3q0 5-5 5M12 15v5M7 21h10',
+  chest:'M3 11V8a5 5 0 0 1 5-5h8a5 5 0 0 1 5 5v3M3 11h18v10H3ZM10 11v4h4v-4M7 4v7M17 4v7',
+  camp:'M9 16c-5-3-1-8 2-12 0 4 6 5 6 9 0 3-2 5-5 5s-4-2-3-4M4 19l16 3M4 22l16-3',
+  boss:'M3 6l4 4 5-7 5 7 4-4-3 12H6ZM6 21h12M9 13h6',
+};
+export default function UiIcon({name,className=''}:{name:UiIconName;className?:string}){return <svg className={`ui-icon ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d={PATHS[name]}/></svg>;}

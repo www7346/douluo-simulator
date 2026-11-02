@@ -1,0 +1,23 @@
+.opening-workshop {display:grid;gap:1rem;min-width:0}
+.opening-workshop p{overflow-wrap:anywhere}
+.opening-workshop__editor{scroll-margin-top:1rem;min-width:0}
+.opening-workshop label{display:grid;gap:.35rem;min-width:0}
+.opening-workshop input,.opening-workshop select,.opening-workshop textarea{max-width:100%;min-width:0;width:100%;box-sizing:border-box}
+.opening-workshop input:not([type=checkbox]):not([type=radio]),.opening-workshop select{min-height:44px}
+.opening-workshop textarea{min-height:5rem;resize:vertical}
+.opening-workshop fieldset{min-width:0;border:1px solid #b89c6450;border-radius:.7rem;padding:.85rem}
+.opening-workshop__tabs,.opening-workshop__actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.opening-workshop__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.75rem;margin:.75rem 0}
+.opening-workshop label.opening-workshop__check{display:flex;align-items:center;gap:.5rem}
+.opening-workshop__check input{width:auto;flex:none}
+.opening-workshop__branch{margin:1rem 0}
+.opening-workshop__node,.opening-workshop__saved,.opening-workshop__proposal{padding:.8rem;margin:.75rem 0;border:1px solid #b89c6438;border-radius:.65rem;background:#10182138}
+.opening-workshop__node-head{display:flex;justify-content:space-between;gap:.5rem;align-items:center;flex-wrap:wrap}
+.opening-workshop__advanced{margin:.75rem 0}
+.opening-workshop__advanced summary{cursor:pointer;margin-bottom:.65rem}
+.opening-workshop__advanced textarea{font:12px/1.5 monospace;min-height:8rem}
+.opening-workshop__preview{display:flex;gap:1rem;align-items:flex-start;padding:1rem;border:1px solid #d5b46766;border-radius:.85rem;background:#b89c6410}
+.opening-workshop__preview .relic-art{width:100px;height:100px;flex:none}
+.opening-workshop__preview h3{margin-top:0}
+.opening-workshop__total{border-top:1px solid #b89c6440;padding-top:.8rem}
+@media(max-width:540px){.opening-workshop>.panel{padding:.65rem}.opening-workshop__node{padding:.55rem}.opening-workshop__preview{gap:.6rem;padding:.7rem}.opening-workshop__preview .relic-art{width:64px;height:64px}.opening-workshop__tabs .button{flex:1 1 40%}.opening-workshop__actions .button{max-width:100%}.opening-workshop fieldset{padding:.5rem}}

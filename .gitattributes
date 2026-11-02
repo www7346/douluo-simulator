@@ -1,0 +1,6 @@
+tests/fixtures/formal-card-v1.10/* text eol=lf
+# Evidence receipts hash exact file bytes. Keep them stable across Windows checkouts.
+output/normal-campaign/** text eol=lf
+output/playwright/**/*.json text eol=lf
+# Preserve the redistributable runtime license verbatim.
+desktop/node-LICENSE -text -whitespace

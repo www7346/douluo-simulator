@@ -1,0 +1,13 @@
+.story-inline-card{margin:1rem auto;padding:1rem;max-width:42rem;border:1px solid #9f875b77;border-radius:.65rem;background:linear-gradient(140deg,#29243d,#171b25);color:#eee4d1;overflow-wrap:anywhere;white-space:normal}
+.story-inline-card header{display:flex;gap:.6rem;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-bottom:.7rem;color:#ecd39b}
+.story-inline-card small{color:#c6bba8;font-size:.78rem}
+.story-inline-card__person{display:flex;gap:.8rem;align-items:center;margin-bottom:.65rem}
+.story-inline-card__person .conversation-avatar{width:2.8rem;height:2.8rem;flex:0 0 2.8rem;overflow:hidden;border-radius:50%}
+.story-inline-card__resources{display:flex;flex-wrap:wrap;gap:.45rem .9rem;margin:.5rem 0;font-size:.86rem}
+.story-inline-card__resources span{padding:.35rem .55rem;background:#ffffff09;border-radius:.3rem}
+.story-inline-card__units{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:.8rem}
+.story-inline-card summary{cursor:pointer;color:#ecd39b;font-size:.88rem}
+.story-inline-card li{line-height:1.6;font-size:.86rem}
+.story-inline-card p{margin:.5rem 0;line-height:1.7}
+.story-inline-card__ring{display:inline-block;margin:.5rem .5rem 0 0;font-size:.85rem}
+@media(max-width:520px){.story-inline-card{padding:.8rem;margin:.8rem 0}.story-inline-card header{display:block}.story-inline-card header small{display:block;margin-top:.25rem}}

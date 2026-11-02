@@ -1,0 +1,1400 @@
+{
+  "labels": {
+    "contract.oath": "灵魂誓约",
+    "trigger.contract": "背誓与解约发作",
+    "payload.death": "死亡",
+    "modifier.world_duration": "长期世界期限",
+    "status.limited_followup": "蓄势追击",
+    "payload.stack_confluence": "追击合流",
+    "status.next_check_penalty": "出手干扰",
+    "status.battle_resource": "战斗蓄能",
+    "payload.resource_damage": "蓄势一击",
+    "payload.resource_endstate": "力竭",
+    "payload.zone_dispel": "破除遮蔽",
+    "status.hit_advantage": "命中优势",
+    "modifier.hit_advantage": "本次攻击·命中优势",
+    "status.hit_disadvantage": "命中干扰",
+    "status.hit_reroll": "失手重掷",
+    "modifier.hit_reroll": "本次攻击·失手重掷",
+    "status.evasion_reroll": "规避重掷",
+    "status.sure_hit": "必中",
+    "modifier.sure_hit": "本次攻击·必中",
+    "status.absolute_evasion": "绝对闪避",
+    "status.critical_guarantee": "会心保证",
+    "modifier.critical_guarantee": "本次攻击·会心保证",
+    "status.critical_guard": "暴击抑制",
+    "status.miss_graze": "失手补偿",
+    "modifier.miss_graze": "本次攻击·失手补偿",
+    "status.mind_control": "精神控制",
+    "status.soul_control": "灵魂控制",
+    "status.cognition_shift": "认知改造",
+    "transform.disguise": "伪装",
+    "transform.sex": "身体性转",
+    "release.touch": "接触释放",
+    "release.melee": "近战释放",
+    "release.projectile": "投射释放",
+    "target.single": "单体目标",
+    "target.cluster": "小范围簇",
+    "target.line": "直线",
+    "target.self": "自身",
+    "target.aura": "光环快照",
+    "target.cone": "锥形区域",
+    "target.burst": "指定爆发区域",
+    "target.chain": "连锁多目标",
+    "check.physical_attack": "物理攻击检定",
+    "check.soul_attack": "魂力攻击检定",
+    "check.save": "属性豁免",
+    "payload.damage": "伤害",
+    "payload.residual": "微弱残响",
+    "payload.shield": "护盾",
+    "payload.heal": "治疗",
+    "payload.arcane_lock": "临时魔法锁",
+    "payload.unlock": "实体解锁",
+    "payload.suppress_lock": "暂抑锁效",
+    "payload.rule_break": "条件规则破坏",
+    "payload.analyze_lock": "分析实体锁",
+    "payload.create_key": "实体钥匙造物",
+    "payload.repair_item": "装备修复",
+    "realm.store": "空间收容",
+    "realm.capture": "收入独立空间",
+    "realm.deploy": "召唤对应画中人物",
+    "payload.fabricate": "永久造物",
+    "payload.soul_damage": "魂力损伤",
+    "payload.soul_restore": "魂力恢复",
+    "payload.restore": "动态生命魂力恢复",
+    "payload.cleanse": "净化",
+    "payload.dispel": "驱散",
+    "payload.revive": "复活",
+    "payload.drain": "生命汲取",
+    "status.bind": "束缚",
+    "status.paralysis": "麻痹积累",
+    "status.burn": "灼烧",
+    "status.poison": "中毒",
+    "status.armor_break": "破甲",
+    "passive.equipment_stat": "装备常驻加成",
+    "passive.element_amplify": "属性伤害增幅",
+    "status.buff": "战斗数值修正",
+    "status.stun": "眩晕",
+    "status.fear": "恐惧",
+    "status.charm": "魅惑",
+    "status.blind": "致盲",
+    "status.silence": "封技",
+    "status.mute": "禁声",
+    "status.desire": "欲火",
+    "intimate.stimulate": "情欲刺激",
+    "intimate.climax": "强制高潮",
+    "status.limb_bind": "肢体拘束",
+    "status.power_seal": "能力封印",
+    "status.sleep": "睡眠",
+    "status.slow": "迟缓",
+    "status.haste": "加速",
+    "status.invisibility": "隐身",
+    "status.invulnerable": "条件无敌",
+    "status.regeneration": "再生",
+    "status.status_guard": "状态防护",
+    "status.resistance_shift": "抗性改变",
+    "status.mark": "持续标记追踪",
+    "status.eternal_wound": "复合永久创伤",
+    "copy.skillset": "临时技能复制",
+    "modifier.next_skill": "下次技能或制造增幅",
+    "move.knockback": "击退",
+    "move.pull": "拉拽",
+    "move.teleport": "瞬移",
+    "move.flight": "飞行",
+    "move.approach": "触及追击",
+    "move.pursuit": "标记追击",
+    "zone.hazard": "危险区域",
+    "zone.wall": "墙体",
+    "zone.obscure": "遮蔽区域",
+    "domain.field": "动态领域",
+    "summon.entity": "召唤实体",
+    "transform.form": "形态变化",
+    "transform.martial_avatar": "武魂真身",
+    "reaction.counter": "反制",
+    "reaction.reflect": "反弹吸收转化",
+    "sustain.maintain": "维持",
+    "channel.followup": "有限同源追击",
+    "channel.check-penalty": "后续检定压制",
+    "channel.battle-resource": "战斗事件资源",
+    "channel.zone-dispel": "空间区域驱散",
+    "channel.item-seal": "物品超凡封锁",
+    "channel.summon-inheritance": "指定技能实体继承",
+    "channel.avatar-enhancement": "定向真身增强",
+    "channel.hit-interference": "命中干涉",
+    "channel.melee": "近战打击",
+    "channel.touch": "接触传递",
+    "channel.projectile": "远程投射",
+    "channel.beam": "射线贯穿",
+    "channel.breath": "吐息扩散",
+    "channel.burst": "爆发区域",
+    "channel.chain": "连锁传导",
+    "channel.aura": "光环辐射",
+    "channel.entangle": "缠绕拘束",
+    "channel.poison": "毒蚀传递",
+    "channel.burn": "燃烧附着",
+    "channel.freeze": "冻结塑形",
+    "channel.paralyze": "神经麻痹",
+    "channel.armor_break": "破甲震荡",
+    "channel.shield": "护盾守护",
+    "channel.repair": "物质修复",
+    "channel.fabricate": "永久造物",
+    "channel.key-creation": "实体钥匙造物",
+    "channel.device-lock": "锁定解构",
+    "channel.arcane-lock": "魔法锁构造",
+    "channel.rule-break": "条件规则破坏",
+    "channel.heal": "生命治疗",
+    "channel.cleanse": "净化驱散",
+    "channel.drain": "生命汲取",
+    "channel.buff": "属性增幅",
+    "channel.debuff": "属性压制",
+    "channel.fear": "威压恐惧",
+    "channel.charm": "心灵魅惑",
+    "channel.sleep": "睡眠梦境",
+    "channel.blind": "感知剥夺",
+    "channel.silence": "封技沉默",
+    "channel.stealth": "隐匿幻象",
+    "channel.movement": "机动位移",
+    "channel.status-guard": "状态防护",
+    "channel.resistance": "抗性改变",
+    "channel.resource": "魂力循环",
+    "channel.sensory": "感知侦察",
+    "channel.flight": "飞行升空",
+    "channel.contract-oath": "灵魂誓约",
+    "channel.death": "真实死亡",
+    "channel.world-duration": "长期世界期限",
+    "channel.realm-storage": "人物空间收容",
+    "channel.teleport": "空间跃迁",
+    "channel.area-shaping": "区域塑形",
+    "channel.domain": "领域展开",
+    "channel.summon": "实体召唤",
+    "channel.disguise": "仪容伪装",
+    "channel.transform": "形态变化",
+    "channel.counter": "反应反制",
+    "channel.sustain": "持续维持",
+    "channel.absorption": "属性吸收",
+    "channel.invulnerability": "绝对防御",
+    "channel.revive": "生命复苏",
+    "channel.soul-interference": "灵魂干涉",
+    "channel.seal": "封印压制",
+    "channel.formation": "阵法编织",
+    "attribute.physical": "物理",
+    "attribute.metal": "金",
+    "attribute.wood": "木",
+    "attribute.water": "水",
+    "attribute.fire": "火",
+    "attribute.earth": "土",
+    "attribute.wind": "风",
+    "attribute.thunder": "雷",
+    "attribute.ice": "冰",
+    "attribute.light": "光",
+    "attribute.dark": "暗",
+    "attribute.toxic-corrosion": "毒蚀",
+    "attribute.life": "生命",
+    "attribute.death": "死亡",
+    "attribute.destruction": "毁灭",
+    "attribute.mind": "精神",
+    "attribute.soul": "灵魂",
+    "attribute.yin": "阴",
+    "attribute.yang": "阳",
+    "attribute.lust": "淫",
+    "attribute.space": "空间",
+    "attribute.time": "时间",
+    "category.plant": "植物",
+    "category.vine": "藤蔓",
+    "category.grass": "草本",
+    "category.flower": "花卉",
+    "category.tree": "木本",
+    "category.root": "根茎",
+    "category.seed-fruit": "果实种子",
+    "category.aquatic-plant": "水生植物",
+    "category.parasitic-plant": "寄生植物",
+    "category.carnivorous-plant": "食肉植物",
+    "category.bryophyte": "苔藓蕨类",
+    "category.other-plant": "其他植物",
+    "category.fungus": "菌类",
+    "category.insect": "昆虫",
+    "category.arachnid": "蛛形",
+    "category.serpent": "蛇类",
+    "category.dragon": "龙类",
+    "category.avian": "鸟类",
+    "category.feline": "猫科",
+    "category.canine": "犬科",
+    "category.bear": "熊类",
+    "category.bovine": "牛类",
+    "category.equine": "马类",
+    "category.aquatic": "水生",
+    "category.mollusk": "软体",
+    "category.crustacean": "甲壳水族",
+    "category.humanoid": "人形",
+    "category.bone": "骨骼",
+    "category.blood": "血液",
+    "category.eye": "眼瞳",
+    "category.heart": "心脏",
+    "category.skin": "皮肤",
+    "category.hair": "毛发",
+    "category.limb": "肢体",
+    "category.nervous": "神经",
+    "category.organ": "脏器",
+    "category.symbiote": "共生体",
+    "category.blade": "刀刃",
+    "category.sword": "剑器",
+    "category.spear": "枪矛",
+    "category.hammer": "锤器",
+    "category.bow": "弓弩",
+    "category.shield": "盾牌",
+    "category.armor": "甲胄",
+    "category.chain": "锁链",
+    "category.staff": "杖器",
+    "category.grimoire": "典籍",
+    "category.cauldron": "炉鼎",
+    "category.seal": "印玺",
+    "category.formation": "阵图",
+    "category.instrument": "乐器",
+    "category.firearm": "枪械",
+    "category.mechanism": "机关造物",
+    "category.textile": "织物",
+    "category.metal": "金属",
+    "category.stone": "岩石",
+    "category.crystal": "晶体",
+    "category.wood": "木质",
+    "category.fluid": "流体",
+    "category.gas": "气体",
+    "category.energy": "能量体",
+    "category.flame": "火焰现象",
+    "category.frost": "冰霜现象",
+    "category.thunder": "雷霆现象",
+    "category.storm": "风暴现象",
+    "category.ocean": "海洋现象",
+    "category.earth": "大地现象",
+    "category.mountain": "山岳意象",
+    "category.sun": "太阳意象",
+    "category.moon": "月亮意象",
+    "category.star": "星辰意象",
+    "category.shadow": "阴影现象",
+    "category.light": "光辉现象",
+    "category.void": "虚无现象",
+    "category.space": "空间概念",
+    "category.time": "时间概念",
+    "category.gravity": "重力概念",
+    "category.dream": "梦境概念",
+    "category.sound": "声音概念",
+    "category.poison": "毒蚀概念",
+    "category.plague": "疫病概念",
+    "category.life": "生命概念",
+    "category.death": "死亡概念",
+    "category.soul": "灵魂概念",
+    "category.mind": "心灵概念",
+    "category.order": "秩序概念",
+    "category.chaos": "混沌概念",
+    "category.causality": "因果概念",
+    "category.fate": "命运概念",
+    "category.memory": "记忆概念",
+    "category.emotion": "情绪概念",
+    "category.boundary": "边界概念",
+    "category.creation": "创造概念",
+    "category.destruction": "毁灭概念",
+    "category.devouring": "吞噬概念",
+    "category.replication": "复制概念",
+    "category.transformation": "变化概念",
+    "category.domain": "领域概念"
+  },
+  "people": {
+    "tang-hao-village": {
+      "name": "唐昊·圣魂村",
+      "stage": "隐居时期",
+      "kind": "soul-master"
+    },
+    "tang-san-awakening": {
+      "name": "唐三·觉醒",
+      "stage": "诺丁入学前",
+      "kind": "soul-master"
+    },
+    "ah-yin-human": {
+      "name": "阿银·人形",
+      "stage": "化形后",
+      "kind": "soul-master"
+    },
+    "huo-yuhao-triple": {
+      "name": "霍雨浩·三武魂",
+      "stage": "绝世唐门巅峰时期",
+      "kind": "soul-master"
+    },
+    "su-yuntao": {
+      "name": "素云涛",
+      "stage": "圣魂村觉醒仪式",
+      "kind": "soul-master"
+    },
+    "si-si": {
+      "name": "丝丝",
+      "stage": "诺丁武魂殿",
+      "kind": "soul-master"
+    },
+    "ma-xiunuo": {
+      "name": "马修诺",
+      "stage": "诺丁武魂殿",
+      "kind": "soul-master"
+    },
+    "yu-xiaogang-notting": {
+      "name": "玉小刚·诺丁",
+      "stage": "诺丁学院",
+      "kind": "soul-master"
+    },
+    "xiao-wu-notting": {
+      "name": "小舞·诺丁",
+      "stage": "诺丁学院",
+      "kind": "soul-master"
+    },
+    "wang-sheng": {
+      "name": "王圣",
+      "stage": "诺丁学院",
+      "kind": "soul-master"
+    },
+    "xiao-chenyu": {
+      "name": "萧尘宇",
+      "stage": "诺丁学院",
+      "kind": "soul-master"
+    },
+    "ling-feng-notting": {
+      "name": "凌风",
+      "stage": "诺丁学院",
+      "kind": "soul-master"
+    },
+    "liu-long-notting": {
+      "name": "柳龙",
+      "stage": "诺丁学院",
+      "kind": "soul-master"
+    },
+    "meng-shu": {
+      "name": "孟蜀",
+      "stage": "龙公",
+      "kind": "soul-master"
+    },
+    "chao-tianxiang": {
+      "name": "朝天香",
+      "stage": "蛇婆",
+      "kind": "soul-master"
+    },
+    "meng-yiran": {
+      "name": "孟依然",
+      "stage": "星斗遇见时",
+      "kind": "soul-master"
+    },
+    "bu-le": {
+      "name": "不乐",
+      "stage": "索托城",
+      "kind": "soul-master"
+    },
+    "e-kao": {
+      "name": "鹅考",
+      "stage": "索托城",
+      "kind": "soul-master"
+    },
+    "tian-ya": {
+      "name": "天涯",
+      "stage": "索托城",
+      "kind": "soul-master"
+    },
+    "tang-san-shrek": {
+      "name": "唐三·史莱克",
+      "stage": "索托时期",
+      "kind": "soul-master"
+    },
+    "xiao-wu-shrek": {
+      "name": "小舞·史莱克",
+      "stage": "索托时期",
+      "kind": "soul-master"
+    },
+    "dai-mubai-shrek": {
+      "name": "戴沐白·史莱克",
+      "stage": "索托时期",
+      "kind": "soul-master"
+    },
+    "oscar-shrek": {
+      "name": "奥斯卡·史莱克",
+      "stage": "索托时期",
+      "kind": "soul-master"
+    },
+    "ma-hongjun-shrek": {
+      "name": "马红俊·史莱克",
+      "stage": "索托时期",
+      "kind": "soul-master"
+    },
+    "ning-rongrong-shrek": {
+      "name": "宁荣荣·史莱克",
+      "stage": "索托时期",
+      "kind": "soul-master"
+    },
+    "zhu-zhuqing-shrek": {
+      "name": "朱竹清·史莱克",
+      "stage": "索托时期",
+      "kind": "soul-master"
+    },
+    "flender": {
+      "name": "弗兰德",
+      "stage": "院长",
+      "kind": "soul-master"
+    },
+    "zhao-wuji": {
+      "name": "赵无极",
+      "stage": "学院老师",
+      "kind": "soul-master"
+    },
+    "li-yusong": {
+      "name": "李郁松",
+      "stage": "学院老师",
+      "kind": "soul-master"
+    },
+    "lu-qibin": {
+      "name": "卢奇斌",
+      "stage": "学院老师",
+      "kind": "soul-master"
+    },
+    "shao-xin": {
+      "name": "邵鑫",
+      "stage": "学院老师",
+      "kind": "soul-master"
+    },
+    "yu-xiaogang-lanba": {
+      "name": "玉小刚·蓝霸",
+      "stage": "黄金铁三角重聚",
+      "kind": "soul-master"
+    },
+    "liu-erlong-lanba": {
+      "name": "柳二龙·蓝霸",
+      "stage": "蓝霸院长",
+      "kind": "soul-master"
+    },
+    "qin-ming": {
+      "name": "秦明",
+      "stage": "天斗教师",
+      "kind": "soul-master"
+    },
+    "tai-long-tournament": {
+      "name": "泰隆·大赛",
+      "stage": "史莱克替补",
+      "kind": "soul-master"
+    },
+    "huang-yuan": {
+      "name": "黄远",
+      "stage": "史莱克替补",
+      "kind": "soul-master"
+    },
+    "jing-ling": {
+      "name": "京灵",
+      "stage": "史莱克替补",
+      "kind": "soul-master"
+    },
+    "jiang-zhu": {
+      "name": "绛珠",
+      "stage": "史莱克替补",
+      "kind": "soul-master"
+    },
+    "meng-shenji": {
+      "name": "梦神机",
+      "stage": "教委会首席",
+      "kind": "soul-master"
+    },
+    "bai-baoshan": {
+      "name": "白宝山",
+      "stage": "教委会",
+      "kind": "soul-master"
+    },
+    "zhi-lin": {
+      "name": "智林",
+      "stage": "教委会",
+      "kind": "soul-master"
+    },
+    "yu-tianheng": {
+      "name": "玉天恒",
+      "stage": "皇斗战队",
+      "kind": "soul-master"
+    },
+    "dugu-yan": {
+      "name": "独孤雁",
+      "stage": "皇斗战队",
+      "kind": "soul-master"
+    },
+    "ye-lingling": {
+      "name": "叶泠泠",
+      "stage": "皇斗战队",
+      "kind": "soul-master"
+    },
+    "ao-siluo": {
+      "name": "奥斯罗",
+      "stage": "皇斗战队",
+      "kind": "soul-master"
+    },
+    "yu-feng": {
+      "name": "御风",
+      "stage": "皇斗战队",
+      "kind": "soul-master"
+    },
+    "shi-mo": {
+      "name": "石墨",
+      "stage": "皇斗战队",
+      "kind": "soul-master"
+    },
+    "shi-mo-younger": {
+      "name": "石磨",
+      "stage": "皇斗战队",
+      "kind": "soul-master"
+    },
+    "xue-xing": {
+      "name": "雪星亲王",
+      "stage": "天斗亲王",
+      "kind": "soul-master"
+    },
+    "xue-beng": {
+      "name": "雪崩",
+      "stage": "皇子时期",
+      "kind": "soul-master"
+    },
+    "xue-ke": {
+      "name": "雪珂",
+      "stage": "公主时期",
+      "kind": "soul-master"
+    },
+    "xue-qinghe": {
+      "name": "雪清河",
+      "stage": "天斗太子",
+      "kind": "soul-master"
+    },
+    "tang-yuehua": {
+      "name": "唐月华",
+      "stage": "月轩轩主",
+      "kind": "soul-master"
+    },
+    "dugu-bo-sunset": {
+      "name": "独孤博·落日森林",
+      "stage": "冰火两仪眼时期",
+      "kind": "soul-master"
+    },
+    "ning-fengzhi": {
+      "name": "宁风致",
+      "stage": "宗主时期",
+      "kind": "soul-master"
+    },
+    "chen-xin": {
+      "name": "尘心",
+      "stage": "剑斗罗",
+      "kind": "soul-master"
+    },
+    "gu-rong": {
+      "name": "古榕",
+      "stage": "骨斗罗",
+      "kind": "soul-master"
+    },
+    "ning-rongrong-sect": {
+      "name": "宁荣荣·九宝",
+      "stage": "复活后时期",
+      "kind": "soul-master"
+    },
+    "tang-san-tournament": {
+      "name": "唐三·大赛",
+      "stage": "全大陆高级魂师学院精英大赛",
+      "kind": "soul-master"
+    },
+    "xiao-wu-tournament": {
+      "name": "小舞·大赛",
+      "stage": "全大陆高级魂师学院精英大赛",
+      "kind": "soul-master"
+    },
+    "dai-mubai-tournament": {
+      "name": "戴沐白·大赛",
+      "stage": "全大陆高级魂师学院精英大赛",
+      "kind": "soul-master"
+    },
+    "oscar-tournament": {
+      "name": "奥斯卡·大赛",
+      "stage": "全大陆高级魂师学院精英大赛",
+      "kind": "soul-master"
+    },
+    "ma-hongjun-tournament": {
+      "name": "马红俊·大赛",
+      "stage": "全大陆高级魂师学院精英大赛",
+      "kind": "soul-master"
+    },
+    "ning-rongrong-tournament": {
+      "name": "宁荣荣·大赛",
+      "stage": "全大陆高级魂师学院精英大赛",
+      "kind": "soul-master"
+    },
+    "zhu-zhuqing-tournament": {
+      "name": "朱竹清·大赛",
+      "stage": "全大陆高级魂师学院精英大赛",
+      "kind": "soul-master"
+    },
+    "huo-wushuang": {
+      "name": "火无双",
+      "stage": "炽火学院",
+      "kind": "soul-master"
+    },
+    "huo-wu": {
+      "name": "火舞",
+      "stage": "炽火学院",
+      "kind": "soul-master"
+    },
+    "huo-yun": {
+      "name": "火云",
+      "stage": "炽火学院",
+      "kind": "soul-master"
+    },
+    "huo-yu": {
+      "name": "火雨",
+      "stage": "炽火学院",
+      "kind": "soul-master"
+    },
+    "feng-xiaotian": {
+      "name": "风笑天",
+      "stage": "神风学院",
+      "kind": "soul-master"
+    },
+    "shui-binger": {
+      "name": "水冰儿",
+      "stage": "天水学院",
+      "kind": "soul-master"
+    },
+    "shui-yuer": {
+      "name": "水月儿",
+      "stage": "天水学院",
+      "kind": "soul-master"
+    },
+    "xue-wu": {
+      "name": "雪舞",
+      "stage": "天水学院",
+      "kind": "soul-master"
+    },
+    "yu-tianxin": {
+      "name": "玉天心",
+      "stage": "雷霆学院",
+      "kind": "soul-master"
+    },
+    "lei-tian": {
+      "name": "雷天",
+      "stage": "雷霆学院",
+      "kind": "soul-master"
+    },
+    "lei-dong": {
+      "name": "雷动",
+      "stage": "雷霆学院",
+      "kind": "soul-master"
+    },
+    "huyan-li": {
+      "name": "呼延力",
+      "stage": "象甲学院",
+      "kind": "soul-master"
+    },
+    "shi-nian": {
+      "name": "时年",
+      "stage": "苍晖学院",
+      "kind": "soul-master"
+    },
+    "ye-zhiqiu": {
+      "name": "叶知秋",
+      "stage": "苍晖学院",
+      "kind": "soul-master"
+    },
+    "dai-weisi": {
+      "name": "戴维斯",
+      "stage": "星罗皇家学院",
+      "kind": "soul-master"
+    },
+    "zhu-zhuyun": {
+      "name": "朱竹云",
+      "stage": "星罗皇家学院",
+      "kind": "soul-master"
+    },
+    "dai-tian": {
+      "name": "戴天",
+      "stage": "星罗皇帝",
+      "kind": "soul-master"
+    },
+    "hu-liena-tournament": {
+      "name": "胡列娜·大赛",
+      "stage": "黄金一代",
+      "kind": "soul-master"
+    },
+    "xie-yue": {
+      "name": "邪月",
+      "stage": "黄金一代",
+      "kind": "soul-master"
+    },
+    "yan": {
+      "name": "焱",
+      "stage": "黄金一代",
+      "kind": "soul-master"
+    },
+    "bibi-dong-pope": {
+      "name": "比比东·教皇",
+      "stage": "教皇时期",
+      "kind": "soul-master"
+    },
+    "qian-renxue-spirit": {
+      "name": "千仞雪·供奉殿",
+      "stage": "成神前",
+      "kind": "soul-master"
+    },
+    "qian-xunji": {
+      "name": "千寻疾",
+      "stage": "前教皇",
+      "kind": "soul-master"
+    },
+    "qian-daoliu": {
+      "name": "千道流",
+      "stage": "极限斗罗",
+      "kind": "soul-master"
+    },
+    "golden-crocodile": {
+      "name": "金鳄斗罗",
+      "stage": "二供奉",
+      "kind": "soul-master"
+    },
+    "yue-guan": {
+      "name": "月关",
+      "stage": "菊斗罗",
+      "kind": "soul-master"
+    },
+    "gui-mei": {
+      "name": "鬼魅",
+      "stage": "鬼斗罗",
+      "kind": "soul-master"
+    },
+    "she-long": {
+      "name": "蛇矛斗罗·佘龙",
+      "stage": "长老",
+      "kind": "soul-master"
+    },
+    "ci-xue": {
+      "name": "刺豚斗罗·刺血",
+      "stage": "长老",
+      "kind": "soul-master"
+    },
+    "ghost-leopard": {
+      "name": "鬼豹斗罗",
+      "stage": "长老",
+      "kind": "soul-master"
+    },
+    "devil-bear": {
+      "name": "魔熊斗罗",
+      "stage": "长老",
+      "kind": "soul-master"
+    },
+    "spirit-kite": {
+      "name": "灵鸢斗罗",
+      "stage": "长老",
+      "kind": "soul-master"
+    },
+    "tuoba-xi": {
+      "name": "拓跋希",
+      "stage": "圣龙宗宗主",
+      "kind": "soul-master"
+    },
+    "salas": {
+      "name": "萨拉斯",
+      "stage": "白金主教",
+      "kind": "soul-master"
+    },
+    "roldiarra": {
+      "name": "洛尔迪亚拉",
+      "stage": "白金主教",
+      "kind": "soul-master"
+    },
+    "huyan-zhen": {
+      "name": "呼延震",
+      "stage": "象甲宗宗主",
+      "kind": "soul-master"
+    },
+    "meyers-spirit": {
+      "name": "迈尔斯主教",
+      "stage": "庚辛城武魂主殿",
+      "kind": "soul-master"
+    },
+    "bibi-dong-mortal-peak": {
+      "name": "比比东·巅峰魂师",
+      "stage": "不含神位能力",
+      "kind": "soul-master"
+    },
+    "qian-renxue-mortal-peak": {
+      "name": "千仞雪·巅峰魂师",
+      "stage": "不含神位能力",
+      "kind": "soul-master"
+    },
+    "ge-long": {
+      "name": "戈龙",
+      "stage": "天斗元帅",
+      "kind": "soul-master"
+    },
+    "tang-san-title": {
+      "name": "唐三·封号斗罗",
+      "stage": "不含神位能力",
+      "kind": "soul-master"
+    },
+    "xiao-wu-title": {
+      "name": "小舞·复活后",
+      "stage": "不含神位能力",
+      "kind": "soul-master"
+    },
+    "dai-mubai-title": {
+      "name": "戴沐白·封号斗罗",
+      "stage": "战争末期",
+      "kind": "soul-master"
+    },
+    "oscar-title": {
+      "name": "奥斯卡·食神斗罗",
+      "stage": "战争末期",
+      "kind": "soul-master"
+    },
+    "ma-hongjun-title": {
+      "name": "马红俊·凤凰斗罗",
+      "stage": "战争末期",
+      "kind": "soul-master"
+    },
+    "zhu-zhuqing-title": {
+      "name": "朱竹清·幽冥斗罗",
+      "stage": "战争末期",
+      "kind": "soul-master"
+    },
+    "tang-hao-final": {
+      "name": "唐昊·巅峰",
+      "stage": "重归巅峰",
+      "kind": "soul-master"
+    },
+    "dugu-bo-final": {
+      "name": "独孤博·战争末期",
+      "stage": "战争末期",
+      "kind": "soul-master"
+    },
+    "tang-chen": {
+      "name": "唐晨",
+      "stage": "极限斗罗",
+      "kind": "soul-master"
+    },
+    "tang-xiao": {
+      "name": "唐啸",
+      "stage": "宗主时期",
+      "kind": "soul-master"
+    },
+    "tang-hao-sect": {
+      "name": "唐昊·昊天宗",
+      "stage": "回宗门时期",
+      "kind": "soul-master"
+    },
+    "tang-long": {
+      "name": "唐龙",
+      "stage": "三代首席",
+      "kind": "soul-master"
+    },
+    "tang-hu": {
+      "name": "唐虎",
+      "stage": "宗门弟子",
+      "kind": "soul-master"
+    },
+    "tang-tian": {
+      "name": "唐天",
+      "stage": "宗门弟子",
+      "kind": "soul-master"
+    },
+    "tang-yu": {
+      "name": "唐玉",
+      "stage": "宗门弟子",
+      "kind": "soul-master"
+    },
+    "tang-tiantian": {
+      "name": "唐甜甜",
+      "stage": "宗门弟子",
+      "kind": "soul-master"
+    },
+    "tai-tan": {
+      "name": "泰坦",
+      "stage": "力之一族族长",
+      "kind": "soul-master"
+    },
+    "tai-nuo": {
+      "name": "泰诺",
+      "stage": "力之一族",
+      "kind": "soul-master"
+    },
+    "tai-long-clan": {
+      "name": "泰隆·力之一族",
+      "stage": "力之一族",
+      "kind": "soul-master"
+    },
+    "tai-xing": {
+      "name": "泰兴",
+      "stage": "力之一族",
+      "kind": "soul-master"
+    },
+    "niu-gao": {
+      "name": "牛皋",
+      "stage": "御之一族族长",
+      "kind": "soul-master"
+    },
+    "niu-ben": {
+      "name": "牛奔",
+      "stage": "御之一族",
+      "kind": "soul-master"
+    },
+    "bai-he": {
+      "name": "白鹤",
+      "stage": "敏之一族族长",
+      "kind": "soul-master"
+    },
+    "bai-chenxiang": {
+      "name": "白沉香",
+      "stage": "敏之一族",
+      "kind": "soul-master"
+    },
+    "yang-wudi": {
+      "name": "杨无敌",
+      "stage": "破之一族族长",
+      "kind": "soul-master"
+    },
+    "yang-wushuang": {
+      "name": "杨无双",
+      "stage": "破之一族",
+      "kind": "soul-master"
+    },
+    "lou-gao": {
+      "name": "楼高",
+      "stage": "铁匠协会会长",
+      "kind": "soul-master"
+    },
+    "si-long": {
+      "name": "思龙",
+      "stage": "楼高首徒",
+      "kind": "soul-master"
+    },
+    "si-di": {
+      "name": "思迪",
+      "stage": "楼高弟子",
+      "kind": "soul-master"
+    },
+    "si-yu": {
+      "name": "思雨",
+      "stage": "楼高弟子",
+      "kind": "soul-master"
+    },
+    "si-kai": {
+      "name": "思凯",
+      "stage": "楼高弟子",
+      "kind": "soul-master"
+    },
+    "blue-silver-king": {
+      "name": "蓝银王",
+      "stage": "八万五千年蓝银草王",
+      "kind": "soul-beast"
+    },
+    "ah-yin-blue-silver-emperor": {
+      "name": "蓝银皇·阿银",
+      "stage": "十万年蓝银皇",
+      "kind": "soul-beast"
+    },
+    "yu-yuanzhen": {
+      "name": "玉元震",
+      "stage": "宗主",
+      "kind": "soul-master"
+    },
+    "yu-luomian": {
+      "name": "玉罗冕",
+      "stage": "宗门二当家",
+      "kind": "soul-master"
+    },
+    "yu-tianxin-sect": {
+      "name": "玉天心·蓝电宗",
+      "stage": "宗门子弟",
+      "kind": "soul-master"
+    },
+    "slaughter-king": {
+      "name": "杀戮之王",
+      "stage": "杀戮之都统治者",
+      "kind": "soul-master"
+    },
+    "dread-knight-scott": {
+      "name": "恐怖骑士斯科特",
+      "stage": "入口守卫",
+      "kind": "soul-master"
+    },
+    "tang-san-slaughter": {
+      "name": "唐三·杀戮之都",
+      "stage": "地狱杀戮场",
+      "kind": "soul-master"
+    },
+    "hu-liena-slaughter": {
+      "name": "胡列娜·杀戮之都",
+      "stage": "地狱杀戮场",
+      "kind": "soul-master"
+    },
+    "zi-zhenzhu": {
+      "name": "紫珍珠",
+      "stage": "团长",
+      "kind": "soul-master"
+    },
+    "haider": {
+      "name": "海德尔",
+      "stage": "海德尔号船长",
+      "kind": "soul-master"
+    },
+    "ji-xiang": {
+      "name": "吉祥",
+      "stage": "拜师唐三后",
+      "kind": "soul-master"
+    },
+    "bo-saixi": {
+      "name": "波赛西",
+      "stage": "极限斗罗",
+      "kind": "soul-master"
+    },
+    "sea-dragon-douluo": {
+      "name": "海龙斗罗",
+      "stage": "海龙圣柱守护者",
+      "kind": "soul-master"
+    },
+    "sea-spear-douluo": {
+      "name": "海矛斗罗",
+      "stage": "海矛圣柱守护者",
+      "kind": "soul-master"
+    },
+    "sea-fantasy-douluo": {
+      "name": "海幻斗罗",
+      "stage": "海幻圣柱守护者",
+      "kind": "soul-master"
+    },
+    "sea-star-douluo": {
+      "name": "海星斗罗",
+      "stage": "海星圣柱守护者",
+      "kind": "soul-master"
+    },
+    "sea-ghost-douluo": {
+      "name": "海鬼斗罗",
+      "stage": "海鬼圣柱守护者",
+      "kind": "soul-master"
+    },
+    "ou-ya": {
+      "name": "欧亚·海马斗罗",
+      "stage": "海马圣柱守护者",
+      "kind": "soul-master"
+    },
+    "sea-woman-douluo": {
+      "name": "海女斗罗",
+      "stage": "海女圣柱守护者",
+      "kind": "soul-master"
+    },
+    "xiao-bai": {
+      "name": "小白·魔魂大白鲨之王",
+      "stage": "十万年魂兽",
+      "kind": "soul-beast"
+    },
+    "da-ming": {
+      "name": "大明·天青牛蟒",
+      "stage": "十万年魂兽",
+      "kind": "soul-beast"
+    },
+    "er-ming": {
+      "name": "二明·泰坦巨猿",
+      "stage": "十万年魂兽",
+      "kind": "soul-beast"
+    },
+    "dark-devilgod-tiger": {
+      "name": "暗魔邪神虎",
+      "stage": "六万年异种魂兽",
+      "kind": "soul-beast"
+    },
+    "evil-orca-king": {
+      "name": "邪魔虎鲸王",
+      "stage": "十万年魂兽",
+      "kind": "soul-beast"
+    },
+    "deep-sea-demon-whale-king": {
+      "name": "深海魔鲸王",
+      "stage": "九十九万年魂兽",
+      "kind": "soul-beast"
+    },
+    "gu-yuena-adult": {
+      "name": "古月娜",
+      "stage": "龙王传说·成年银龙王",
+      "kind": "soul-master",
+      "apparentAge": 18
+    },
+    "li-chijing": {
+      "name": "李尺泾",
+      "stage": "玄鉴仙族·太阴剑修",
+      "kind": "soul-master"
+    }
+  },
+  "persistentPeople": {
+    "resident-tang-hao-village": "tang-hao-village",
+    "resident-tang-san-awakening": "tang-san-awakening",
+    "resident-ah-yin-human": "ah-yin-human",
+    "resident-huo-yuhao-triple": "huo-yuhao-triple",
+    "resident-su-yuntao": "su-yuntao",
+    "resident-si-si": "si-si",
+    "resident-ma-xiunuo": "ma-xiunuo",
+    "resident-yu-xiaogang-notting": "yu-xiaogang-notting",
+    "resident-xiao-wu-notting": "xiao-wu-notting",
+    "resident-wang-sheng": "wang-sheng",
+    "resident-xiao-chenyu": "xiao-chenyu",
+    "resident-ling-feng-notting": "ling-feng-notting",
+    "resident-liu-long-notting": "liu-long-notting",
+    "resident-meng-shu": "meng-shu",
+    "resident-chao-tianxiang": "chao-tianxiang",
+    "resident-meng-yiran": "meng-yiran",
+    "resident-bu-le": "bu-le",
+    "resident-e-kao": "e-kao",
+    "resident-tian-ya": "tian-ya",
+    "resident-tang-san-shrek": "tang-san-shrek",
+    "resident-xiao-wu-shrek": "xiao-wu-shrek",
+    "resident-dai-mubai-shrek": "dai-mubai-shrek",
+    "resident-oscar-shrek": "oscar-shrek",
+    "resident-ma-hongjun-shrek": "ma-hongjun-shrek",
+    "resident-ning-rongrong-shrek": "ning-rongrong-shrek",
+    "resident-zhu-zhuqing-shrek": "zhu-zhuqing-shrek",
+    "resident-flender": "flender",
+    "resident-zhao-wuji": "zhao-wuji",
+    "resident-li-yusong": "li-yusong",
+    "resident-lu-qibin": "lu-qibin",
+    "resident-shao-xin": "shao-xin",
+    "resident-yu-xiaogang-lanba": "yu-xiaogang-lanba",
+    "resident-liu-erlong-lanba": "liu-erlong-lanba",
+    "resident-qin-ming": "qin-ming",
+    "resident-tai-long-tournament": "tai-long-tournament",
+    "resident-huang-yuan": "huang-yuan",
+    "resident-jing-ling": "jing-ling",
+    "resident-jiang-zhu": "jiang-zhu",
+    "resident-meng-shenji": "meng-shenji",
+    "resident-bai-baoshan": "bai-baoshan",
+    "resident-zhi-lin": "zhi-lin",
+    "resident-yu-tianheng": "yu-tianheng",
+    "resident-dugu-yan": "dugu-yan",
+    "resident-ye-lingling": "ye-lingling",
+    "resident-ao-siluo": "ao-siluo",
+    "resident-yu-feng": "yu-feng",
+    "resident-shi-mo": "shi-mo",
+    "resident-shi-mo-younger": "shi-mo-younger",
+    "resident-xue-xing": "xue-xing",
+    "resident-xue-beng": "xue-beng",
+    "resident-xue-ke": "xue-ke",
+    "resident-xue-qinghe": "xue-qinghe",
+    "resident-tang-yuehua": "tang-yuehua",
+    "resident-dugu-bo-sunset": "dugu-bo-sunset",
+    "resident-ning-fengzhi": "ning-fengzhi",
+    "resident-chen-xin": "chen-xin",
+    "resident-gu-rong": "gu-rong",
+    "resident-ning-rongrong-sect": "ning-rongrong-sect",
+    "resident-tang-san-tournament": "tang-san-tournament",
+    "resident-xiao-wu-tournament": "xiao-wu-tournament",
+    "resident-dai-mubai-tournament": "dai-mubai-tournament",
+    "resident-oscar-tournament": "oscar-tournament",
+    "resident-ma-hongjun-tournament": "ma-hongjun-tournament",
+    "resident-ning-rongrong-tournament": "ning-rongrong-tournament",
+    "resident-zhu-zhuqing-tournament": "zhu-zhuqing-tournament",
+    "resident-huo-wushuang": "huo-wushuang",
+    "resident-huo-wu": "huo-wu",
+    "resident-huo-yun": "huo-yun",
+    "resident-huo-yu": "huo-yu",
+    "resident-feng-xiaotian": "feng-xiaotian",
+    "resident-shui-binger": "shui-binger",
+    "resident-shui-yuer": "shui-yuer",
+    "resident-xue-wu": "xue-wu",
+    "resident-yu-tianxin": "yu-tianxin",
+    "resident-lei-tian": "lei-tian",
+    "resident-lei-dong": "lei-dong",
+    "resident-huyan-li": "huyan-li",
+    "resident-shi-nian": "shi-nian",
+    "resident-ye-zhiqiu": "ye-zhiqiu",
+    "resident-dai-weisi": "dai-weisi",
+    "resident-zhu-zhuyun": "zhu-zhuyun",
+    "resident-dai-tian": "dai-tian",
+    "resident-hu-liena-tournament": "hu-liena-tournament",
+    "resident-xie-yue": "xie-yue",
+    "resident-yan": "yan",
+    "resident-bibi-dong-pope": "bibi-dong-pope",
+    "resident-qian-renxue-spirit": "qian-renxue-spirit",
+    "resident-qian-xunji": "qian-xunji",
+    "resident-qian-daoliu": "qian-daoliu",
+    "resident-golden-crocodile": "golden-crocodile",
+    "resident-yue-guan": "yue-guan",
+    "resident-gui-mei": "gui-mei",
+    "resident-she-long": "she-long",
+    "resident-ci-xue": "ci-xue",
+    "resident-ghost-leopard": "ghost-leopard",
+    "resident-devil-bear": "devil-bear",
+    "resident-spirit-kite": "spirit-kite",
+    "resident-tuoba-xi": "tuoba-xi",
+    "resident-salas": "salas",
+    "resident-roldiarra": "roldiarra",
+    "resident-huyan-zhen": "huyan-zhen",
+    "resident-meyers-spirit": "meyers-spirit",
+    "resident-bibi-dong-mortal-peak": "bibi-dong-mortal-peak",
+    "resident-qian-renxue-mortal-peak": "qian-renxue-mortal-peak",
+    "resident-ge-long": "ge-long",
+    "resident-tang-san-title": "tang-san-title",
+    "resident-xiao-wu-title": "xiao-wu-title",
+    "resident-dai-mubai-title": "dai-mubai-title",
+    "resident-oscar-title": "oscar-title",
+    "resident-ma-hongjun-title": "ma-hongjun-title",
+    "resident-zhu-zhuqing-title": "zhu-zhuqing-title",
+    "resident-tang-hao-final": "tang-hao-final",
+    "resident-dugu-bo-final": "dugu-bo-final",
+    "resident-tang-chen": "tang-chen",
+    "resident-tang-xiao": "tang-xiao",
+    "resident-tang-hao-sect": "tang-hao-sect",
+    "resident-tang-long": "tang-long",
+    "resident-tang-hu": "tang-hu",
+    "resident-tang-tian": "tang-tian",
+    "resident-tang-yu": "tang-yu",
+    "resident-tang-tiantian": "tang-tiantian",
+    "resident-tai-tan": "tai-tan",
+    "resident-tai-nuo": "tai-nuo",
+    "resident-tai-long-clan": "tai-long-clan",
+    "resident-tai-xing": "tai-xing",
+    "resident-niu-gao": "niu-gao",
+    "resident-niu-ben": "niu-ben",
+    "resident-bai-he": "bai-he",
+    "resident-bai-chenxiang": "bai-chenxiang",
+    "resident-yang-wudi": "yang-wudi",
+    "resident-yang-wushuang": "yang-wushuang",
+    "resident-lou-gao": "lou-gao",
+    "resident-si-long": "si-long",
+    "resident-si-di": "si-di",
+    "resident-si-yu": "si-yu",
+    "resident-si-kai": "si-kai",
+    "resident-blue-silver-king": "blue-silver-king",
+    "resident-ah-yin-blue-silver-emperor": "ah-yin-blue-silver-emperor",
+    "resident-yu-yuanzhen": "yu-yuanzhen",
+    "resident-yu-luomian": "yu-luomian",
+    "resident-yu-tianxin-sect": "yu-tianxin-sect",
+    "resident-slaughter-king": "slaughter-king",
+    "resident-dread-knight-scott": "dread-knight-scott",
+    "resident-tang-san-slaughter": "tang-san-slaughter",
+    "resident-hu-liena-slaughter": "hu-liena-slaughter",
+    "resident-zi-zhenzhu": "zi-zhenzhu",
+    "resident-haider": "haider",
+    "resident-ji-xiang": "ji-xiang",
+    "resident-bo-saixi": "bo-saixi",
+    "resident-sea-dragon-douluo": "sea-dragon-douluo",
+    "resident-sea-spear-douluo": "sea-spear-douluo",
+    "resident-sea-fantasy-douluo": "sea-fantasy-douluo",
+    "resident-sea-star-douluo": "sea-star-douluo",
+    "resident-sea-ghost-douluo": "sea-ghost-douluo",
+    "resident-ou-ya": "ou-ya",
+    "resident-sea-woman-douluo": "sea-woman-douluo",
+    "resident-xiao-bai": "xiao-bai",
+    "resident-da-ming": "da-ming",
+    "resident-er-ming": "er-ming",
+    "resident-dark-devilgod-tiger": "dark-devilgod-tiger",
+    "resident-evil-orca-king": "evil-orca-king",
+    "resident-deep-sea-demon-whale-king": "deep-sea-demon-whale-king",
+    "resident-gu-yuena-adult": "gu-yuena-adult",
+    "resident-li-chijing": "li-chijing"
+  },
+  "venueNames": {
+    "arena-soto": "索托大斗魂场",
+    "arena-lanba": "史莱克学院擂台",
+    "arena-royal": "天斗皇家学院赛",
+    "arena-seven-treasure": "七宝琉璃宗赛",
+    "arena-blue-lightning": "蓝电霸王龙家族赛",
+    "arena-hanhai": "瀚海大斗魂场",
+    "arena-spirit-city": "武魂城总决赛",
+    "arena-clear-sky": "昊天宗驻地赛"
+  },
+  "grades": [
+    {
+      "id": "waste",
+      "name": "废武魂"
+    },
+    {
+      "id": "common",
+      "name": "普通武魂"
+    },
+    {
+      "id": "rare",
+      "name": "稀有武魂"
+    },
+    {
+      "id": "top",
+      "name": "顶级武魂"
+    },
+    {
+      "id": "divine",
+      "name": "神级武魂"
+    }
+  ],
+  "ringTiers": [
+    {
+      "minimum": 1,
+      "maximum": 99,
+      "name": "十年",
+      "color": "白"
+    },
+    {
+      "minimum": 100,
+      "maximum": 999,
+      "name": "百年",
+      "color": "黄"
+    },
+    {
+      "minimum": 1000,
+      "maximum": 9999,
+      "name": "千年",
+      "color": "紫"
+    },
+    {
+      "minimum": 10000,
+      "maximum": 99999,
+      "name": "万年",
+      "color": "黑"
+    },
+    {
+      "minimum": 100000,
+      "maximum": 999999,
+      "name": "十万年",
+      "color": "红"
+    },
+    {
+      "minimum": 1000000,
+      "maximum": 9007199254740991,
+      "name": "百万年",
+      "color": "金"
+    }
+  ],
+  "venueLocations": {
+    "arena-soto": "loc-soto-arena",
+    "arena-lanba": "loc-lanba-campus",
+    "arena-royal": "loc-royal-campus",
+    "arena-seven-treasure": "loc-seven-hall",
+    "arena-blue-lightning": "loc-heaven-dou-city",
+    "arena-hanhai": "loc-hanhai-arena",
+    "arena-spirit-city": "loc-spirit-tournament",
+    "arena-clear-sky": "loc-clear-residence"
+  },
+  "attributes": [
+    "物理",
+    "金",
+    "木",
+    "水",
+    "火",
+    "土",
+    "风",
+    "雷",
+    "冰",
+    "光",
+    "暗",
+    "毒蚀",
+    "生命",
+    "死亡",
+    "毁灭",
+    "精神",
+    "灵魂",
+    "阴",
+    "阳",
+    "淫",
+    "空间",
+    "时间"
+  ],
+  "rounds": {
+    "R16": "十六强",
+    "QF": "四分之一决赛",
+    "SF": "半决赛",
+    "F": "决赛"
+  }
+}

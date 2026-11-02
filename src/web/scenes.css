@@ -1,0 +1,79 @@
+/* Scene composition. Controls remain live React elements over original artwork. */
+.atlas__person { display:flex; align-items:center; gap:12px; color:inherit; text-decoration:none; padding:10px 0; border-bottom:1px solid rgba(169,151,115,0.25); }.atlas__person>span:nth-child(2) { display:grid; gap:6px; flex:1; }.atlas__person small { color:#6e6858; font-size:11px; }.atlas__person>span:last-child { color:#855f2a; }.atlas__person:focus-visible { outline:2px solid var(--gold); outline-offset:4px; }.atlas__person:hover b { color:#855f2a; }
+:root { --serif: "Noto Serif SC", "Songti SC", "SimSun", serif; }
+.sr-only { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.text-link { display:flex; align-items:center; justify-content:space-between; gap:24px; width:100%; padding:14px 0; text-align:left; color:var(--gold); background:none; border:0; border-bottom:1px solid var(--line-gold); cursor:pointer; font-size:12px; }
+.app-shell--home { padding:0; }
+.app-shell--home .page-stage { width:100%; }
+.app-shell--home .topbar { background:linear-gradient(rgba(250,245,230,0.85),transparent); border:0; backdrop-filter:none; }
+.brand__sigil { transform:none; border:0; box-shadow:none; font-size:28px; }
+.brand strong { font-size:16px; }
+.topbar { height:66px; }
+.button { border-radius:3px; }
+.traveler-orbit { position:absolute; z-index:-1; width:85%; height:27%; top:43%; left:7%; border:1px solid rgba(167,132,70,0.47); border-radius:50%; transform:rotate(-22deg); box-shadow:0 0 20px rgba(161,122,59,0.07),inset 0 0 20px rgba(161,122,59,0.04); }
+.journal-name { display:flex; gap:14px; align-items:baseline; justify-content:space-between; margin-top:15px; }
+.journal-name h2 { font:32px var(--serif); margin:0; }
+.journal-name>span { font-size:13px; color:var(--gold); }
+html[data-performance="cinematic"] .traveler-orbit,html[data-performance="standard"] .traveler-orbit { animation:orbit-breathe 6s ease-in-out infinite; }
+@keyframes scene-stars { to { transform:translateY(-60px); opacity:.3; } }
+@keyframes orbit-breathe { 50% { transform:rotate(-15deg) scale(1.05); opacity:.5; } }
+
+.app-shell--adventure { padding-inline:22px; }
+.app-shell--adventure .page-stage { width:100%; max-width:1800px; }
+.atlas { display:grid; grid-template-columns:minmax(0,1fr) 315px; height:calc(100svh - 175px); min-height:500px; max-height:940px; border:1px solid rgba(169,151,115,0.25); background:#faf5e6; margin-bottom:28px; }
+.atlas__canvas { position:relative; overflow:hidden; min-width:0; border-radius:10px 10px 0 0; box-shadow:var(--shadow); background:#d2dcbc; }
+.atlas__terrain { width:100%; height:100%; display:block; touch-action:none; user-select:none; cursor:grab; }
+.atlas__terrain:active { cursor:grabbing; }
+.atlas-route { stroke:rgba(167,132,70,0.6); stroke-width:1.5; pointer-events:none; }
+.atlas-route.is-locked { stroke:rgba(169,151,115,0.42); stroke-dasharray:4 5; }
+.atlas-route.is-planned { stroke:#a78446; stroke-width:3; filter:drop-shadow(0 0 3px rgba(161,122,59,0.55)); }
+.atlas-pin { cursor:pointer; outline:none; }
+.atlas-pin>path { stroke:#a78446; stroke-width:1; fill:#194347; vector-effect:non-scaling-stroke; }
+.atlas-pin>circle:not(.atlas-pin__hit):not(.atlas-player-halo) { fill:#f3e4b0; }
+.atlas-pin.is-locked>path { fill:#364552; stroke:#a99773; }
+.atlas-pin.is-locked>circle:not(.atlas-pin__hit):not(.atlas-player-halo) { fill:#bbc6c9; }
+.atlas-pin.is-selected>path,.atlas-pin:focus-visible>path { stroke:#a99773; fill:#d7b664; stroke-width:2; filter:drop-shadow(0 0 4px rgba(161,122,59,0.55)); }
+.atlas-pin>text { fill:#faf3d3; paint-order:stroke; stroke:#a99773; stroke-width:3px; stroke-linejoin:round; vector-effect:non-scaling-stroke; font-family:var(--serif); font-weight:700; pointer-events:none; }
+.atlas-pin .atlas-player-halo { fill:#cfeced22!important; stroke:#668b6b; stroke-width:1.5; vector-effect:non-scaling-stroke; }
+.atlas__heading { position:absolute; pointer-events:none; top:28px; left:30px; text-shadow:0 2px 12px rgba(76,67,44,0.55); padding:12px 18px; border-radius:8px; background:#fffaf0e8; border:1px solid #bba67870; box-shadow:0 4px 16px #5563401c; }
+.atlas__heading h1 { font:30px var(--serif); margin:4px 0; color:#5e593b; }
+.atlas__heading p { font-size:11px; letter-spacing:.15em; color:#3d352c; }
+.atlas__search { position:absolute; right:20px; top:20px; width:180px; }
+.atlas__search input { border-color:rgba(169,151,115,0.27); background:rgba(250,245,230,0.86); border-radius:3px; font-size:12px; }
+.atlas-search-results { position:absolute; z-index:6; background:rgba(250,245,230,0.96); width:240px; right:0; max-height:300px; overflow:auto; border:1px solid var(--line-gold); }
+.atlas-search-results button { width:100%; display:grid; gap:4px; text-align:left; padding:12px; border:0; border-bottom:1px solid var(--line); background:none; cursor:pointer; }
+.atlas-search-results button:hover { background:rgba(231,211,164,0.13); }.atlas-search-results small { color:var(--muted); }
+.atlas__tools { position:absolute; bottom:60px; left:22px; display:grid; gap:6px; }
+.atlas__tools button { width:36px; height:36px; color:#855f2a; font-size:22px; border:1px solid rgba(167,132,70,0.4); background:rgba(250,245,230,0.9); cursor:pointer; }
+.atlas__tools button:hover { background:#faf5e6; }
+.atlas__legend { position:absolute; bottom:0; left:0; right:0; display:flex; align-items:center; gap:18px; padding:12px 20px; font-size:10px; pointer-events:none; background:#fff9e9e8; color:#655d45; }
+.atlas__legend i { display:inline-block; width:6px; height:6px; background:#accdac; border-radius:50%; margin-right:3px; }.atlas__drag-hint { margin-left:auto; opacity:.6; }
+.atlas__details { overflow:auto; padding:30px 25px 25px; background:linear-gradient(160deg,#faf5e6,#faf5e6 70%); border-left:1px solid rgba(167,132,70,0.25); }
+.atlas__details>.eyebrow { font-size:10px; letter-spacing:.1em; }.atlas__details h2 { font:30px/1.35 var(--serif); margin:15px 0; }.atlas__details>p { font-size:12px; color:#6e6858; line-height:1.9; }
+.atlas-place-status { display:flex; justify-content:space-between; font-size:11px; padding:13px 0; border-bottom:1px solid var(--line); color:#306d4d; }
+.atlas__details h3 { font:16px var(--serif); color:#855f2a; margin:24px 0 14px; }.atlas__people>div { display:flex; align-items:center; gap:12px; margin:14px 0; }.atlas__people>div>span:last-child { display:grid; gap:5px; min-width:0; }.atlas__people b { font-size:13px; font-weight:500; }.atlas__people small { font-size:10px; color:var(--muted); }.atlas__people p { font-size:12px; }
+.person-medallion { display:grid; place-items:center; width:34px; height:34px; flex-shrink:0; border:1px solid rgba(167,132,70,0.4); border-radius:50%; font:18px var(--serif); color:var(--gold); background:#faf5e6; }
+.atlas__services>span { display:block; margin:9px 0; font-size:11px; color:#6e6858; }.atlas__departure { margin-top:24px; padding-top:18px; border-top:1px solid var(--line-gold); }.atlas__departure label { font-size:11px; }.atlas__departure select { padding:9px; background:#faf5e6; border-radius:3px; }.atlas__departure .button { width:100%; margin-top:10px; font-size:12px; }.atlas__departure p { font-size:11px; }.atlas-travel-cost { display:flex; justify-content:space-between; color:var(--gold); margin:17px 0 0; }.atlas-guidance { color:#6e6858; }
+
+.app-shell--character { background:transparent; }
+.app-shell--character .page-stage { max-width:1800px; }.ring-inspect { display:grid; justify-items:center; gap:10px; margin:6px 12px 6px 0; }.ring-inspect>span { font-size:11px; color:var(--muted); }
+.ring-details { display:grid; grid-template-columns:40% 1fr; gap:25px; align-items:center; }.ring-details__art { display:grid; place-items:center; min-height:260px; }.ring-details article { padding:18px 0; border-top:1px solid var(--line); }.ring-details h3 { font:22px var(--serif); margin:12px 0; }.ring-details p { font-size:12px; color:#6e6858; }
+html[data-performance="smooth"] .traveler-orbit,html[data-performance="reduced"] .traveler-orbit { box-shadow:none; }
+@media (min-width:1700px) {.atlas { grid-template-columns:minmax(0,1fr) 360px; } }
+@media (max-width:1100px) {.atlas { grid-template-columns:minmax(0,1fr) 280px; }.atlas__details { padding:24px 20px; }.atlas__heading h1 { font-size:30px; }.atlas__search { width:150px; } }
+@media (max-width:760px) {
+  .app-shell--home { padding:0; }.has-traveler { flex-direction:column; }
+  .app-shell--adventure { padding-inline:12px; }.atlas { grid-template-columns:1fr; height:auto; max-height:none; min-height:0; }.atlas__canvas { height:58svh; min-height:350px; }.atlas__details { max-height:none; border-left:0; border-top:1px solid var(--line-gold); }.atlas__heading { left:20px; top:20px; }.atlas__heading h1 { font-size:26px; }.atlas__search { top:auto; bottom:52px; right:15px; width:160px; }.atlas__legend { gap:12px; padding-inline:12px; font-size:9px; }.atlas__drag-hint { display:none; }.atlas__details h2 { font-size:28px; }.atlas__people { display:flex; flex-wrap:wrap; gap:0 24px; }.atlas__people h3 { width:100%; }.atlas__services { display:flex; flex-wrap:wrap; gap:0 20px; }.atlas__services h3 { width:100%; }.atlas__departure { max-width:500px; }
+}
+@media (max-width:600px) {.ring-details { grid-template-columns:1fr; }.ring-details__art { min-height:130px; }.ring-details__art .soul-ring { width:130px; height:130px; } }
+
+.atlas-place-symbol path { fill:#233e43; stroke:#a78446; stroke-width:1.25; stroke-linejoin:round; }
+.atlas-pin.is-selected .atlas-place-symbol path { fill:#3c5550; stroke:#a78446; }
+.atlas__services button { display:block; width:100%; padding:11px 0; text-align:left; color:#3d352c; background:none; border:0; border-bottom:1px solid rgba(169,151,115,0.25); cursor:pointer; font:12px var(--sans); }
+.atlas__services button:hover { color:#855f2a; }
+
+.atlas-pin text { fill:#4b5137; stroke:#fff9e8; stroke-width:3px; paint-order:stroke; font-weight:600; }
+
+.atlas-pin.is-selected text,.atlas-pin.is-player text { fill:#77531c; stroke:#fff9e8; }
+
+.atlas-place-symbol { fill:#fff5d2; stroke:#708552; stroke-width:1.4; }
