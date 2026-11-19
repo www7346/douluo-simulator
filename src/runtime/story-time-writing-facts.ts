@@ -5,14 +5,16 @@ const copy=<T>(v:T):T=>structuredClone(v);
 const pick=(v:any,keys:string[])=>Object.fromEntries(keys.filter(k=>v&&Object.hasOwn(v,k)).map(k=>[k,copy(v[k])]));
 const timed=[...WORLD_EFFECT_RECEIPT_FIELDS,'before','after','minutes','longActionId','interrupted','remainingMinutes','interruption'];
 export const TIME_RECEIPT_FIELDS:Record<string,readonly string[]>={
+ 'world-worked':[...timed,'gold'],
  'world-waited':[...timed,'dutySettlements','abilitySettlements'],'world-cultivated':[...timed,'progress'],
  'travel-completed':[...timed,'actorId','from','to','current','destinationId','mode','completed','path','legs','costGold','castIds','companionIds','remainingGold','position','transit'],
  'long-action-abandoned':['longActionId','kind','ownerId','cancelledAt','minutesExecuted','remainingMinutes','paidGold','locationId','position','transit'],
  'captivity-escape':['sourceId','actorId','captivityId','guarded','guardId','statusId','before','after','check','result','escaped','interruption'],
+ 'custody-door-break':['actorId','facilityId','cellId','before','after','minutes','check','broken','interruption'],
  'world-event-completed':['eventId','locationId','speaker','name','grantedFlags','discoveredLocationIds'],
 };
 function known(v:any,fields:readonly string[],label:string){const unknown=Object.keys(v).filter(k=>!['id','type','transactionType','summary',...fields].includes(k));if(unknown.length)throw Error(`时间世界结果缺少字段编译：${label}/${unknown.join(',')}`);}
-const kindNames:Record<string,string>={wait:'等待',travel:'旅行',cultivation:'修炼'};
+const kindNames:Record<string,string>={wait:'等待',travel:'旅行',cultivation:'修炼',work:'打工',evolution:'武魂变化修习'};
 function interruption(v:any){
  if(!v)return null;
  const names:Record<string,string>={meeting:'已接受约见需要处理','npc-request':'实际收到人物请求','growth-boundary':'达到成长阶段上限','life-exhausted':'寿命耗尽','person-death':'行动参与者死亡','action-blocked':'实际行动条件失效','battle-started':'现场营救战斗开始','cooperation-ended':'同行许可或原控制来源失效','field-control-ended':'本次移动命令的原控制来源失效','foreground-battle':'当前战斗需要本人决定，旅行已暂停'};
@@ -22,10 +24,10 @@ function interruption(v:any){
 }
 const minute=(t:any)=>t.day*1440+t.hour*60+t.minute;
 export function compileLongActionContext(rows:any[]){return rows.map(a=>{
- known(a,['kind','status','startedAt','targetAt','progressedTo','minutesExecuted','remainingMinutes','paidGold','interruptions','experienceGained','cultivationMeaning','destinationId','destinationName','mode','lastLocationId','remainingGold','estimateFrom','canResume','meaning','resumeReason','position','transit'],'长行动当前进度');
+ known(a,['kind','status','startedAt','targetAt','progressedTo','minutesExecuted','remainingMinutes','paidGold','interruptions','earnedGold','experienceGained','cultivationMeaning','destinationId','destinationName','mode','lastLocationId','remainingGold','estimateFrom','canResume','meaning','resumeReason','position','transit'],'长行动当前进度');
  if(!kindNames[a.kind])throw Error(`长行动类型缺少编译：${a.kind}`);
  return {actionId:a.id,activity:kindNames[a.kind],stage:({interrupted:'已暂停',completed:'已完成',cancelled:'已放弃剩余部分'} as Record<string,string>)[a.status],
-  ...pick(a,['startedAt','targetAt','progressedTo','minutesExecuted','remainingMinutes','paidGold','experienceGained','destinationId','destinationName','mode','lastLocationId','remainingGold','estimateFrom','canResume','resumeReason','position','transit']),interruptions:a.interruptions.map(interruption)};
+  ...pick(a,['startedAt','targetAt','progressedTo','minutesExecuted','remainingMinutes','paidGold','earnedGold','experienceGained','destinationId','destinationName','mode','lastLocationId','remainingGold','estimateFrom','canResume','resumeReason','position','transit']),interruptions:a.interruptions.map(interruption)};
 });}
 
 export function compileTimeReceipt(turn:StoryTurn,c:any){
@@ -43,8 +45,14 @@ export function compileTimeReceipt(turn:StoryTurn,c:any){
   return {actorId,stage:stages[c.result],captivityId:c.captivityId,guardPresentAtAttempt:c.guarded,guardId:c.guardId,statusId:c.statusId,escaped:c.escaped,time,
    check:{...copy(c.check),outcome:c.check.die===null?'无需掷骰':c.check.passed?'通过':'未通过'},interruption:copy(c.interruption??null)};
  }
+ if(c.type==='custody-door-break'){
+  known(c.check,['attribute','difficulty','modifier','die','total','passed'],'破门检定');
+  if(time.elapsedMinutes!==c.minutes||c.broken&&!c.check.passed)throw Error('破门回执与实际检定不一致');
+  return {actorId,stage:c.summary,facilityId:c.facilityId,cellId:c.cellId,broken:c.broken,time,check:copy(c.check),interruption:copy(c.interruption??null)};
+ }
  if(time.elapsedMinutes!==c.minutes)throw Error('长行动回执的实际用时与时间不一致');
  const common={...compileWorldEffectSettlements(c),actorId,time,actionId:c.longActionId??null,stage:c.interrupted?'行动已暂停':'行动已完成',remainingMinutes:c.remainingMinutes??null,interruption:interruption(c.interruption)};
+ if(c.type==='world-worked')return {...common,activity:'打工',gold:c.gold};
  if(c.type==='world-waited'){
   const duties=(c.dutySettlements??[]).map((r:any)=>{
    known(r,['eventId','dutyId','facilityId','facilityName','personId','personName','at','status','reason'],'看守安排');
@@ -80,6 +88,7 @@ export function timeEventAccount(type:string,f:any,n:StoryEventNames):string{
  if(type==='long-action-abandoned')return `${actor}在${storyEventTime(f.cancelledAt)}放弃剩余${f.activity}。此前已经执行${f.minutesAlreadyExecuted}分钟、支付${f.alreadyPaidGold}金币；取消时尚余${f.remainingMinutesAtCancellation}分钟，当前位置为${f.transit?`${n.location(f.transit.from)}至${n.location(f.transit.to)}途中（路段进度 ${f.transit.progressUnits}/${f.transit.totalUnits}）`:n.location(f.locationId)}。`;
  const elapsed=`从${storyEventTime(f.time.before)}至${storyEventTime(f.time.after)}，实际经过${f.time.elapsedMinutes}分钟`;
  if(type==='captivity-escape')return `${actor}尝试脱困，${elapsed}；${f.check.attribute}检定${f.check.outcome}，${f.stage}。`;
+ if(type==='custody-door-break')return `${actor}尝试破门，${elapsed}。${f.stage}`;
  const lines=[`${actor}${f.activity}，${elapsed}。`,...worldEffectAccount(f,n)];
  for(const r of f.abilitySettlements??[]){
   if(r.payment){const p=r.payment,costs=[...(p.soulPower?[`魂力${p.soulPower}`]:[]),...(p.health?[`生命${p.health}`]:[]),...(p.lifespan?[`寿命${p.lifespan}分钟（另于自然经过时间）`]:[]),...p.items.map((i:any)=>`${i.itemName}${i.quantity}份`)];lines.push(`${actor}在${storyEventTime(r.settledAt)}为“${r.skillName}”这次施放实际支付维持费：${costs.length?costs.join('、'):'没有资源消耗'}。`);}
@@ -88,6 +97,7 @@ export function timeEventAccount(type:string,f:any,n:StoryEventNames):string{
  for(const r of f.dutySettlements??[])lines.push(`${r.personName}在${storyEventTime(r.settledAt)}结束值守：${r.reason}。`);
  if(type==='travel-completed')lines.push(`从${n.location(f.startLocationId)}出发，${f.transit?`当前在${n.location(f.transit.from)}至${n.location(f.transit.to)}途中（路段进度 ${f.transit.progressUnits}/${f.transit.totalUnits}）`:`实际到达${n.location(f.actualLocationId)}`}，${f.reachedDestination?'已抵达预定终点':`尚未抵达预定终点${n.location(f.intendedDestinationId)}`}；本次实际支付${f.paidGold}金币。`,
   ...(f.travelingCompanionIds.length?[`实际同行者：${f.travelingCompanionIds.map(n.person).join('、')}。`]:[]));
+ if(type==='world-worked')lines.push(`获得工钱${f.gold}金魂币。`);
  if(f.growth){const g=f.growth;lines.push(`本次修炼实际获得经验${g.experienceGained}、提升${g.levelsGained}级、获得属性点${g.attributePointsGained}。等级${g.before.level} → ${g.after.level}，经验${g.before.experience} → ${g.after.experience}；尚未折算的修炼时间${g.unconvertedPracticeMinutesBefore} → ${g.unconvertedPracticeMinutesAfter}分钟。`);}
  lines.push(f.interruption?`${f.activity}已暂停：${f.interruption.kind}${f.interruption.reason?`，${f.interruption.reason}`:''}；尚余${f.remainingMinutes}分钟未执行。`:`本次${f.activity}已完成。`);
  return lines.join('\n');

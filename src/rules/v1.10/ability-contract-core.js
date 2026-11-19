@@ -60,10 +60,12 @@
     return check;
   }
   function deriveCopy(source,spec){
-    if(source.effectGraph?.nodes?.some(n=>globalThis.SoulEffectCompiler.EFFECT_REGISTRY[n.effectId]?.copyable===false))throw Error('该能力依托独立的实体来源，不能复制或继承');
+    const carrier=!!spec?.carrierSoulId&&spec.carrierSoulId===(source.sourceMartialSoulId||source.来源武魂ID)&&spec.kind==='summoned-copy'&&spec.scale===100&&spec.ownerId==='manifestation:'+spec.carrierSoulId+':body'&&spec.castSkillId==='manifest:'+spec.carrierSoulId&&spec.sourceUnitId===source.持有者单位ID;
+    if(spec?.carrierSoulId&&!carrier)throw Error('常驻载体与原武魂来源不一致');
+    if(!carrier&&source.effectGraph?.nodes?.some(n=>globalThis.SoulEffectCompiler.EFFECT_REGISTRY[n.effectId]?.copyable===false))throw Error('该能力依托独立的实体来源，不能复制或继承');
     if(!spec||!['copied','summoned-copy'].includes(spec.kind)||!Number.isFinite(spec.scale)||spec.scale<10||spec.scale>100||!spec.ownerId||!spec.sourceUnitId||!spec.id)throw Error('复制来源或比例无效');
     if(spec.discreteScale!==undefined&&spec.discreteScale!=='向下取整最少1'&&spec.discreteScale!=='不放大')throw Error('离散继承缩放规则未登记');
-    const result={...clone(source),id:spec.id,name:`镜像·${source.name??source.名称??source.id}`,持有者单位ID:spec.ownerId,ownerId:spec.ownerId,
+    const result={...clone(source),id:spec.id,name:carrier?(source.name??source.名称):`镜像·${source.name??source.名称??source.id}`,持有者单位ID:spec.ownerId,ownerId:spec.ownerId,
       sourceKind:spec.kind,sourceMartialSoulId:'',sourceRingId:'',来源武魂ID:'',来源魂环ID:'',sourceItemId:'',
       usageKey:String(source.usageKey||source.usageRules?.worldUsageGroup||source.id),outputScale:Math.min(3,Math.max(.2,Number(source.outputScale??1)*spec.scale/100))};
     delete result.castOrigin;
@@ -138,7 +140,7 @@
     const compiler=globalThis.SoulEffectCompiler??(typeof require==='function'?require('./effects-core.js'):null);
     graph=compiler.immediateGraph(graph);
     const shell=n=>['release.touch','release.melee','release.projectile','target.self','target.single','target.burst','target.aura','check.save'].includes(n.effectId);
-    const payload=n=>['contract.oath','trigger.contract','modifier.world_duration','payload.death','payload.soul_damage'].includes(n.effectId)||controls.canPersist(n.effectId,n.params)&&n.params?.持续方式&&n.params.持续方式!=='回合'||['realm.store','realm.capture','payload.heal','payload.restore','payload.soul_restore','payload.cleanse','payload.dispel','payload.repair_item','payload.fabricate','payload.unlock','payload.suppress_lock','payload.rule_break','payload.analyze_lock','payload.create_key','payload.arcane_lock'].includes(n.effectId)||['zone.wall','summon.entity'].includes(n.effectId)&&n.params?.持续方式==='世界分钟';
+    const payload=n=>['contract.oath','trigger.contract','modifier.world_duration','payload.death','payload.soul_damage'].includes(n.effectId)||controls.canPersist(n.effectId,n.params)&&n.params?.持续方式&&n.params.持续方式!=='回合'||['payload.recon','realm.store','realm.capture','payload.heal','payload.restore','payload.soul_restore','payload.revive','payload.cleanse','payload.dispel','payload.repair_item','payload.fabricate','payload.unlock','payload.suppress_lock','payload.rule_break','payload.analyze_lock','payload.create_key','payload.arcane_lock'].includes(n.effectId)||['zone.wall','summon.entity'].includes(n.effectId)&&n.params?.持续方式==='世界分钟';
     const branches=compiler.graphBranches(graph).filter(b=>b.activation==='active');
     const result=branches.flatMap(branch=>{
       const excluded=branch.nodes.filter(n=>!shell(n)&&!payload(n));

@@ -43,7 +43,8 @@ export function storyPersona(state:any,person:any,observerId=person.id){
  const reference=REFERENCES[canonicalId];
  const profile=rules.backgroundOpening.effectiveProfile(state,person.id);
  const profileData=profile?.status==='complete'?structuredClone(profile.data):null;
- const rewritten=Object.values(state.扩展?.personaRewrites?.patches??{}).some((r:any)=>r.targetId===person.id&&(r.retention==='保留'||state.状态实例?.列表?.[r.sourceStatusId]?.状态==='生效'));
+ const patches=Object.values(state.扩展?.personaRewrites?.patches??{}).filter((r:any)=>r.targetId===person.id&&(r.retention==='保留'||state.状态实例?.列表?.[r.sourceStatusId]?.状态==='生效')) as any[];
+ const rewrittenPersonality=patches.some(r=>Object.hasOwn(r.fields??{},'personality'));
  // Only the registered background-event fields carry this source. A forgotten
  // purchase must not be restored through biography or a named opening goal;
  // temperament, speech and independently authored profiles remain untouched.
@@ -51,15 +52,16 @@ export function storyPersona(state:any,person:any,observerId=person.id){
   if(Object.hasOwn(profile.backgroundFallback??{},field))profileData[field]=structuredClone(profile.backgroundFallback[field]);
   else delete profileData[field];
  }
+ if(profileData&&rewrittenPersonality&&!patches.some(r=>Object.hasOwn(r.fields??{},'profile.values'))&&person.personality?.trim())profileData.values=person.personality;
  const boundary=rules.personChangeKnowledge.memoryBoundary(state,person.id);
- const patches=Object.values(state.扩展?.personaRewrites?.patches??{}) as any[];
- const fullMemoryReplacement=patches.some(r=>r.targetId===person.id&&Object.hasOwn(r.fields??{},'cognition.memories')&&(r.retention==='保留'||state.状态实例?.列表?.[r.sourceStatusId]?.状态==='生效'))||(state.扩展?.personaRewrites?.baselines?.[person.id]?.['cognition.memories']?.order??0)>0;
+ const fullMemoryReplacement=patches.some(r=>Object.hasOwn(r.fields??{},'cognition.memories'))||(state.扩展?.personaRewrites?.baselines?.[person.id]?.['cognition.memories']?.order??0)>0;
  if(profileData&&fullMemoryReplacement&&boundary.order>0){
   for(const field of ['biography','shortTermGoal','longTermGoal']){
    const key='profile.'+field,baseline=state.扩展?.personaRewrites?.baselines?.[person.id]?.[key];
-   const current=patches.some(r=>r.targetId===person.id&&r.order>=boundary.order&&(r.retention==='保留'||state.状态实例?.列表?.[r.sourceStatusId]?.状态==='生效')&&r.fields?.[key]===profileData[field]);
+   const current=patches.some(r=>r.order>=boundary.order&&r.fields?.[key]===profileData[field]);
    if(!current&&!(baseline?.order>=boundary.order&&baseline.value===profileData[field]))delete profileData[field];
   }
+  profileData.examples=rules.npcLoadouts.examplesForProfile(profileData);
  }
  const playerId=state.角色?.主控单位ID;
  const physical=person.id===observerId||rules.actions.perception(state,observerId,person.id,'vision')?person:person.扩展?.已知档案?.[observerId];
@@ -68,13 +70,13 @@ export function storyPersona(state:any,person:any,observerId=person.id){
   ...(profileData?{profile:profileData}:{}),
   ...(relationshipToPlayer?{relationshipToPlayer}:{}),
   ...(person.id===observerId&&person.扩展?.身份呈现?{identityPresentation:structuredClone(person.扩展.身份呈现)}:{}),
-  recorded:{personality:person.personality?.trim()||null,occupation:person.occupation||null,faction:person.faction||null,
+  recorded:{personality:(rewrittenPersonality?person.personality?.trim():profileData?.values)||person.personality?.trim()||null,occupation:person.occupation||null,faction:person.faction||null,
    appearance:physical?.appearance&&physical.appearance!=='原作人物档案'?physical.appearance:null,
    ...(physical?recordedIdentity(physical):{age:null,gender:null})},
   ...(person.id===observerId&&person.扩展?.cognitivePersona?{personalSettings:structuredClone(person.扩展.cognitivePersona)}:{}),
   personalExperience:person.id===observerId?personalChangeContext(state,person.id):{ownerId:observerId,
    experiences:rules.personChangeKnowledge.facts(state,observerId,{targetId:person.id}),
    heardReactions:changeInteractionContext(state,observerId,person.id)},
-  reference:reference&&!rewritten&&!boundary.order?{source:'斗罗大陆Reborn V2.6 正式版',...reference}:null,
+  reference:reference&&!patches.length&&!boundary.order?{source:'斗罗大陆Reborn V2.6 正式版',...reference}:null,
  };
 }

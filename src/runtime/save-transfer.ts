@@ -33,6 +33,7 @@ export function importCharacterConfig(input: string): Record<string, unknown> {
     expectedKinds: [rules.transfer.KINDS.character],
     rulesetVersion: rules.foundation.VERSION,
   }).payload;
+  for(const soul of payload.martialSoulDrafts??[])checkImportedSoul(soul);
   const validation=rules.world.validateCreationDraft(payload);
   if(!validation.pass)throw new Error(validation.errors.join('；'));
   return payload;
@@ -45,8 +46,16 @@ export function exportMartialSoulConfig(soul: Record<string, unknown>): string {
 }
 
 export function importMartialSoulConfig(input: string): Record<string, unknown> {
-  return rules.transfer.parseEnvelope(input, {
+  const soul=rules.transfer.parseEnvelope(input, {
     expectedKinds: [rules.transfer.KINDS.martialSoul],
     rulesetVersion: rules.foundation.VERSION,
   }).payload;
+  checkImportedSoul(soul);
+  return soul;
+}
+
+function checkImportedSoul(soul:any){
+  if(soul?.baseAction?.mode==='disguise'&&!soul.baseAction.disguise?.伪装模板){
+    throw new Error('这份武魂方案缺少伪装外貌设置，请从原角色重新导出武魂后再导入');
+  }
 }

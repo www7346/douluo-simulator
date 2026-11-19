@@ -1074,7 +1074,10 @@
   "artPath": "/art/presets-v26/towers-and-water.webp"
  }
 };
+ for(const [id,art] of Object.entries({'summon-guardian-rhino':'summon-wolf','summon-scout-eagle':'step-flight','fixed-ward-sentinel':'earth-fort'}))BINDINGS['preset:'+id]=BINDINGS['preset:'+art];
  for(const id of ['oath-cinder','oath-dormant-star','oath-still-spring','oath-echo','oath-six-cord','oath-silent-bell'])BINDINGS['shop:'+id]={artId:'item.blueprint',artPath:'/art/generated-v2/items-supplies-v2.png'};
+ const tangmen=globalThis.SoulTangmenItemArt??require('../../shared/tangmen-item-art.js');
+ for(const entry of tangmen.ENTRIES)BINDINGS[entry.presetId]={artId:entry.artId,artPath:entry.artPath};
  const women=globalThis.SoulCanonicalWomenContent??require('../../shared/canonical-women-content-core.js');
  for(const p of women.PROFILES)BINDINGS[p.SOUL.id]={artId:p.SOUL.artId,artPath:p.SOUL.artPath};
  for(const v of Object.values(BINDINGS))Object.freeze(v);Object.freeze(BINDINGS);

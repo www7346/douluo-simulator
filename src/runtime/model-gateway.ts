@@ -1,7 +1,7 @@
 import {validateGlobalPrompts,validateGlobalPromptPreset,globalPromptMessages,type GlobalPromptConfiguration} from './model-global-prompts';
 import {modelRequestMessages,modelPromptText,promptMessage} from './model-prompt-templates';
 import {modelAnalysisBoundaries,separateModelResponse,separateNovelResponse,normalizeNovelPromptStructure,isStoryAuthorTask} from './model-response-sections';
-import {resolveTaskProfile,taskChain,type ModelLibraryFields} from './model-library';
+import {resolveTaskProfile,separateWriterProfile,taskChain,type ModelLibraryFields} from './model-library';
 import {modelContextBudget} from '../shared/model-context';
 import type {ModelRecoveryBudget} from './model-recovery-budget';
 import {sanitizeDiagnostic} from '../shared/failure-diagnostics';
@@ -64,7 +64,7 @@ export class ModelGateway {
  readonly #tasks=new Map<string,ModelGateway>();
  #route(task:string):ModelGateway|undefined{if(!this.#profile.modelLibrary)return undefined;let gateway=this.#tasks.get(task);if(!gateway){gateway=new ModelGateway(resolveTaskProfile(this.#profile,task),this.#fetch,this.#observe,this.candidateSink,this.recoveryBudget,()=>this.#route('format-repair')!);this.#tasks.set(task,gateway);}return gateway;}
  constructor(profile:ModelProfile,fetchImplementation:typeof fetch=fetch,observe?:(log:ModelLog)=>void,private readonly candidateSink?:(record:ModelCandidateRecord)=>void,readonly recoveryBudget?:ModelRecoveryBudget,private readonly formatRepairGateway?:()=>ModelGateway){validateGlobalPrompts(profile.globalPrompts);validateReplyTools(profile.replyTools);validateGlobalPromptPreset(profile.globalPromptPreset);validateConnection(profile.connection);validateHeaders(profile.credentialHeaders);this.#profile=structuredClone(profile);this.#fetch=(input,init)=>fetchImplementation(input,Object.hasOwn(init??{},'providerBrowserToken')?init:{...init,providerBrowserToken:profile.transport==='browser'?profile.apiKey:undefined} as RequestInit);this.#observe=observe;
-  if(profile.writer){if(Object.hasOwn(profile.writer,'writer'))throw Error('作家连接不能嵌套其他连接');this.#writer=new ModelGateway({...profile.writer,globalPrompts:profile.globalPrompts,apiKey:profile.writer.apiKey??''},fetchImplementation,observe,candidateSink,recoveryBudget);}
+  if(profile.writer){if(Object.hasOwn(profile.writer,'writer'))throw Error('作家连接不能嵌套其他连接');this.#writer=new ModelGateway(separateWriterProfile(profile)!,fetchImplementation,observe,candidateSink,recoveryBudget);}
  }
  identity(task=''):{model:string;service:string;connection:ModelConnection|undefined;purposeFingerprint?:string}{
   if(this.#profile.modelLibrary)return this.#route(task)!.identity(task);if(taskChain(task).includes('story-writer')&&this.#writer)return this.#writer.identity(task);
@@ -87,7 +87,7 @@ export class ModelGateway {
   if(this.#profile.modelLibrary)return this.#route(options.task)!.checkContext(messages,options);
   if(taskChain(options.task).includes('story-writer')&&this.#writer)return this.#writer.checkContext(messages,options);
   const budget=measureModelPrompt(this.#profile,messages,options);
-  if(budget.exceeded)throw new ModelGatewayError('invalid-response',`当前内容按保守估算需约 ${budget.total} Token，超过设置的上下文容量 ${budget.capacity}；输入约 ${budget.estimatedInput}，输出预留 ${budget.outputReserve}。请提高容量或精简提示词`);
+  if(budget.exceeded&&!isStoryAuthorTask(options.task))throw new ModelGatewayError('invalid-response',`当前内容按保守估算需约 ${budget.total} Token，超过设置的上下文容量 ${budget.capacity}；输入约 ${budget.estimatedInput}，输出预留 ${budget.outputReserve}。请提高容量或精简提示词`);
   return budget;
  }
 
@@ -160,18 +160,19 @@ export class ModelGateway {
   try{
    if(path!=='/models'&&!this.#profile.model.trim())throw new ModelGatewayError('invalid-response','请先选择或填写模型名');
    const analysisBoundaries=path==='/models'?[]:modelAnalysisBoundaries(this.#profile,task);
-   options={...options,promptStructure:normalizeNovelPromptStructure(task,options.promptStructure,analysisBoundaries,!!validate||!!options.responseFormat)};
+   const structured=!!validate||!!options.responseFormat,author=!structured&&isStoryAuthorTask(task);
+   options={...options,promptStructure:normalizeNovelPromptStructure(task,options.promptStructure,analysisBoundaries,structured)};
    let outgoing=path==='/models'?messages:modelRequestMessages(this.#profile,messages,task,options.promptStructure);
    const appendRepair=(repair:ChatMessage[])=>{const tail=globalPromptMessages(this.#profile,'after',task,options.promptStructure).length;outgoing.splice(outgoing.length-tail,0,...repair);};
    const thinking=options.thinking??config.thinking,thinkingActive=thinking==='enabled'||(deepseek&&thinking==='default');
    this.checkTaskSettings(task,options);
    const notes:string[]=[];if(deepseek&&config.topK!==null)notes.push('DeepSeek不支持Top-K，此项未发送');if(deepseek&&thinkingActive&&(config.temperature!==null||config.topP!==null))notes.push('思考模式下温度和Top-P不生效，已保留设置');if(!deepseek&&!isArkService(this.#profile.baseUrl)&&!this.#profile.connection?.extendedParameters&&thinking!=='default')notes.push('此接口未启用扩展参数，思考由服务默认配置决定');
-   const maxTokens=options.probe?options.maxTokens!:this.#profile.taskOverrides?.[task]?.outputTokens??this.#profile.generation?.outputTokens??options.maxTokens??config.outputTokens!;let repaired=false,adapted=false,toolRounds=0,toolContinuation=false;const replyTools=activeReplyTools(this.#profile,task,!!validate||!!options.responseFormat);const omitted=new Set<string>();
+   const maxTokens=options.probe?options.maxTokens!:this.#profile.taskOverrides?.[task]?.outputTokens??this.#profile.generation?.outputTokens??options.maxTokens??config.outputTokens!;let repaired=false,adapted=false,toolRounds=0,toolContinuation=false;const replyTools=activeReplyTools(this.#profile,task,structured);const omitted=new Set<string>();
    while(true){
     if(signal.aborted)throw cancellation(signal);
     body=path==='/models'?null:protocolBody(this.#profile,wireProtocol(this.#profile,config.protocol),outgoing,config,maxTokens,!!options.responseFormat,thinking,omitted,options.promptStructure,options.responseSchema,toolRounds?replyTools.map(t=>({...t,choice:'auto'})):replyTools);
     const schema=wireResponseSchema(body),budget=modelContextBudget([...outgoing,...(schema?[{content:JSON.stringify(schema)}]:[]),...(body?.tools?.length?[{content:JSON.stringify(body.tools)}]:[])],config.contextTokens,maxTokens,options.promptStructure?.prefill?.content),estimatedInput=budget.estimatedInput;
-    if(path!=='/models'&&budget.exceeded)throw new ModelGatewayError('invalid-response',`当前内容按保守估算需约 ${budget.total} Token，超过设置的上下文容量 ${budget.capacity}；输入约 ${estimatedInput}，输出预留 ${budget.outputReserve}。请提高容量或精简提示词`);
+    if(path!=='/models'&&budget.exceeded&&!author)throw new ModelGatewayError('invalid-response',`当前内容按保守估算需约 ${budget.total} Token，超过设置的上下文容量 ${budget.capacity}；输入约 ${estimatedInput}，输出预留 ${budget.outputReserve}。请提高容量或精简提示词`);
     if(signal.aborted)throw cancellation(signal);
     if(attempt===0&&options.recoveryKind)options.recoveryBudget?.consume(options.recoveryKind);
     if(attempt>0&&!toolContinuation)options.recoveryBudget?.consume(current.errorKind==='invalid-json'||current.repairReason==='内容校验'?'format-recovery':'provider-retry');
@@ -186,7 +187,6 @@ export class ModelGateway {
       else{outgoing.push(...tool.messages);toolContinuation=true;report('预设工具已确认，等待正文');continue;}
      }current.finishReason=finish??null;if(options.promptStructure)current.contentCharacters=typeof content==='string'?content.length:0;else current.content=typeof content==='string'?content:'';
      if(typeof content==='string')this.candidateSink?.({callId:id,task:task||'generation',attempt,at:current.startedAt,elapsedMs:current.elapsedMs,content,transportComplete:payload.transportComplete!==false,finishReason:finish??null,usage:current.usage??null});
-     const author=!validate&&isStoryAuthorTask(task);
      if(!author){
       if(finish==='length')throw new ModelGatewayError('invalid-response','回复在完成前被截断。请提高输出上限，或降低思考级别后重试');
       if(finish==='content_filter')throw new ModelGatewayError('invalid-response','模型服务未提供这次答复，请调整构想后重试');

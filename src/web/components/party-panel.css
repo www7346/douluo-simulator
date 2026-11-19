@@ -1,1 +1,7 @@
 .party-status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:1rem;margin-top:1rem}.party-status-grid article{border:1px solid #d8c9a9;border-radius:.6rem;padding:1rem;background:#faf7ee}.party-status-identity{display:flex;align-items:center;text-align:left;gap:.8rem;width:100%;border:0;background:none;padding:0;margin-bottom:1rem}.party-status-identity>span{width:64px;height:64px;flex:none;overflow:hidden;border-radius:50%}.party-status-identity img{width:100%;height:100%;object-fit:cover}.party-status-identity div{display:grid;gap:.3rem}.party-status-identity small{font-size:.85rem;color:#7e7057}.party-status-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}.party-status-dialog .modal__body{max-width:100%}
+
+.summon-orders { margin-block: .6rem; padding: .7rem 1rem; border: 1px solid #d8c9a9; border-radius: .5rem; background: #faf7ee; }
+.summon-orders h3,.summon-orders p { margin: .25rem 0; }
+.summon-orders article { padding-block: .5rem; }
+.summon-orders label { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.summon-orders select { max-width: 100%; }

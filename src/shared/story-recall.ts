@@ -1,6 +1,7 @@
 import {MAX_STORY_PROSE_LENGTH} from './story-prose';
 import {storySourceInput} from './story-source-input';
 export {STORY_RECALL_GUIDANCE} from './model-prompt-defaults';
+import {dialogueParticipants,turnDialogue,type DialogueMemory} from './story-dialogue-memory';
 import {isPartyTurn} from './story-party-chat';
 import {remembersStoryTurn} from './cognition-view';
 import {storyPersonObservations} from './story-event-context';
@@ -67,10 +68,11 @@ function candidate(entry:StoryArchiveRecord,query:Set<string>,queryText:string){
 }
 
 /** Read only the selected archive chain. No cache can outlive a rewind or cross worlds. */
-export async function readStoryContext(readPage:(nextId?:string)=>Promise<StoryArchivePage>,options:{query:string;beforeTurn:number;privatePersonId?:string;recentLimit?:number;includeHostPrivate?:boolean}){
+export async function readStoryContext(readPage:(nextId?:string)=>Promise<StoryArchivePage>,options:{query:string;beforeTurn:number;privatePersonId?:string;recentLimit?:number;includeHostPrivate?:boolean;dialoguePersonId?:string}){
  const history:StoryRecent[]=[],ranked:{recall:StoryRecall;score:number}[]=[],query=new Set(terms(options.query).map(t=>t.term));
  const privateRanked:{recall:StoryRecall;score:number}[]=[],includePrivate=!!options.includeHostPrivate&&!options.privatePersonId;
  const seeksOrigin=/(?:最初|最早|首次|第一次)/u.test(options.query);
+ const dialogue:{record:DialogueMemory;score:number}[]=[];
  let earliestInput:NonNullable<ReturnType<typeof candidate>>|undefined;
  const seen=new Set<string>(),cursors=new Set<string>();let nextId:string|undefined,prior=options.beforeTurn,scanned=0,matched=0,worldId:string|undefined;
  do{
@@ -80,6 +82,18 @@ export async function readStoryContext(readPage:(nextId?:string)=>Promise<StoryA
    worldId??=entry.worldId;if(entry.worldId!==worldId)throw Error('记忆来源不能混用不同世界');
    if(seen.has(entry.id)||entry.turn.number>=prior)throw Error('记忆来源的故事顺序不完整');seen.add(entry.id);prior=entry.turn.number;scanned++;
    if(isPartyTurn(entry.turn))continue;
+   const audience=dialogueParticipants(entry.turn);
+   for(const id of audience){
+    const recipient=options.privatePersonId??options.dialoguePersonId;
+    if(recipient?recipient!==id:!entry.turn.privatePersonId)continue;
+    const named=!recipient&&storyPersonObservations(entry.turn).some(({person})=>person?.id===id&&person.name&&options.query.includes(person.name));
+    if(!recipient&&!named)continue;
+    const record=turnDialogue(entry.turn,entry.branchId,id);
+    if(!record)continue;
+    const hits=new Set(record.speech.flatMap(s=>terms(s.text).filter(t=>query.has(t.term)).map(t=>t.term)));
+    dialogue.push({record,score:hits.size});
+    dialogue.sort((a,b)=>b.score-a.score||b.record.turn-a.record.turn);dialogue.splice(4);
+   }
    if(entry.turn.privatePersonId!==options.privatePersonId){
     if(includePrivate&&entry.turn.privatePersonId){const hit=candidate(entry,query,options.query);if(hit){privateRanked.push(hit);privateRanked.sort((a,b)=>b.score-a.score||b.recall.source.turn-a.recall.source.turn);privateRanked.splice(4);}}
     continue;
@@ -97,7 +111,7 @@ export async function readStoryContext(readPage:(nextId?:string)=>Promise<StoryA
  }while(nextId);
  if(earliestInput&&!ranked.some(r=>r.recall.source.id===earliestInput!.recall.source.id)){ranked.splice(3);ranked.push(earliestInput);}
  const recall=ranked.map(r=>r.recall).sort((a,b)=>a.source.turn-b.source.turn);
- return {history:history.reverse(),recall,...(includePrivate?{hostPrivateRecall:privateRanked.map(r=>r.recall).sort((a,b)=>a.source.turn-b.source.turn)}:{}),recallSelection:{scanned,matched,selected:recall.length,characters:recall.reduce((n,r)=>n+r.passages.reduce((m,p)=>m+p.text.length,0),0),method:'entity-and-lexical-original-excerpts'}};
+ return {history:history.reverse(),recall,dialogue:dialogue.map(d=>d.record).reverse(),...(includePrivate?{hostPrivateRecall:privateRanked.map(r=>r.recall).sort((a,b)=>a.source.turn-b.source.turn)}:{}),recallSelection:{scanned,matched,selected:recall.length,characters:recall.reduce((n,r)=>n+r.passages.reduce((m,p)=>m+p.text.length,0),0),method:'entity-and-lexical-original-excerpts'}};
 }
 
 /** A separate host channel, not permission to mix private excerpts into ordinary/NPC history. */

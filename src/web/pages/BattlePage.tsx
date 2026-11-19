@@ -37,6 +37,7 @@ import {useGameQuery} from '../use-game-query';
 
 const SOURCE_LABELS:Record<string,string>={ordinary:'普通攻击','martial-base':'武魂本能','martial-skill':'武魂技','soul-ring':'魂环技','soul-bone':'魂骨技','soul-device':'魂导器','hidden-weapon':'暗器',consumable:'消耗品',copied:'复制技能','martial-switch':'武魂切换',tactic:'战术'};
 type BattlePageProps={onNavigate:(page:PageId)=>void;embedded?:boolean;onPlaybackChange?:(playing:boolean)=>void};
+import SummonOrders from '../components/SummonOrders';
 export default function BattlePage({onNavigate,embedded=false,onPlaybackChange}:BattlePageProps) {
   const {state,view}=useGame();
   return <BattleScene key={`${view.sessionId}:${state?.战斗?.id ?? ''}`} onNavigate={onNavigate} embedded={embedded} onPlaybackChange={onPlaybackChange}/>;
@@ -209,6 +210,7 @@ function BattleScene({onNavigate,embedded,onPlaybackChange}:BattlePageProps) {
     {battle?.扩展?.strategy&&<p className="muted" aria-label="当前自动战术">集火：{state.战斗单位.列表[battle.扩展.strategy.focusTargetId]?.名称??'自由选择'}；支援：{state.战斗单位.列表[battle.扩展.strategy.protectTargetId]?.名称??'按战况选择'}；保留魂力：{battle.扩展.strategy.reservePercent}%；{battle.扩展.strategy.retreatPercent?`生命降至${battle.扩展.strategy.retreatPercent}%时尝试撤离`:'未设条件撤离'}。</p>}
     {battle.状态==='已结束'&&<BattleReplayButton/>}
     {battle.状态==='进行中'&&<><MedicineBattlePanel/><MedicineStatePanel/></>}
+    {battle?.状态==='进行中'&&battle.参与者ID列表.some((id:string)=>state.战斗单位?.列表[id]?.扩展?.召唤?.接受指令)&&<SummonOrders/>}
     <div className="combat-order" aria-label="行动顺序">{order?.map((id:string,index:number)=>{const unit=playback.frame.units.find(item=>item.id===id);if(!unit)return null;return <button key={id} onClick={()=>chooseUnit(id)} className={id===(activeEvent?.payload.actorId ?? playback.frame.actorId) ? 'is-current' : ''}><span className="combat-order__portrait">{<BattleUnitPortrait name={unit.name} avatarUrl={id===playerId?view.avatarUrl:''} portrait={unit.portrait} figure={figures[id]} appearance={collarAppearance(state,id)}/>}</span><span>{index+1}</span><b>{unit.name}</b>{id===(activeEvent?.payload.actorId ?? playback.frame.actorId)&&<i>行动中</i>}</button>;})}</div>
     <div className={`combat-layout${pending ? ' has-plan' : ''}`}>
       <BattleIntel state={state} unit={inspectedFrame} title={inspectedFrame?.sideId===playerFrame?.sideId?'我方情报':'敌方情报'}/>
@@ -257,7 +259,7 @@ function BattleScene({onNavigate,embedded,onPlaybackChange}:BattlePageProps) {
     {storyPending&&<p role="status">正在处理本场战斗的行动，请完成当前步骤后继续。</p>}
     {actionQuery.loading&&<p role="status">正在查看可用行动…</p>}{actionQuery.error&&<p role="alert">{actionQuery.error}</p>}
     {!autoBattle&&allActions.find(action=>action.id==='tactic:support')&&<div className="combat-support-entry"><button disabled={locked} onClick={()=>chooseAction(allActions.find(action=>action.id==='tactic:support'))}>持续加持 · 选择同伴与技能</button><span>可同时加持在场队友与投影</span></div>}
-    {autoBattle?<p role="status">正在自动选择行动。手动接管后可选择魂技与战术。</p>:<BattleConsole key={view.profileId+':'+playerId} state={state} worldId={view.profileId} unitId={playerId} actions={allActions} locked={locked} pending={pending} castReceipt={activeReceipt?.actorId===playerId?activeReceipt:lastOwnCast} playing={Boolean(activeReceipt?.actorId===playerId&&playback.playing)} onChoose={chooseAction} onCancel={()=>{setPending(null);setMode('target');}}/>}
+    {autoBattle?<p role="status">正在自动选择行动。手动接管后可选择魂技与战术。</p>:<BattleConsole key={view.profileId+':'+playerId} state={state} worldId={view.profileId} unitId={playerId} actions={allActions} soulImages={view.soulImages} locked={locked} pending={pending} castReceipt={activeReceipt?.actorId===playerId?activeReceipt:lastOwnCast} playing={Boolean(activeReceipt?.actorId===playerId&&playback.playing)} onChoose={chooseAction} onCancel={()=>{setPending(null);setMode('target');}}/>}
     {!embedded&&state.扩展?.story&&<section className="combat-story" aria-label="战斗故事">
       <StoryChat deferBattleNarration={playback.playing}/>
     </section>}

@@ -73,3 +73,15 @@ html:is([data-performance='smooth'],[data-performance='reduced']) .soul-ring-art
 .background-ring .ability-details :is(.ability-effects span,.ability-context dd span,.ability-costs),.ring-adopted-design .ability-details :is(.ability-effects span,.ability-context dd span,.ability-costs){font-size:15px;line-height:1.65}
 .opening-ring-years select,.opening-ring-years textarea{font-size:16px;min-height:44px;max-width:100%;width:100%}
 .ring-exchange-editor [aria-label="当前魂技设计预览"] .ability-context dd span{font-size:15px;line-height:1.65}
+
+.ring-manual-editor,.effect-catalogue { min-width:0; margin-block:1rem; }
+.ring-manual-editor fieldset { min-width:0; margin-block:1rem; }
+.ring-manual-editor input:not([type="checkbox"]),.ring-manual-editor textarea,.ring-manual-editor select,.effect-catalogue input,.effect-catalogue select { max-width:100%; box-sizing:border-box; }
+.effect-catalogue__list { max-height:28rem; overflow:auto; display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap:.6rem; }
+.effect-catalogue__list article { padding:.75rem; border:1px solid var(--border-color,#bca66f55); border-radius:.5rem; overflow-wrap:anywhere; }
+.effect-attribute-options { display:flex; flex-wrap:wrap; gap:.5rem 1rem; margin-block:.6rem; }
+.effect-attribute-options label { display:flex; align-items:center; gap:.3rem; }
+.ability-range { margin-block:.65rem; padding:.65rem; border-left:3px solid var(--accent,#b59756); background:#b597560a; }
+.ability-range p { margin:.3rem 0 0; }
+.ring-design-advisor label.opening-workshop__check { display:flex; align-items:center; gap:.5rem; }
+.ring-design-advisor label.opening-workshop__check input { width:auto; margin:0; flex:none; }

@@ -2,7 +2,7 @@ import {rules} from '../rules';
 import {restraintPresentation,restraintEffectLines} from './restraint-presentation';
 import {playerText} from './player-text';
 
-const PARTS:Record<string,string>={hands:'双手',legs:'双腿',body:'躯干与四肢',mouth:'口部',neck:'颈部'};
+const PARTS:Record<string,string>={hands:'双手',legs:'双腿',body:'躯干与四肢',mouth:'口部',neck:'颈部',anchor:'场景固定',feet:'足部'};
 const MODES:Record<string,string>={locked:'锁定',escort:'押送',released:'解放',limited:'受限活动'};
 
 /** Worn equipment belongs to the wearer view, independently of property rights. */
@@ -28,7 +28,7 @@ export function wornRestraintsPresentation(state:any,wearerId:string,viewerId=st
   try{rules.custody.controlDevice(state,viewerId,item.id,battle?.id??null);}catch(error){controlReason=(error as Error).message;}
   try{rules.custody.detachQuote(state,{actorId:viewerId,itemId:item.id});}catch(error){detachReason=(error as Error).message;}
   const bind=effects.find((e:any)=>e.effectId==='status.limb_bind');
-  return {itemId:item.id,name:playerText(item.name,state,'拘束器'),part:bind?.params.部位??PARTS[attachment.part]??'佩戴处',mode:attachment.mode,modeLabel:MODES[attachment.mode],
+  return {itemId:item.id,name:playerText(item.name,state,'拘束器'),part:details.realm?(PARTS[attachment.part]??'佩戴处'):(bind?.params.部位??PARTS[attachment.part]??'佩戴处'),mode:attachment.mode,modeLabel:MODES[attachment.mode],
    durability:item.durability,broken:item.durability<=0,expired:Number(state.世界.时间.day)>Number(item.payload?.expiresAtDay??Number.MAX_SAFE_INTEGER),effects,details,
    canControl:!controlReason,reason:controlReason,canDetach:!detachReason,detachReason,battleId:battle?.id??null,
    modes:Object.keys(device.modes),limits:structuredClone(attachment.mode==='limited'&&rules.host.definition(item).capabilities.suppression?rules.host.suppressionLimits(item):attachment.limits??null),supportsFineLimits:['restraint-seal-collar','restraint-seal-platform','restraint-slime-suit'].includes(item.templateId),supportsDamage:item.templateId==='restraint-seal-platform',

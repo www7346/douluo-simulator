@@ -2,7 +2,7 @@ import {rules} from '../rules';
 import {validateCharacterProfile,type CharacterProfile} from './character-profile';
 
 export interface GenerationTarget {kind:'person'|'skill'|'soul-base';id:string;fingerprint:string;value:any;ownerId?:string;allowPersonalName?:boolean}
-export interface GenerationLabel {kind:GenerationTarget['kind'];id:string;fingerprint:string;name?:string;description?:string;profile?:CharacterProfile}
+export interface GenerationLabel {kind:GenerationTarget['kind'];id:string;fingerprint:string;name?:string;description?:string;profile?:CharacterProfile;profileSource?:'preset'|'existing'}
 export function generationFingerprint(value:any):string {
  const text=JSON.stringify(value?.effectGraph||value?.效果图||value?.effectSpecs?rules.abilities.mechanics(value):value);
  let hash=14695981039346656037n;for(let i=0;i<text.length;i++)hash=BigInt.asUintN(64,(hash^BigInt(text.charCodeAt(i)))*1099511628211n);return hash.toString(16).padStart(16,'0');
@@ -45,9 +45,9 @@ export function generationTargets(before:any,after:any,repairIds:string[]=[],ret
  }
  for(const person of Object.values(after.人物?.列表??{}) as any[]){
   if(unmetCompetitionPeople.has(person.id))continue;
-  const promoted=before.人物?.列表?.[person.id]?.tier==='light'&&person.tier==='full';
-  const firstEncounter=firstCompetitionEncounter.has(person.id)||person.tier==='light'&&!before.人物?.列表?.[person.id]?.扩展?.相遇记录?.[playerId]&&!!person.扩展?.相遇记录?.[playerId];
-  if((!before.人物?.列表?.[person.id]||promoted||firstEncounter||repair.has(person.id))&&person.id!==playerId&&(person.扩展?.archetypeId||repair.has(person.id)&&!person.扩展?.角色库ID)&&(promoted||person.扩展?.characterProfile?.status!=='complete')){
+  const previous=before.人物?.列表?.[person.id];
+  const promoted=previous?.tier==='light'&&person.tier==='full'&&!person.扩展?.npcLoadoutId&&(previous.扩展?.characterProfile?.status!=='complete'||rules.world.NPC_ARCHETYPES[person.扩展?.archetypeId]?.full);
+  if((!previous||promoted||repair.has(person.id))&&person.id!==playerId&&(person.扩展?.archetypeId||repair.has(person.id)&&!person.扩展?.角色库ID)&&(promoted||person.扩展?.characterProfile?.status!=='complete')){
    const allowPersonalName=repair.has(person.id)&&!person.扩展?.角色库ID&&/掌柜|店主|商人|伙计/.test(person.name)&&/商|店|掌柜/.test(person.occupation??person.identity??'');
    result.push({kind:'person',id:person.id,allowPersonalName,fingerprint:generationFingerprint({name:person.name,age:person.age,gender:person.gender,occupation:person.occupation,faction:person.faction,profile:person.扩展?.characterProfile?.data}),value:person});
   }
@@ -75,15 +75,22 @@ export function validateGenerationLabels(targets:GenerationTarget[],input:unknow
  if(!Array.isArray(input)||input.length!==targets.length)throw Error('人物或能力生成结果不完整');
  const seen=new Set<string>(),names=new Set<string>();
  return input.map((row:any)=>{
-  if(!row||Object.keys(row).some(k=>!['kind','id','fingerprint','name','description','profile'].includes(k)))throw Error('生成结果包含不支持的字段');
+  if(!row||Object.keys(row).some(k=>!['kind','id','fingerprint','name','description','profile','profileSource'].includes(k)))throw Error('生成结果包含不支持的字段');
   const target=targets.find(t=>t.id===row.id&&t.kind===row.kind),key=`${row.kind}:${row.id}`;
   if(!target||seen.has(key)||row.fingerprint!==target.fingerprint)throw Error('生成结果与冻结人物或能力不一致');seen.add(key);
   if(row.kind==='person'){
    if(row.description!==undefined||row.name!==undefined&&(!target.allowPersonalName||typeof row.name!=='string'||!/^\p{Script=Han}{2,5}$/u.test(row.name)||/掌柜|店主|商人|伙计/.test(row.name)))throw Error('人物身份不能通过命名结果改写');
    if(target.allowPersonalName&&!row.name)throw Error('商人需要个人姓名');
-   return {...row,profile:validateCharacterProfile(row.profile)};
+   if(row.profileSource==='existing'){
+    if(row.profile!==undefined||row.name!==undefined||target.value.扩展?.characterProfile?.status!=='complete')throw Error('没有可保留的完成人物档案');
+    return row;
+   }
+   const profile=validateCharacterProfile(row.profile);
+   if(row.profileSource!==undefined&&(row.profileSource!=='preset'||row.name!==undefined||generationFingerprint(profile)!==generationFingerprint(target.value.扩展?.characterProfile?.data)))throw Error('本地短卡与创建时的人物资料不一致');
+   profile.examples??=rules.npcLoadouts.examplesForProfile(profile);
+   return {...row,profile};
   }
-  if(row.profile!==undefined||typeof row.name!=='string'||row.name.trim().length<2||row.name.length>18||typeof row.description!=='string'||row.description.trim().length<8||row.description.length>globalThis.SoulSkillProse.descriptionLimit||/程序组合|魂师能力|第\d+魂技|本能运用/.test(row.name))throw Error('能力名称或介绍尚未完成');
+  if(row.profile!==undefined||row.profileSource!==undefined||typeof row.name!=='string'||row.name.trim().length<2||row.name.length>18||typeof row.description!=='string'||row.description.trim().length<8||row.description.length>globalThis.SoulSkillProse.descriptionLimit||/程序组合|魂师能力|第\d+魂技|本能运用/.test(row.name))throw Error('能力名称或介绍尚未完成');
   if(target.value.effectGraph)rules.effects.validateDefenseNarrative(target.value.effectGraph.nodes,row.description,target.value.effectGraph);
   const nameKey=`${target.ownerId}:${row.name.trim()}`;if(names.has(nameKey))throw Error('同一人物的能力名称不能重复');names.add(nameKey);
   return {...row,name:row.name.trim(),description:row.description.trim()};
@@ -94,7 +101,8 @@ export function applyGenerationLabels(state:any,targets:GenerationTarget[],input
  const labels=validateGenerationLabels(targets,input);
  for(const row of labels){
   if(row.kind==='person'){
-   const person=state.人物.列表[row.id];person.扩展??={};person.扩展.characterProfile={version:1,source:'llm',status:'complete',data:row.profile};
+   if(row.profileSource==='existing')continue;
+   const person=state.人物.列表[row.id];person.扩展??={};person.扩展.characterProfile={version:1,source:row.profileSource??'llm',status:'complete',data:row.profile};
    if(row.name){if(Object.values(state.人物.列表).some((p:any)=>p.id!==row.id&&p.name===row.name))throw Error('个人姓名与已有人物重复');person.扩展.previousTitleName=person.name;person.name=row.name;const unit=state.战斗单位?.列表?.[row.id];if(unit)unit.名称=row.name;}
   }else if(row.kind==='skill'){
    const skill=state.技能.列表[row.id];if(generationFingerprint(skill)!==row.fingerprint)throw Error('魂技机制已经改变');

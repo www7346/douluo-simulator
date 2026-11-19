@@ -128,6 +128,23 @@
     state.历史??=[];state.历史.push({type:'person-death',personId:id,...death});
     return death;
   }
+  function revivalReason(state,id){
+    const person=personAt(state,id),unit=state.战斗单位?.列表?.[person.combatantId||id];
+    if(!person.life?.death||!unit||unit.存活状态!=='死亡')return '目标没有可恢复的死亡记录';
+    if(facts(state,id).expiresAt<=now(state))return '目标寿命已耗尽，复活不能延长寿命';
+    if(globalThis.SoulCommerceProvenance?.origin(state,id))return '化形魂兽死亡后的遗骸与魂环不能由人物复活恢复';
+    const remains=Object.values(state.战利品?.遗骸列表??{}).find(r=>r.unitId===id&&r.type==='human-corpse');
+    if(!remains||remains.type!=='human-corpse'||remains.harvested||!state.容器?.列表?.[remains.containerId])return '目标的完整遗体已不可用';
+    return '';
+  }
+  function revive(state,id,amount,sourceId){
+    const reason=revivalReason(state,id);if(reason)throw Error(reason);
+    const person=personAt(state,id),unit=state.战斗单位.列表[person.combatantId||id],death=JSON.parse(JSON.stringify(person.life.death));
+    globalThis.SoulWorldEngine.recoverRevivalRemains(state,id);
+    person.life.death=null;person.status='active';unit.存活状态='存活';unit.资源.生命.当前=Math.max(1,Math.min(unit.资源.生命.最大,amount));
+    state.历史??=[];state.历史.push({type:'person-revived',personId:id,at:now(state),sourceId,death});
+    return {deathId:death.id,remainingHp:unit.资源.生命.当前};
+  }
   /** Called before due actions and after paid effects, never before a sacrifice's effect. */
   function settleAt(state,at=now(state)){
     const deaths=[];
@@ -174,5 +191,5 @@
     return errors;
   }
   function nextEventOrder(state){state.扩展??={};const n=Number(state.扩展.personEventSequence??0)+1;if(!Number.isSafeInteger(n))throw Error('人物事件顺序超限');state.扩展.personEventSequence=n;return n;}
-  return Object.freeze({MINUTES_PER_YEAR,LIFESPAN_TIERS,UNKNOWN_AGE_YEARS,bindDeathSettlement,nextEventOrder,now,personalNow,levelOf,baseYears,initialize,syncGrowth,facts,isDead,assertAlive,checkPayment,pay,extend,die,settleAt,nextExpiry,validate});
+  return Object.freeze({MINUTES_PER_YEAR,LIFESPAN_TIERS,UNKNOWN_AGE_YEARS,bindDeathSettlement,nextEventOrder,now,personalNow,levelOf,baseYears,initialize,syncGrowth,facts,isDead,assertAlive,checkPayment,pay,extend,die,revivalReason,revive,settleAt,nextExpiry,validate});
 });

@@ -1,5 +1,5 @@
 import {storyNpcMechanicsFacts} from './story-npc-mechanics';
-import {storyActionState} from './story-state-writing-facts';
+import {perceivedActionState,storyActionState} from './story-state-writing-facts';
 import {rules} from '../rules';
 import type {UnitActionsReader} from './ability-presentation';
 import {ownedAbilityCatalog} from './owned-abilities';
@@ -58,6 +58,11 @@ export function rememberStoryPerson(state:any,personId:string){
  const p=state.人物.列表[personId],playerId=state.角色.主控单位ID;if(!rules.actions.perception(state,playerId,personId,'vision'))return;p.扩展??={};
  p.扩展.已知档案={...p.扩展.已知档案,[playerId]:observedDossier(state,personId)};
 }
+export function knownStoryDossier(state:any,personId:string){
+ const viewer=state.角色.主控单位ID,dossier=state.人物.列表[personId]?.扩展?.已知档案?.[viewer];
+ if(!dossier?.actionState||!rules.disguise.presentation(state,personId,viewer).identityHidden)return dossier;
+ return {...dossier,actionState:perceivedActionState(dossier.actionState,true)};
+}
 /** Compare observations only; equal endpoints cannot establish what happened between them. */
 function resourceObservationComparison(previous:any,current:any){
  const value=(v:unknown)=>typeof v==='number'&&Number.isFinite(v)?v:null;
@@ -79,7 +84,7 @@ export function inspectStoryPerson(state:any,input:Record<string,any>){
  const p=state.人物?.列表?.[personId],playerId=state.角色?.主控单位ID;
  if(!p||!playerId)throw Error('没有这位人物的已登记档案');
  const present=personId===playerId||globalThis.SoulScenePosition.communicationColocated(state,personId,playerId)&&rules.actions.perception(state,playerId,personId,'vision');
- const dossier=present?observedDossier(state,personId):p.扩展?.已知档案?.[playerId];
+ const dossier=present?observedDossier(state,personId):knownStoryDossier(state,personId);
  if(!dossier){
   const communication=communicationAvailability(state,personId);
   if(communication.available&&communication.mode==='in-person'&&rules.actions.perception(state,playerId,personId))return structuredClone({type:'person-dossier',personId,scope:'voice-conversation',

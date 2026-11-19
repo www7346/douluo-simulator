@@ -25,11 +25,12 @@
  function percent(s,id,kind,type='',skill=null){
   const isRing=Boolean(skill?.sourceRingId||skill?.来源魂环ID||skill?.ringOrdinal),metrics=kind==='damage'?['物理伤害','魂技伤害','攻击伤害','属性伤害']:kind==='heal'?['治疗']:kind==='shield'?['护盾']:['伤害减免'];
   const physical=globalThis.SoulCombatFoundation?.damageTypeFamily(type)==='物理',attack=Boolean(skill?.effectGraph?.nodes?.some(n=>['check.physical_attack','check.soul_attack'].includes(n.effectId))||['ordinary.attack','basic.attack','martial.base'].includes(skill?.id));
-  return metrics.reduce((sum,metric)=>{
+  const total=metrics.reduce((sum,metric)=>{
    if(metric==='物理伤害'&&!physical||metric==='魂技伤害'&&!isRing||metric==='攻击伤害'&&!attack)return sum;
    const rows=live(s,id).filter(x=>x.模板ID==='status.amplify'&&x.快照?.参数?.指标===metric&&applies(x,skill)&&(metric!=='属性伤害'||(x.快照?.参数?.伤害属性??x.扩展?.加持属性)===globalThis.SoulCombatFoundation.canonicalDamageType(type)));
    return sum+aggregate(s,rows);
   },0);
+  return kind==='reduction'?Math.min(globalThis.SoulEffectCompiler.DESIGN_BALANCE_POLICY.maximumSustainedReduction,Math.max(0,total)):total;
  }
  function avatar(s,id,skill){return live(s,id).find(x=>x.模板ID==='transform.martial_avatar'&&x.来源?.武魂ID===soulId(skill));}
  function range(s,id,skill){return Number(maintain(skill)?.params?.维持距离区??0)+Number(avatar(s,id,skill)?.快照?.参数?.同源射程增幅??0);}

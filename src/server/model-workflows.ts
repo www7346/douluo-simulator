@@ -35,6 +35,7 @@ import {requestCreationAdvice} from './creation-advisor';
 import {requestItemAdvice} from './creation-item-advisor';
 import {requestWorkshopAdvice} from './creation-workshop-advisor';
 import {requestRingDesignAdvice} from './ring-design-advisor';
+import {requestEvolutionAdvice,requestEvolutionDecision} from './evolution-advisor';
 import {requestResearchDesignAdvice} from './research-design-workflow';
 import {validateConnection,validateHeaders} from '../runtime/model-protocol';
 import {rules} from '../rules';
@@ -50,7 +51,7 @@ import {StoryWritingDiagnostics,type StoryWritingReviewer} from './story-writing
 import type {ModelCandidateRecord} from '../shared/model-evidence';
 import {defaultModelRecoveryDirectory,hasPersistentModelRecovery,persistentWorkflowRecovery,type WorkflowRecovery} from './model-recovery-store';
 
-export const WORKFLOW_KINDS=['person-growth','person-conversation','person-performance-agreement','research-advice','ring-advice','person-change-reaction','person-rewrite','generation','generation-repair','generation-rebuild','list','test','generation-test','draft','advice','creation-advice','creation-item-advice','creation-workshop-advice','room','world-people','person-room','person-ring-naming','person-ring-choice','person-research-naming','person-research-choice','ring-skills','ring-item','research','title','combat','story-host','story-social','person-defeat','person-custody-disposition','person-restraint-permission','person-ability-use','person-drug-offer','person-rescue-response','person-custody-auction','person-custody-trade','person-gift','person-cooperation','person-loot','story-autonomy','story-belief','story-writer','story-rewrite','story-summary','story-stage-summary'] as const;
+export const WORKFLOW_KINDS=['evolution-advice','evolution-response','person-growth','person-conversation','person-performance-agreement','research-advice','ring-advice','person-change-reaction','person-rewrite','generation','generation-repair','generation-rebuild','list','test','generation-test','draft','advice','creation-advice','creation-item-advice','creation-workshop-advice','room','world-people','person-room','person-ring-naming','person-ring-choice','person-research-naming','person-research-choice','ring-skills','ring-item','research','title','combat','story-host','story-social','person-defeat','person-custody-disposition','person-restraint-permission','person-ability-use','person-drug-offer','person-rescue-response','person-custody-auction','person-custody-trade','person-gift','person-cooperation','person-loot','story-autonomy','story-belief','story-writer','story-rewrite','story-summary','story-stage-summary'] as const;
 export function validateWorkflow(input:any) {
   if(!WORKFLOW_KINDS.includes(input?.kind)||!Number.isSafeInteger(input.revision)||input.revision<0||!input.input||typeof input.input!=='object'||Array.isArray(input.input))throw new CloudError('invalid-workflow','不支持这项生成任务');
   if(input.local===true){if(!['room','research'].includes(input.kind))throw new CloudError('invalid-workflow','这项任务需要模型服务');return;}
@@ -116,6 +117,12 @@ export async function runModelWorkflow(snapshot:GameSnapshot,worldId:string,requ
   };
   const apply=async(type:string,payload:Record<string,any>,value?:any)=>complete({ticket:issueWorkflowTicket(secret,worldId,snapshot,{type,payload}),...(value===undefined?{}:{value})});
   switch(kind){
+    case 'evolution-advice':
+      if(request.revision!==snapshot.revision)throw new CloudError('stale-workflow','武魂与材料已有变化，请重新讨论',409);
+      return {value:await requestEvolutionAdvice(gateway!,state,input,signal)};
+    case 'evolution-response':
+      if(request.revision!==snapshot.revision)throw new CloudError('stale-workflow','方案已有变化，请重新听取回应',409);
+      return apply('person.respond-evolution',await requestEvolutionDecision(gateway!,state,input.planId,signal));
     case 'ring-advice':
       if(request.revision!==snapshot.revision)throw new CloudError('stale-workflow','魂环或人物设定已改变，请按当前进度继续讨论',409);
       if(input.target?.kind==='opening'&&state.角色?.已建立)throw new CloudError('stale-workflow','人物已经启程，请在实际魂环入口继续设计',409);

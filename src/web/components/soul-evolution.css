@@ -1,0 +1,11 @@
+.soul-evolution {display:grid;gap:1rem;min-width:0;max-width:100%;}
+.soul-evolution textarea {width:100%;box-sizing:border-box;resize:vertical;}
+.soul-evolution article {padding:1rem;border:1px solid var(--border,#5b4f3c);border-radius:12px;min-width:0;}
+.soul-evolution .field-actions {flex-wrap:wrap;}
+.evolution-material {display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:.6rem 0;}
+.evolution-material input {max-width:5rem;min-height:44px;}
+.evolution-guides {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:1rem;}
+.soul-evolution summary {cursor:pointer;min-height:44px;display:flex;align-items:center;overflow-wrap:anywhere;}
+.soul-evolution p,.soul-evolution li {overflow-wrap:anywhere;}
+
+.evolution-preview-art{display:block;width:min(100%,240px);height:auto;aspect-ratio:1;margin:.75rem auto;border-radius:16px;}

@@ -10,7 +10,7 @@ export interface HeardStatement {
  id:string;kind:'heard';speakerId:string;listenerId:string;text:string;truth:'unverified';
  source:{branchId:string;turn:number;step:number;revision:number;inputStart:number;inputEnd:number};
  assessment?:{stance:'believes'|'doubts'|'uncertain';reason:string;sourceId:string;revision:number};
- channel?:{kind:'soul-device';contactId:string}|{kind:'realm';realmId:string;captureEventId:string};
+ channel?:{kind:'soul-device';contactId:string}|{kind:'realm';realmId:string;captureEventId:string;deploymentId?:string}|{kind:'realm-visit';realmId:string;entryEventId:string};
  partyMessageId?:string;
  locationId:string;time:{day:number;hour:number;minute:number};
 }

@@ -27,11 +27,21 @@
  // Their recipes below are game-authored, not copied signature soul skills.
  const COMMON_CANON=[['blue-silver-grass','蓝银草','plant','grass'],['long-staff','长棍','assault','staff'],['lone-wolf','独狼','beast','canine'],['wolf','狼','beast','canine'],['battle-tiger','战虎','beast','feline'],['snake','蛇','beast','serpent'],['skeleton','骷髅','beast','humanoid'],['healing-scepter','治疗权杖','healer','staff']];
  for(const [id,name,family,category]of COMMON_CANON){const base=clone(ENTRIES.find(e=>e.family===family&&e.index===0));base.id=`npc:canon:${id}`;base.name=base.draft.name=name;base.canonName=name;base.source='existing-canonical-character-catalog';base.draft.concept=`${name}是常见武魂类型，按${base.role}配置基础能力。`;base.draft.form=`魂力显出${name}的清晰轮廓。`;base.draft.categories=[`category.${category}`];base.draft.attributes=base.draft.attributes.map((a,i)=>({...a,investment:i?1:2}));base.draft.baseAction.powerTier=0;ENTRIES.push(base);}
+ const inherited=(root.SoulCanonicalWomenContent??require('../../shared/canonical-women-content-core.js')).PROFILES.filter(p=>p.npcFamily);
+ for(const p of inherited)ENTRIES.push({id:p.SOUL.id,name:p.SOUL.name,role:p.SOUL.draft.role,family:p.npcFamily,rarity:'稀有',routeId:p.reference.id,draft:{...clone(p.SOUL.draft),presetId:p.SOUL.id}});
  const freeze=v=>{if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;};freeze(ENTRIES);
  function get(id){return ENTRIES.find(e=>e.id===id);}
  const eligibleCache=new Map();
  function candidates(archetype,budget=40){const key=`${archetype}:${budget}`;if(!eligibleCache.has(key)){const allowed=ROLES[archetype],pool=ENTRIES.filter(e=>(!allowed||allowed.includes(e.family))&&(!['local-artisan','commerce-artisan','commerce-smith'].includes(archetype)||[2,3,5].includes(e.index)||e.id==='npc:canon:long-staff')&&root.SoulMartialSoulCore.inspectDraft(e.draft,{budget}).accepted);if(!pool.length)throw Error('当前人物定位没有合法的预设武魂');eligibleCache.set(key,pool);}return eligibleCache.get(key).map(e=>clone(e));}
- function select(archetype,seed,budget=40){const pool=candidates(archetype,budget);return pool[root.SoulPresetCatalog.indexFor(seed,`npc-loadout:${archetype}`,pool.length)];}
+ function select(archetype,seed,budget=40,limit=budget){
+  const common=candidates(archetype,budget).filter(e=>!e.routeId);
+  const draw=root.SoulPresetCatalog.indexFor;
+  if(draw(seed,'npc-loadout:rare',16)===0){
+   const rare=candidates(archetype,limit).filter(e=>e.routeId);
+   if(rare.length)return rare[draw(seed,'npc-loadout:rare-choice',rare.length)];
+  }
+  return common[draw(seed,`npc-loadout:${archetype}`,common.length)];
+ }
  function mechanics(f,ordinal,index){
   const n=1+Math.floor((ordinal-1)/3),slot=(ordinal-1+index%3)%9,hit=f.id==='archer'||['plant','fire','water'].includes(f.id)?shot:melee;
   if(f.id==='healer')return slot%4===0?ally([['payload.heal',{骰数:n,骰面:6,加值:3}]]):slot%4===1?ally([['payload.cleanse',{类别:'毒素',最大数量:1}]]):slot%4===2?ally([shield(6+n*3)]):ally([buff('体魄',n)]);
@@ -127,14 +137,75 @@
   'npc:canon:skeleton':['骨爪直刺','骨痕猎印','白骨护幕','骨节灵身','骸拳叩击','骨纹循踪','骨甲屏障','轻骸敏步','骨肘重击'],
   'npc:canon:healing-scepter':['权杖润伤','杖光涤毒','权杖护脉','柔光培元','杖辉续生','清辉洗毒','杖影护幕','温辉养体','杖泉回春']
  };
+ for(const p of inherited)SKILL_NAMES[p.SOUL.id]=p.NODES.map(node=>node.name);
  const registeredNames=new Set();
  if(Object.keys(SKILL_NAMES).length!==ENTRIES.length)throw Error('预设魂技名称目录与武魂目录不一致');
  for(const e of ENTRIES){const names=SKILL_NAMES[e.id];if(!names||names.length!==9)throw Error(`预设武魂缺少正式魂技名称：${e.name}`);for(const name of names){if(typeof name!=='string'||!name.trim()||registeredNames.has(name))throw Error(`预设魂技名称缺失或重名：${e.name}`);registeredNames.add(name);}}
  freeze(SKILL_NAMES);
- function loadout(id,level){const e=get(id);if(!e)throw Error('人物配装未登记');const f=FAMILIES.find(f=>f.id===e.family),count=Math.min(9,Math.floor((level-1)/10));return {soulIndex:1,desiredCount:count,rings:Array.from({length:count},(_,i)=>({years:YEARS[i],evidence:'authored-npc-loadout',sourceOrigin:'魂兽猎杀',source:{物种ID:`npc-source:${f.id}`,名称:f.beast,类别标签:[f.tags[0]],种族特征:f.tags,属性谱:{主属性:f.attrs.map(([id])=>`attribute.${id}`),副属性:[]}},skills:[{name:SKILL_NAMES[e.id][i],requestedEffects:mechanics(f,i+1,e.index)}]}))};}
- function profile(person,location){const family=ENTRIES.find(e=>e.id===person.扩展?.npcLoadoutId)?.role??person.occupation;return {biography:`${person.name}在${location}以${person.occupation}谋生，常年积累了${family}方面的经验。${['早年随亲人往来乡镇，后来在此安家。','从学徒做起，靠守约和熟悉本地的同行维持生计。','曾离乡谋生，最终选择在熟悉的道路旁定居。','跟随长辈学习手艺，如今独立承担工作。'][root.SoulPresetCatalog.indexFor(person.seed,'npc-biography',4)]}`,values:person.personality,speech:`言语${person.personality}，习惯结合日常经历说明自己的判断。`,shortTermGoal:['完成手边的工作，攒足修缮住处的费用。','处理好最近的委托，抽空看望家人。','整理行装与工具，为下一趟出行做准备。','结清手边的账目，留出一段安稳休息的时间。'][root.SoulPresetCatalog.indexFor(person.seed,'npc-goal',4)],longTermGoal:'在自己的职业中积累稳定的生计，也保留选择今后生活的余地。'};}
+ function loadout(id,level){const e=get(id);if(!e)throw Error('人物配装未登记');
+  if(e.routeId){
+   const route=root.SoulCanonicalGrowth.routeFor(e.routeId).loadout;
+   const rings=route.rings.slice(0,Math.max(0,Math.min(9,Math.floor((level-1)/10))));
+   return {...clone(route),desiredCount:rings.length,rings:clone(rings)};
+  }
+  const f=FAMILIES.find(f=>f.id===e.family),count=Math.min(9,Math.floor((level-1)/10));return {soulIndex:1,desiredCount:count,rings:Array.from({length:count},(_,i)=>({years:YEARS[i],evidence:'authored-npc-loadout',sourceOrigin:'魂兽猎杀',source:{物种ID:`npc-source:${f.id}`,名称:f.beast,类别标签:[f.tags[0]],种族特征:f.tags,属性谱:{主属性:f.attrs.map(([id])=>`attribute.${id}`),副属性:[]}},skills:[{name:SKILL_NAMES[e.id][i],requestedEffects:mechanics(f,i+1,e.index)}]}))};}
+ const ordinary=root.SoulOrdinaryNpcPersonas??(typeof require==='function'?require('../../shared/ordinary-npc-personas.js'):null);
+ const canonical=root.SoulCanonicalNpcPersonas??(typeof require==='function'?require('../../shared/canonical-npc-personas.js'):null);
+ const PROFILE_GROUPS={
+  civilian:'street','commerce-cat':'street',
+  'commerce-merchant':'trade',merchant:'trade','auction-owner':'trade','commerce-consignor':'trade',
+  'commerce-artisan':'craft','commerce-smith':'craft','local-artisan':'craft',
+  guard:'guard','imperial-patrol':'guard','sect-retainer':'guard',
+  hunter:'trail','forest-veteran':'trail','frontier-mercenary':'trail',
+  'commerce-ally':'healer','commerce-healer':'healer',
+  'opening-agent':'duty','auction-host':'duty','spirit-hall-worker':'duty',
+  'sea-guide':'water','ocean-mercenary':'water',
+  mercenary:'wander','wandering-soul-master':'wander','seasoned-soul-master':'wander','high-soul-master':'wander','titled-soul-master':'wander'
+ };
+ function card(row){
+  const [biography,values,speech,shortTermGoal,longTermGoal,...examples]=row;
+  return {biography,values,speech,shortTermGoal,longTermGoal,examples:dialogue(examples)};
+ }
+ const dialogue=rows=>rows.map(([prompt,reply])=>({prompt,reply}));
+ function registeredExamples(id){const rows=ordinary.registered[id];return rows?dialogue(rows):undefined;}
+ function examplesForProfile(profile){
+  const speech=profile?.speech??'';
+  const samples=/寡言|简短|冷淡|惜字|沉默/.test(speech)?[
+   ['还好吗？','还好。坐一会儿就走。'],['你先答应再说。','先把事说完。']
+  ]:/玩笑|俏皮|调侃|打趣|幽默/.test(speech)?[
+   ['你这么看着我做什么？','看你到底是要说事，还是只打算让我猜。'],['先点个头，往后再谈。','我的头先借你点一下，答应的事还得你说清楚。']
+  ]:/温和|轻声|细声|柔和|耐心/.test(speech)?[
+   ['我怕我说不明白。','慢慢说。你先说最要紧的那一件。'],['大家都在催，你替我决定吧。','我陪你把两种做法想清楚，最后那一句留给你说。']
+  ]:/直率|粗犷|爽快|直截|果断/.test(speech)?[
+   ['你有话就说吧。','成。我先问一句，你自己想怎么办？'],['这事就这么说定了。','等等，我还没答应。你把难处摆出来。']
+  ]:[['现在有空吗？','有一会儿。你想先说哪件事？'],['你能马上答应吗？','说说要我做哪一步，我得想清楚再回你。']];
+  return dialogue(samples);
+ }
+ function profile(person,location,authored){
+  const group=PROFILE_GROUPS[person.扩展?.archetypeId]??'wander';
+  const entries=ordinary.cards[group],seed=person.seed??person.id;
+  const values={place:location||'当地',job:person.occupation||'魂师'};
+  const row=entries[root.SoulPresetCatalog.indexFor(seed,'npc-persona:'+group,entries.length)];
+  const fill=text=>text.replace(/\{\{(place|job)\}\}/g,(_match,key)=>values[key]);
+  const ready=card(row.map(value=>Array.isArray(value)?value.map(fill):fill(value)));
+  if(!authored)return ready;
+  const merged={...ready,...authored};
+  if(authored.speech&&!authored.examples)merged.examples=registeredExamples(person.id)??examplesForProfile(merged);
+  return merged;
+ }
+ function fixedProfile(recordId,identityId=recordId){
+  const row=canonical.cards[recordId]??canonical.cards[identityId];
+  if(!row)return null;
+  const data=card(row),phase=canonical.phases[recordId];
+  if(phase){
+   data.biography=phase.biography;
+   data.shortTermGoal=phase.goal;
+   data.examples.push({prompt:phase.prompt,reply:phase.reply});
+  }
+  return data;
+ }
  function skillRoles(archetype){return ['commerce-ally','commerce-healer','auction-host'].includes(archetype)?['recovery','defense','counter','enhance']:['guard','imperial-patrol'].includes(archetype)?['defense','damage','control']:archetype==='spirit-hall-worker'?['defense','recovery','damage']:['damage','weaken','movement','control','defense','recovery'];}
- function ordinarySoul(value){const name=String(value?.name??value?.名称??'').normalize('NFKC').replace(/\s/g,'');return !root.SoulPresetCatalog.list({category:'武魂'}).some(e=>(e.gates.rarity!=='常规')&&name.includes(e.name));}
+ function ordinarySoul(value){const name=String(value?.name??value?.名称??'').normalize('NFKC').replace(/\s/g,'');return !root.SoulPresetCatalog.list({category:'武魂'}).some(e=>(!['常规','稀有'].includes(e.gates.rarity))&&name.includes(e.name));}
  function assertOrdinarySoul(value){if(!ordinarySoul(value))throw Error('新建普通人物不能使用原著专属、传承或跨时代武魂，请按人物定位创建原创武魂。');}
- return Object.freeze({ENTRIES,select,candidates,get,loadout,profile,skillRoles,ordinarySoul,assertOrdinarySoul});
+ return Object.freeze({ENTRIES,select,candidates,get,loadout,profile,fixedProfile,registeredExamples,examplesForProfile,PROFILE_GROUPS,skillRoles,ordinarySoul,assertOrdinarySoul});
 });

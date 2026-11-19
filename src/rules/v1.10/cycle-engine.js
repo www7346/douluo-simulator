@@ -23,7 +23,7 @@
   const VERSION = '2.1.0';
   const RING_ATTRIBUTE_POINTS = 2;
   const RING_SKILL_CHOICE_RULES = Object.freeze({baseCount: 2, minimum: 2, maximum: 4});
-  const RING_GENERATION_KEYS=Object.freeze(['presetId','requestedEffects','requestedBranches','requestedEffectIds','requestedSkills','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules']);
+  const RING_GENERATION_KEYS=Object.freeze(['evolutionTarget','presetId','requestedEffects','requestedBranches','requestedEffectIds','requestedSkills','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules']);
   const clone = value => value === undefined ? undefined : JSON.parse(JSON.stringify(value));
   const clamp = (value, minimum, maximum) => {
     const number = Number(value);
@@ -81,6 +81,7 @@
   }
 
   function commit(state, transactionId, type, receipt) {
+    globalThis.SoulManifestation?.reconcile(state);
     state.系统.revision += 1;
     state.系统.last_transaction_id = transactionId;
     state.系统.last_error = '';
@@ -121,7 +122,7 @@
       if(o?.id!==id||!['condense','absorb','prepare','name','reroll','replace-preset','confirm','prepare-item','name-item'].includes(o.kind)||o.requestHash!==abilities.hash(o.request)||!o.receipt||o.receiptHash!==abilities.hash(o.receipt)||!state.战斗单位?.列表?.[o.request?.actorId]){errors.push('魂环操作请求或回执无效');continue;}
       if(['absorb','confirm'].includes(o.kind)){
         const r=state.魂环?.列表?.[o.receipt.ringId],soul=state.武魂?.列表?.[o.receipt.martialSoulId];
-        if(!r||r.持有者单位ID!==o.request.actorId||o.receipt.playerId!==o.request.actorId||r.武魂ID!==soul?.id||r.年限!==o.receipt.years||r.序号!==o.receipt.ringOrdinal||abilities.hash(r.魂技ID列表)!==abilities.hash(o.receipt.skillIds))errors.push('魂环吸收回执与实际人物或魂环不符');
+        if(!r||r.持有者单位ID!==o.request.actorId||o.receipt.playerId!==o.request.actorId||r.武魂ID!==soul?.id||r.年限!==o.receipt.years||r.序号!==o.receipt.ringOrdinal||abilities.hash(r.扩展?.evolutionOriginalSkillIds??r.魂技ID列表)!==abilities.hash(o.receipt.skillIds))errors.push('魂环吸收回执与实际人物或魂环不符');
         if(o.kind==='absorb'&&r?.扩展?.absorptionTransactionId!==id)errors.push('魂环缺少对应吸收事务');
         if(o.kind==='absorb')for(const expected of o.receipt.skillDefinitions??[])if(expected.presetId){
           const actual=state.技能?.列表?.[expected.id];
@@ -1016,10 +1017,14 @@
     };
   }
 
-  // Initial practice rate; balance remains subject to the P7a/P8 playthrough.
   const CULTIVATION_MINUTES_PER_EXPERIENCE = 60;
-  function validateCultivationProgress(p,unitId){
-    if(!p||p.unitId!==unitId||!Number.isSafeInteger(p.minutes)||p.minutes<0||p.minutes>31*1440||!Number.isSafeInteger(p.carryBefore)||p.carryBefore<0||p.carryBefore>=CULTIVATION_MINUTES_PER_EXPERIENCE||p.carryAfter!==(p.carryBefore+p.minutes)%CULTIVATION_MINUTES_PER_EXPERIENCE||p.experienceGained!==Math.floor((p.carryBefore+p.minutes)/CULTIVATION_MINUTES_PER_EXPERIENCE)||p.attributePointsGained!==0)throw Error('修炼结算');
+  const PLAYER_CULTIVATION_MINUTES_PER_EXPERIENCE = 20;
+  // Shared practice keeps its hourly clock. At a new rate, only boundaries crossed during this practice earn experience.
+  function practiceExperience(minutes,carryMinutes,minutesPerExperience){
+    return Math.floor((minutes+carryMinutes%minutesPerExperience)/minutesPerExperience);
+  }
+  function validateCultivationProgress(p,unitId,minutesPerExperience=CULTIVATION_MINUTES_PER_EXPERIENCE){
+    if(!p||p.unitId!==unitId||!Number.isSafeInteger(p.minutes)||p.minutes<0||p.minutes>31*1440||!Number.isSafeInteger(p.carryBefore)||p.carryBefore<0||p.carryBefore>=CULTIVATION_MINUTES_PER_EXPERIENCE||p.carryAfter!==(p.carryBefore+p.minutes)%CULTIVATION_MINUTES_PER_EXPERIENCE||p.experienceGained!==practiceExperience(p.minutes,p.carryBefore,minutesPerExperience)||p.attributePointsGained!==0)throw Error('修炼结算');
     const b=p.before,c=p.after;if(!b||!c||![b.level,c.level,b.experience,c.experience,b.requirement,c.requirement,p.levelsGained].every(Number.isSafeInteger)||b.level<1||c.level>99||c.level<b.level||p.levelsGained!==c.level-b.level||b.requirement!==100+b.level*25||c.requirement!==100+c.level*25)throw Error('修炼成长');
     let consumed=0;for(let level=b.level;level<c.level;level++)consumed+=100+level*25;
     if(c.experience!==b.experience+p.experienceGained-consumed||b.experience<0||c.experience<0||c.experience>c.requirement)throw Error('修炼经验');return true;
@@ -1036,9 +1041,9 @@
     return Math.max(0,capacity);
   }
   /** Called inside a world transaction; time and practice provenance belong to that transaction. */
-  function applyCultivationMinutes(state, minutes, carryMinutes, unitId = state.角色.主控单位ID) {
+  function applyCultivationMinutes(state, minutes, carryMinutes, unitId = state.角色.主控单位ID, minutesPerExperience=CULTIVATION_MINUTES_PER_EXPERIENCE) {
     if(!Number.isSafeInteger(minutes)||minutes<0||minutes>31*1440||!Number.isSafeInteger(carryMinutes)||carryMinutes<0||carryMinutes>=CULTIVATION_MINUTES_PER_EXPERIENCE)throw new Error('修炼时长无效');
-    const experienceGained=Math.floor((minutes+carryMinutes)/CULTIVATION_MINUTES_PER_EXPERIENCE);
+    const experienceGained=practiceExperience(minutes,carryMinutes,minutesPerExperience);
     if(experienceGained>cultivationCapacity(state,unitId))throw new Error('修炼不能越过魂环瓶颈或最高等级');
     const growth=state.成长.列表[unitId],before={level:growth.魂力等级,experience:growth.当前经验,requirement:growth.当前等级需求};
     growth.当前经验+=experienceGained;
@@ -1404,6 +1409,7 @@
         compatibility: compatibility.ratio,
         requestedEffectIds: proposal.requestedEffectIds,
         requestedEffects: proposal.requestedEffects,
+        evolutionTarget:proposal.evolutionTarget,
         requestedBranches: proposal.requestedBranches,
         requestedSkills: proposal.requestedSkills,
         allowProceduralFallback: proposal.allowProceduralFallback !== false,
@@ -1999,7 +2005,7 @@
     EXPERIENCE_REWARD_MULTIPLIER, scaleExperienceReward, baseExperienceForLevels, baseExperienceRewardForUnit,
     experienceRewardForUnit,
     applyCombatExperience,
-    CULTIVATION_MINUTES_PER_EXPERIENCE, cultivationCapacity, applyCultivationMinutes, validateCultivationProgress,
+    CULTIVATION_MINUTES_PER_EXPERIENCE, PLAYER_CULTIVATION_MINUTES_PER_EXPERIENCE, cultivationCapacity, applyCultivationMinutes, validateCultivationProgress,
     grantCombatExperience,
     allocateGrowthAttribute,previewGrowthAttribute,allocateGrowthAttributes,growthAllocationOptions,
     ringPermanentGainTotal,

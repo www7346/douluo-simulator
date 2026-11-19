@@ -14,7 +14,7 @@ export function personEquipmentPresentation(state:any,input:Record<string,any>){
  const worn=Object.values(state.物品.实例).filter((item:any)=>item.attachment?.wearerId===personId||configured.has(item.id)).map((item:any)=>{
   const restraint:any=restraints.get(item.id),managed=rules.realmArrangements.isManaged(item),binding=rules.residentRealms.binding(state,personId),group=item.provenance?.group;
   let remove=null;
-  if(managed&&group&&group!=='collar')remove=preview({type:'set-realm-arrangement',realmId:binding.realm.id,targetId:personId,[group]:'free'});
+  if(managed){if(group&&group!=='collar')remove=preview({type:'set-realm-arrangement',realmId:binding.realm.id,targetId:personId,[group]:'free'});}
   else if(item.attachment&&rules.intimate.DEVICES[item.templateId])remove=preview({type:'intimate-detach',itemId:item.id});
   else if(restraint)remove=preview({type:'detach-restraint',itemId:item.id});
   return {itemId:item.id,name:item.name,kind:item.type,part:restraint?.part??item.attachment?.slot??configured.get(item.id)??'佩戴处',modeLabel:restraint?.modeLabel??'',managed,permanent:managed&&group==='collar',restraint,remove};

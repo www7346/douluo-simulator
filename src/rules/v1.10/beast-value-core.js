@@ -64,8 +64,17 @@
     if (!lineage || lineage.version !== VERSION || !lineage.definition) throw new Error('魂兽缺少当前血脉结构');
     const expected = compileLineage(lineage.definition);
     if(matchesLineage(lineage,expected))return expected;
-    const historical=legacyLineageCompilation(expected),beforeSupport=beforeSustainedSupport(expected);
-    const accepted=[historical,beforeSupport,legacyLineageCompilation(beforeSupport)].find(candidate=>matchesLineage(lineage,candidate));
+    // Only use the pre-summon vocabulary when a saved channel has that exact shape.
+    const priorRows={'channel.shield':['target.self','target.single','payload.shield'],'channel.sensory':['target.single','target.aura','status.buff','status.mark','zone.obscure']};
+    let base=expected;
+    if(lineage.compiled?.channels?.some(c=>priorRows[c.id]&&JSON.stringify(c.effectIds)===JSON.stringify(priorRows[c.id]))){
+      base=clone(expected);
+      base.compiled.channels=base.compiled.channels.map(c=>priorRows[c.id]?{...c,effectIds:[...priorRows[c.id]]}:c);
+      base.compiled.allowedEffectIds=[...new Set(base.compiled.channels.flatMap(c=>c.effectIds))];
+      if(matchesLineage(lineage,base))return base;
+    }
+    const beforeSupport=beforeSustainedSupport(base);
+    const accepted=[legacyLineageCompilation(base),beforeSupport,legacyLineageCompilation(beforeSupport)].find(candidate=>matchesLineage(lineage,candidate));
     if(!accepted)throw new Error('血脉结构与价值不一致');
     return accepted;
   }
@@ -103,7 +112,7 @@
       :Math.min(maximum,Math.max(minimum,Math.floor(options.targetPoints)));
     const additions=(options.channelIds??Object.keys(core.CHANNEL_REGISTRY)).filter(id=>id!=='channel.melee'&&core.CHANNEL_REGISTRY[id]).map(id=>({kind:'channel',id}));
     for(const id of attributePool.filter(id=>!attributes.some(item=>item.id===id)))additions.push({kind:'attribute',id});
-    for(const trait of core.TRAIT_TEMPLATES.filter(item=>item.parameters==='none'&&options.includeTraits!==false))additions.push({kind:'trait',id:trait.id});
+    for(const trait of core.TRAIT_TEMPLATES.filter(item=>item.parameters==='none'&&item.randomLineage!==false&&options.includeTraits!==false))additions.push({kind:'trait',id:trait.id});
     for(let i=additions.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[additions[i],additions[j]]=[additions[j],additions[i]];}
     for(const addition of additions){
       const candidate=clone(lineage.definition);

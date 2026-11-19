@@ -1,6 +1,6 @@
 import {ART_EXTENSION} from './art-extension';
 /** Local, original sprite atlas cells. Keys represent visual facts, never random rolls. */
-export interface Artwork {key:string;domain:string;label:string;src:string;cell:number;columns:number;rows:number;inset?:number;family?:string;element?:string}
+export interface Artwork {key:string;domain:string;label:string;src:string;cell:number;columns:number;rows:number;inset?:number;family?:string;element?:string;sourceAspect?:number}
 export const ART_CATALOG:readonly Artwork[] = [
   {
     "key": "beast.wolf.neutral",

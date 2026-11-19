@@ -95,15 +95,13 @@ export function selectStoryBattleWritingSection(source:StoryWritingPackage,first
   firstSequence:first.firstSequence,lastSequence:last.lastSequence,includesOpening,includesEnding});
 }
 
-/** Prefer one complete battle when the entire author/review/repair cycle fits.
- * Event markers retain provenance without forcing separate model calls.
- * Capacity alone splits at existing checkpoints; preflight every part before paying. */
+/** Split at recorded checkpoints when every section fits the estimate.
+ * The complete report remains available if the estimate cannot guide a split. */
 export function planStoryBattleWritingSections(source:StoryWritingPackage,fits:(p:StoryWritingPackage)=>boolean){
  if(fits(source))return [source];
  const reading=storyBattleWritingBoundaries(source);
  const ends=new Set(reading?storyBattleEventUnits(reading.battle.account.passages).map(unit=>reading.battle.account.passages[unit.last].sourceSequences.at(-1)):[]);
- if(!reading?.boundaries.length)throw Error('必要写作资料超限，且没有可独立保留的战斗阶段');
- if([...ends].some(end=>!reading.boundaries.some(boundary=>boundary.lastSequence===end)))throw Error('事件经过缺少自身的实际边界，尚未请求作者');
+ if(!reading?.boundaries.length||[...ends].some(end=>!reading.boundaries.some(boundary=>boundary.lastSequence===end)))return [source];
  const sections:StoryWritingPackage[]=[];
  for(let start=0;start<reading.boundaries.length;){
   let accepted:StoryWritingPackage|undefined,end=start;
@@ -112,7 +110,7 @@ export function planStoryBattleWritingSections(source:StoryWritingPackage,fits:(
    if(!fits(section))break;
    accepted=section;end=candidate;
   }
-  if(!accepted)throw Error(`战斗第${reading.boundaries[start].firstSequence}项起的必要阶段资料仍超限；已结算结果保留，尚未请求作者`);
+  if(!accepted)return [source];
   sections.push(accepted);start=end+1;
  }
  return sections;

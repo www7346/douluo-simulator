@@ -36,7 +36,11 @@ export function storyActionState(state:any,actorId:string,perceived=false,readAc
   abilityConditions:actions.map((a:any)=>pick(a,['id','name','actionType','sourceKind','sourceItemId','sourceMartialSoulId','sourceRingId','available','reason','soulPowerCost','activationLock','cooldownRemaining','perBattleUsed','perBattleRemaining','perBattleGroupUsed','perBattleGroupRemaining','dailyUsed','dailyRemaining'])),
   tacticalActions:participant&&battle.当前行动单位ID===actorId?(light?actions.filter((a:any)=>a.sourceKind==='tactic'):rules.combat.listTacticalActions(state,actorId)).map((a:any)=>pick(a,['id','name','actionType','residentId','available','reason'])):null,
   ...(actorId===state.角色?.主控单位ID?{worldActions:{personalBlockReason:rules.world.personalActionBlockReason(state),worldActivityBlockReason:rules.world.worldActionBlockReason(state),captivity:rules.world.activeCaptivity(state),containment}}:{})};
- return perceived?perceivedActionState(result,actorId!==state.角色?.主控单位ID&&!!rules.disguise.winner(state,actorId)):result;
+ // Feeling one's own current condition does not reveal a hidden cast or its operator.
+ // Known changes and causes come from the existing personal experience records.
+ const viewer=state.角色?.主控单位ID;
+ const appearance=perceived&&actorId!==viewer?rules.disguise.presentation(state,actorId,viewer):null;
+ return perceivedActionState(result,!!(appearance?.disguised||appearance?.identityHidden));
 }
 function known(v:any,fields:string[],label:string){const unknown=Object.keys(v).filter(k=>!fields.includes(k));if(unknown.length)throw Error(`状态可行性缺少字段编译：${label}/${unknown.join(',')}`);}
 export function compileActionState(s:any){if(!s)return null;known(s,['interiorSpace','observedAt','lifeStatus','influence','constraints','statuses','battle','abilityConditions','tacticalActions','worldActions'],'当前资料');

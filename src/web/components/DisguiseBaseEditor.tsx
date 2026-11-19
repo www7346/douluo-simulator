@@ -1,4 +1,5 @@
 export default function DisguiseBaseEditor({value,onChange,disabled=false}:{value:any;onChange:(value:any)=>void;disabled?:boolean}){
+ if(!value?.伪装模板)return <p role="alert">这份伪装本能缺少外貌设置，请重新选择本能动作，或从原角色重新导出武魂后再导入。</p>;
  const mask=value.伪装模板,change=(patch:any)=>onChange({...value,...patch}),appearance=(patch:any)=>change({伪装模板:{...mask,...patch}});
  const option=(key:string,label:string,templateKey?:string)=> <label className="toggle-row"><input type="checkbox" checked={!!value[key]} disabled={disabled} onChange={event=>{
   const enabled=event.target.checked,next={...mask};if(templateKey){if(enabled)next[templateKey]=next[templateKey]??(templateKey==='声音'?'与原本不同的声线。':'朦胧的武魂轮廓。');else delete next[templateKey];}

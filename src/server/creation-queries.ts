@@ -2,6 +2,7 @@ import {jsonMatchesText} from '../shared/json-identity';
 import {workshopAdviceMatches} from '../shared/opening-workshop-advice';
 import {playerCopy} from '../runtime/player-copy';
 import {martialSoulTraitTiming,martialSoulTraitMeaning} from '../runtime/martial-soul-writing';
+import {martialSoulChannelDescription} from '../runtime/martial-soul-channels';
 import {ringLore} from './reward-presentation';
 import {inspectCreationAdvice} from './creation-advisor';
 import {rules} from '../rules';
@@ -23,7 +24,7 @@ const traitPresentation=(v:any)=>({...pick(v,selectionFields),meaning:playerCopy
 const selectionFields=['id','name','parameters','selectable','minimumInvestment','maximumInvestment','maxLevel'];
 const catalog={
   situations:rules.talents.SITUATIONS,situationPointCap:rules.talents.SITUATION_POINT_CAP,
-  soul:{CATEGORY_REGISTRY:entries(soulCore.CATEGORY_REGISTRY,selectionFields),ATTRIBUTE_REGISTRY:entries(soulCore.ATTRIBUTE_REGISTRY,selectionFields),CHANNEL_REGISTRY:entries(soulCore.CHANNEL_REGISTRY,selectionFields),BASE_ACTION_MODES:entries(soulCore.BASE_ACTION_MODES,selectionFields),
+  soul:{CATEGORY_REGISTRY:entries(soulCore.CATEGORY_REGISTRY,selectionFields),ATTRIBUTE_REGISTRY:entries(soulCore.ATTRIBUTE_REGISTRY,selectionFields),CHANNEL_REGISTRY:Object.fromEntries(Object.entries(soulCore.CHANNEL_REGISTRY).map(([id,item])=>[id,{...pick(item,selectionFields),description:martialSoulChannelDescription(id)}])),BASE_ACTION_MODES:entries(soulCore.BASE_ACTION_MODES,selectionFields),
     TRAIT_TEMPLATES:soulCore.TRAIT_TEMPLATES.map(traitPresentation),WEAKNESS_TEMPLATES:soulCore.WEAKNESS_TEMPLATES.map(traitPresentation),PARAMETER_OPTIONS:soulCore.PARAMETER_OPTIONS},
   templates:Object.fromEntries(Object.entries(rules.world.MARTIAL_SOUL_TEMPLATES).map(([id,v]:[string,any])=>[id,{name:v.名称,grade:v.品级标签}]).concat(rules.presets.list({category:'武魂'}).map((v:any)=>[v.id,{...presetPresentation(v),grade:'精品范本'}]))),
   characterSources:rules.canonicalGrowth.sources(),
@@ -118,8 +119,54 @@ function actorHistory(actor:any,perspective:string){
   }catch(error){const stale=/^第(\d+)环选择ID已失效/.exec((error as Error).message);return {...meta,ready:false,errors:[historyProblem(error)],...(stale?{staleSelectionFrom:Number(stale[1])}:{}),complete:false,rings:[],selected:[],selectedIds:[]};}
 }
 
+function openingRingPackage(config:any,side:string){
+ const actor=rules.backgrounds.resolveActor(config,side);
+ if(actor.source==='canon'||!actor.draft.martialSoulDrafts?.[0])throw Error('请选择可编辑的开局武魂');
+ return {actor,soul:actor.draft.martialSoulDrafts[0]};
+}
+
 export function creationQuery(name:string,input:Record<string,any>):any {
   switch(name){
+    case 'creation.export-ring-designs':{
+      const {actor,soul}=openingRingPackage(input.config,input.side);
+      const designs=rules.backgroundHistory.normalizeDesigns(actor.ringDesigns).filter((d:any)=>d.requestedSkills?.length&&(input.ordinal===undefined||d.ordinal===input.ordinal));
+      if(!designs.length)throw Error('先采用至少一项自制魂技设计');
+      if(designs.some((d:any)=>d.soulBinding&&d.soulBinding!==rules.backgroundHistory.soulBinding(soul)))throw Error('魂技仍绑定原武魂，请切回该武魂后导出');
+      return {name:soul.name,serialized:JSON.stringify({kind:'douluo-opening-ring-designs',version:1,soul:rules.backgroundHistory.ringPackageSoul(soul),...(input.includeSoul?{weapon:rules.transfer.martialSoulDraftFrom(soul)}:{}),designs},null,2)};
+    }
+    case 'creation.import-ring-designs':{
+      const config=structuredClone(input.config);
+      if(typeof input.serialized!=='string'||input.serialized.length>512_000)throw Error('魂技文件超出读取范围');
+      const data=JSON.parse(input.serialized);
+      if(data?.kind!=='douluo-opening-ring-designs'||data.version!==1)throw Error('请选择开局魂技导出文件');
+      if(input.replaceSoul){
+        if(!data.weapon||config.background.id!=='custom'||input.side!=='main')throw Error('此文件或背景不支持一并载入武魂');
+        config.martialSoulDrafts[0]=rules.transfer.martialSoulDraftFrom(data.weapon);
+      }
+      const {actor,soul}=openingRingPackage(config,input.side);
+      if(!jsonMatchesText(data.soul,JSON.stringify(rules.backgroundHistory.ringPackageSoul(soul))))throw Error('这份魂技绑定了另一套武魂，请先载入对应武魂');
+      const binding=rules.backgroundHistory.soulBinding(soul);
+      const incoming=rules.backgroundHistory.normalizeDesigns(data.designs).map((d:any)=>{
+        if(d.soulBinding&&d.soulBinding!==binding)throw Error('文件里的魂技与所绑定的武魂不符');
+        return {...d,soulBinding:binding};
+      });
+      if(!incoming.length||incoming.some((d:any)=>!d.requestedSkills?.length))throw Error('文件中没有已完成的魂技设计');
+      const first=Math.min(...incoming.map((d:any)=>d.ordinal));
+      const designs=rules.backgroundHistory.normalizeDesigns([...(actor.ringDesigns??[]).filter((d:any)=>!incoming.some((next:any)=>next.ordinal===d.ordinal)),...incoming]);
+      const prefix=input.replaceSoul?[]:actor.ringChoices.slice(0,first-1);
+      const result=config,b=result.background;
+      if(input.side==='main'||input.side===b.perspective){b.ringDesigns=designs;b.ringChoices=prefix;}
+      else b.actors[input.side]={...b.actors[input.side],ringDesigns:designs,ringChoices:prefix};
+      const checked=rules.backgrounds.selection(b);
+      const after=rules.backgrounds.resolveActor({...result,background:checked},input.side);
+      if(actor.ringCount>0&&(input.replaceSoul||first<=actor.ringCount)){
+        const history=rules.backgroundHistory.prepareDraft(after.draft,{level:after.level,manual:false,selectedIds:prefix,budget:after.budget,designs});
+        if(!history.complete)throw Error('当前武魂、魂环年限或预算无法完成导入的魂技');
+        if(input.side==='main'||input.side===b.perspective)b.ringChoices=history.selectedIds;
+        else b.actors[input.side].ringChoices=history.selectedIds;
+      }
+      return {background:b,...(input.replaceSoul?{martialSoulDrafts:config.martialSoulDrafts}:{}),imported:incoming.length,parked:incoming.filter((d:any)=>d.ordinal>actor.ringCount).length};
+    }
     case 'creation.ring.unlock-source-preference':
       if(Object.keys(input).some(key=>!['config','side','ordinal'].includes(key)))throw new CloudError('invalid-query','解除来源固定只接受当前创建草稿、人物与魂环序号');
       return unlockOpeningRingSource(input.config,input.side,input.ordinal);
@@ -145,6 +192,7 @@ export function creationQuery(name:string,input:Record<string,any>):any {
     case 'creation.bootstrap':return {catalog,workspace:createWorkspace(defaultStarterDraft(),input.workspace)};
     case 'creation.background':return createWorkspace(starterDraft(input.config,input.background));
     case 'creation.restore-background':return createWorkspace(input.config.background.id==='sealed-titled'?rules.backgrounds.selectDraft(input.config,input.background):input.config);
+    case 'creation.yu-reunion':return {config:rules.evolutionContent.starter(input.config??defaultStarterDraft())};
     case 'creation.canon':return {...rules.backgrounds.canonicalDraft(input.characterId,input.level,input.mode),characterId:input.characterId};
     case 'creation.actor':return createWorkspace(rules.backgrounds.chooseActor(input.config,input.side,input.source,input.characterId));
     case 'creation.actors':return input.config.background.id==='sealed-titled'?rules.backgrounds.resolveSlots(input.config):null;
@@ -156,7 +204,7 @@ export function creationQuery(name:string,input:Record<string,any>):any {
     }
     case 'creation.history':{
       const b=rules.backgrounds.selection(input.config.background);
-      if(b.id==='jiumeitu-heir'){
+      if(['custom','jiumeitu-heir'].includes(b.id)){
         const main=actorHistory(rules.backgrounds.resolveActor(input.config,'main'),'main'),actorErrors=!main.ready||main.rings.some((ring:any)=>ring.designPending)?[{side:'main',actorId:main.actorId,name:main.name,errors:main.ready?main.rings.filter((ring:any)=>ring.designPending).map((ring:any)=>`请完成第${ring.ordinal}环的魂技设计`):main.errors}]:[];
         return {ready:!actorErrors.length,actorErrors,actors:{main},main,title:main.title};
       }
@@ -167,7 +215,7 @@ export function creationQuery(name:string,input:Record<string,any>):any {
     }
     case 'creation.preview':{
       const result=creationPreview(input.config),background=rules.backgrounds.policy(input.config.background,input.config.difficulty);
-      if(['sealed-titled','jiumeitu-heir'].includes(input.config.background.id)&&result.pass){try{const history=creationQuery('creation.history',input);if(!history.ready){result.pass=false;result.errors.push(...history.actorErrors.flatMap((actor:any)=>actor.errors.map((error:string)=>`${actor.name}：${error}`)));}else if(!history.actors[input.config.background.id==='jiumeitu-heir'?'main':input.config.background.perspective].complete){result.pass=false;result.errors.push('请完成当前人物的历史魂环选择，或请主持人配齐剩余魂环');}}catch(e){result.pass=false;result.errors.push(creationReason((e as Error).message));}}
+      if((['sealed-titled','jiumeitu-heir'].includes(input.config.background.id)||input.config.background.id==='custom'&&background.level>10)&&result.pass){try{const history=creationQuery('creation.history',input);if(!history.ready){result.pass=false;result.errors.push(...history.actorErrors.flatMap((actor:any)=>actor.errors.map((error:string)=>`${actor.name}：${error}`)));}else if(!history.actors[input.config.background.id==='sealed-titled'?input.config.background.perspective:'main'].complete){result.pass=false;result.errors.push('请完成当前人物的历史魂环选择，或请主持人配齐剩余魂环');}}catch(e){result.pass=false;result.errors.push(creationReason((e as Error).message));}}
       let creationItems;try{creationItems=rules.backgroundRestraints.quote(input.config.background);}catch(e){creationItems={pass:false,errors:[(e as Error).message]};}
       const actor=input.config.background.id==='sealed-titled'?rules.backgrounds.resolveActor(input.config,input.config.background.perspective):null,wallet=actor?.canonical?.wallet??background.wallet;
       return {...result,background,creationItems,identity:{name:background.definition.name,currency:rules.world.formatCurrency(wallet+(background.ordinary?rules.talents.inspectSelection(input.config.opening,{purchase:false}).selection.opportunities.reduce((sum:number,v:any)=>sum+rules.talents.opportunityGold(v.kind),0):0))},opportunities:(input.config.opening?.opportunities??[]).map((v:any)=>({kind:v.kind,name:rules.talents.ringItemName(v),tier:v.kind==='starter-supplies'?'补给':rules.foundation.getAgeTier(rules.talents.OPPORTUNITIES[v.kind]?.years).名称}))};

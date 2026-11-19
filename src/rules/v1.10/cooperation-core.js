@@ -123,7 +123,7 @@
     if(q.type==='respond-person-cooperation'){
      if(r.memberId!==q.actorId||r.status!=='proposed'||r.basis==='controlled'||typeof q.accept!=='boolean'||typeof q.reason!=='string'||!q.reason.trim()||q.reason.length>600)throw Error('须由受邀者本人明确回应与理由');
      r.response={actorId:q.actorId,accept:q.accept,reason:q.reason,at:now(s),sourceId};
-     if(q.accept){join(s,r,h);if(r.expiresAt!==null&&r.expiresAt<=now(s))throw Error('原临时合作已经到期');r.status='active';}else r.status='rejected';save(s,r,q.accept?'accepted':'rejected',q.actorId,sourceId,{positions:{[r.leaderId]:clone(actions.positionOf(s,r.leaderId)),[r.memberId]:clone(actions.positionOf(s,r.memberId))}});
+     if(q.accept){const attitude=r.basis==='voluntary'&&globalThis.SoulWorldEngine.playerAttitudeReason(s,r.leaderId,r.memberId);if(attitude)throw Error(attitude);join(s,r,h);if(r.expiresAt!==null&&r.expiresAt<=now(s))throw Error('原临时合作已经到期');r.status='active';}else r.status='rejected';save(s,r,q.accept?'accepted':'rejected',q.actorId,sourceId,{positions:{[r.leaderId]:clone(actions.positionOf(s,r.leaderId)),[r.memberId]:clone(actions.positionOf(s,r.memberId))}});
     }else{
      if(q.actorId!==r.leaderId||r.status!=='suspended'||r.expiresAt!==null&&r.expiresAt<=now(s))throw Error('只有仍有效期内的暂停合作能重新提议');join(s,r,h);r.response=null;if(r.basis==='controlled'){r.controlSources=controlProof(s,r);r.status='active';}else r.status='proposed';save(s,r,'renewed',q.actorId,sourceId,{positions:{[r.leaderId]:clone(actions.positionOf(s,r.leaderId)),[r.memberId]:clone(actions.positionOf(s,r.memberId))}});
     }

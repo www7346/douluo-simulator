@@ -1,4 +1,6 @@
 import data from '../shared/writing-preset-data.json';
+import additions from '../shared/writing-preset-modules.json';
+import sourceOrder from '../shared/writing-source-order.json';
 import type {GlobalPrompt} from './model-global-prompts';
 import type {WriterPromptPart} from './story-writer-prompts';
 import type {ModelReplyTool} from './model-reply-tools';
@@ -7,12 +9,24 @@ import type {GenerationSettings} from './model-settings';
 export type WritingPresetId='dream'|'ny'|'meow';
 export type WritingModelFamily='glm'|'deepseek'|'kimi'|'gemini';
 export type WritingPresetSet=`${WritingPresetId}:${WritingModelFamily}`;
+export type PersonalWritingPresetId=`personal:${string}`;
+export function isPersonalWritingPresetId(id:unknown):id is PersonalWritingPresetId{
+ return typeof id==='string'&&/^personal:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(id);
+}
 type PresetText=Pick<GlobalPrompt,'id'|'name'|'content'|'source'>;
 interface BundledWritingPreset {
- id:string;label:string;defaultStyle:string;global:(PresetText&{role:string})[];
+ id:WritingPresetId;label:string;defaultStyle:string;global:(PresetText&{role:string})[];
  styles:PresetText[];extras:PresetText[];tools:unknown[];
 }
-export const WRITING_PRESETS:BundledWritingPreset[]=data.presets;
+export const WRITING_PRESETS=data.presets as BundledWritingPreset[];
+type PresetModule=PresetText&Pick<WriterPromptPart,'category'|'exclusiveGroup'|'enabled'|'targets'>&{targetCharacters?:number};
+const adapted=additions as Record<WritingPresetId,PresetModule[]>;
+const rawRows=new Map(Object.values(sourceOrder).flat().filter(row=>row.id).map(row=>[row.id,row]));
+export const writingPresetSource=(id:string)=>rawRows.get(id);
+export const WRITING_PRESET_MODULES=Object.fromEntries(WRITING_PRESETS.map(preset=>[
+ preset.id,[...preset.extras.map(part=>({...part,category:'other' as const,enabled:rawRows.get(part.id)?.enabled??true})),...adapted[preset.id]]
+  .sort((a,b)=>(rawRows.get(a.id)?.sourceIndex??0)-(rawRows.get(b.id)?.sourceIndex??0))
+])) as Record<WritingPresetId,PresetModule[]>;
 export const WRITING_MODEL_FAMILIES=['glm','deepseek','kimi','gemini'] as const;
 export const WRITING_MODEL_LABELS={deepseek:'DeepSeek',glm:'GLM',gemini:'Gemini',kimi:'Kimi'} as const;
 export const WRITING_SET_KEYS=WRITING_PRESETS.flatMap(p=>WRITING_MODEL_FAMILIES.map(f=>`${p.id}:${f}` as WritingPresetSet));

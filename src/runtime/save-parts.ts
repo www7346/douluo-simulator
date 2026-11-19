@@ -95,7 +95,7 @@ export async function retainParts(store:IDBObjectStore,parts:Map<string,unknown>
 export async function pruneParts(tx:IDBTransaction,candidates:Set<string>){
   const saves=tx.objectStore('saves').index('partKeys'),backups=tx.objectStore('backups').index('partKeys');
   await Promise.all(Array.from(candidates,async key=>{
-    const [a,b]=await Promise.all([read(saves.getKey(key)),read(backups.getKey(key))]);
-    if(a===undefined&&b===undefined)tx.objectStore(PARTS).delete(key);
+    const [a,b,c]=await Promise.all([read(saves.getKey(key)),read(backups.getKey(key)),tx.objectStoreNames.contains('storyUndo')?read(tx.objectStore('storyUndo').index('partKeys').getKey(key)):undefined]);
+    if(a===undefined&&b===undefined&&c===undefined)tx.objectStore(PARTS).delete(key);
   }));
 }

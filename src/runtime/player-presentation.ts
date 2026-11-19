@@ -9,7 +9,7 @@ export interface BattleViewFrame {
   actorId: string;
   status: string;
   units: Array<{id:string;name:string;sideId:string;point?:{x:number;y:number};kind?:string;portrait?:PortraitArt|null;memberStatus?:string;consciousPersonId?:string;distanceLabel?:string;position:Record<string,any>;hp:number;hpMax:number;shield:number;sp:number;spMax:number;life:string;resources?:Array<{slot:number;name:string;current:number;maximum:number;sourceMartialSoulId?:string}>;statuses:Array<{id:string;effectId?:string;name:string;remaining:number|null;level?:number;usesRemaining?:number;maintained?:boolean}>}>;
-  fields?: Array<{id:string;name:string;kind:string;sourceId:string;position:Record<string,any>;memberIds:string[];remaining:number|null;remainingUnit?:string;maintained?:boolean;status:string;radius?:number}>;
+  fields?: Array<{id:string;name:string;kind:string;sourceId:string;position:Record<string,any>;memberIds:string[];remaining:number|null;remainingUnit?:string;charges?:number;maintained?:boolean;status:string;radius?:number}>;
 }
 
 export interface BattleTurnView {
@@ -49,7 +49,7 @@ export function captureBattleView(state: any): BattleViewFrame {
   return {
     battleId:String(battle.id ?? ''),round:Number(battle.回合 ?? 0),actorId:String(battle.当前行动单位ID ?? ''),status:String(battle.状态 ?? ''),
     fields:[
-      ...Object.values(battle.扩展?.领域实例 ?? {}).map((domain:any) => ({id:domain.id,name:playerText(state.技能?.列表?.[domain.来源?.技能ID]?.name,state,'领域'),kind:'domain',sourceId:String(domain.来源?.单位ID ?? ''),position:structuredClone(rules.combat.domainCenter(state,domain) ?? {}),memberIds:domain.状态 === '生效' ? (battle.参与者ID列表 ?? []).filter((id:string) => rules.combat.domainContains(state,domain,state.战斗单位.列表[id])) : [],remaining:domain.参数?.持续方式==='来源维持'?null:domain.剩余回合 ?? null,maintained:domain.参数?.持续方式==='来源维持',status:domain.状态,radius:Number(domain.参数?.半径区 ?? 0)})),
+      ...Object.values(battle.扩展?.领域实例 ?? {}).map((domain:any) => ({id:domain.id,name:playerText(state.技能?.列表?.[domain.来源?.技能ID]?.name,state,'领域'),kind:'domain',sourceId:String(domain.来源?.单位ID ?? ''),position:structuredClone(rules.combat.domainCenter(state,domain) ?? {}),...(domain.剩余触发!==undefined?{charges:domain.剩余触发}:{}),memberIds:domain.状态 === '生效' ? (battle.参与者ID列表 ?? []).filter((id:string) => rules.combat.domainContains(state,domain,state.战斗单位.列表[id])) : [],remaining:domain.参数?.持续方式==='来源维持'?null:domain.剩余回合 ?? null,maintained:domain.参数?.持续方式==='来源维持',status:domain.状态,radius:Number(domain.参数?.半径区 ?? 0)})),
       ...rules.combat.activeZones(state).map((zone:any) => ({id:zone.id,name:playerText(state.技能?.列表?.[zone.来源?.技能ID]?.name,state,zone.类型 === 'wall' ? '屏障' : '持续区域'),kind:zone.类型,sourceId:String(zone.来源?.单位ID ?? ''),position:{距离区:zone.距离区,站位簇:zone.站位簇,战场坐标:zone.战场坐标},memberIds:(battle.参与者ID列表 ?? []).filter((id:string) => rules.combat.zoneContains(zone,state.战斗单位.列表[id])),remaining:zone.constructId?Math.max(0,(rules.creation.constructs(state).find((r:any)=>r.id===zone.constructId)?.expiresAt??rules.people.now(state))-rules.people.now(state)):zone.剩余回合 ?? null,...(zone.constructId?{remainingUnit:'分钟'}:{}),status:zone.状态 ?? '生效'})),
     ],
     units:(battle.参与者ID列表 ?? []).flatMap((id: string) => {

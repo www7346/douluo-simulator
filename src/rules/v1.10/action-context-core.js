@@ -38,7 +38,7 @@
     if(position.kind==='contained'&&(!awake||!['communication','observe','struggle'].includes(containment)))throw Error('封神台的封锁罩仍然闭合，无法离开或向外施术');
     if(conversation&&(request.requirements??[]).some(v=>!['voice','vision','hearing','focus'].includes(v)))throw Error('隔着封锁罩只能观察或说话');
     if(containment==='struggle'&&(!awake||(request.requirements??[]).length||(request.targetIds??[]).length||(request.harmfulTargetIds??[]).length||(request.approachTargetIds??[]).length))throw Error('只能在自己所在的封锁罩内挣扎');
-    if(!battle&&!person&&!(request.fieldAbility===true&&(unit?.单位种类==='魂兽'||globalThis.SoulConsciousness?.personForCarrier(state,actorId))&&position.kind==='location'))throw Error('场外行动需要完整人物档案');
+    if(!battle&&!person&&!(request.fieldAbility===true&&(unit?.单位种类==='魂兽'||globalThis.SoulConsciousness?.personForCarrier(state,actorId)||globalThis.SoulCreationCore?.constructs(state).some(r=>r.kind==='summon'&&r.status==='active'&&r.unitId===actorId))&&position.kind==='location'))throw Error('场外行动需要完整人物档案');
     if(request.expectedLocationId!==undefined&&request.expectedLocationId!==position.locationId)throw Error('行动地点与人物实际位置不一致');
     const targetIds=[...new Set([...(request.targetIds??[]),...(request.harmfulTargetIds??[]),...(request.approachTargetIds??[])])];
     for(const id of targetIds){

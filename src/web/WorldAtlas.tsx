@@ -146,7 +146,7 @@ export function WorldAtlas({travelMode,onTravelMode,onPlan,onDungeon,active=true
         {!access.pass && <p className="muted">{access.reasons.map((reason:string)=>playerText(reason,state)).join('；')}</p>}
         {access.guidance?.map((item:any)=><p className="atlas-guidance" key={item.name}>{playerText(item.description ?? item.hint ?? item.name,state,'向当地居民打听道路')}</p>)}
         {block && <p className="muted">{playerText(block,state)}</p>}
-        {routePreview && <p className="atlas-travel-cost">{routePreview.path.totalMinutes} 分钟 <span>{routePreview.currencyText}</span></p>}
+        {routePreview && <p className="atlas-travel-cost">{routePreview.path.totalMinutes} 分钟</p>}
         {routeQuery.loading&&<p role="status">正在查看路程…</p>}
         {routeQuery.error&&<p role="alert">{routeQuery.error}</p>}
 

@@ -18,12 +18,13 @@
   'stop-maintenance':{domain:'战斗',fields:['maintenanceSourceId'],required:['maintenanceSourceId'],receipt:'stop-maintenance'},
   travel:{domain:'移动',fields:['destinationId','mode'],required:['destinationId'],receipt:'travel-completed'},
   'resume-travel':{domain:'移动',fields:['actionId'],required:['actionId'],receipt:'travel-completed'},
+  'set-custody-cell-door':{domain:'物品',fields:['facilityId','cellId','locked'],required:['facilityId','cellId','locked'],receipt:'custody-logistics'},
   'switch-martial-soul':{domain:'战斗',fields:['martialSoulId'],required:['martialSoulId'],receipt:'martial-soul-switched'}
  });
  const INTENTS=Object.freeze(['issue-field-control']);
  const table=(s,create=false)=>{if(create)s.世界.fieldControl??={version:1,orders:[],events:[]};return s.世界.fieldControl??{version:1,orders:[],events:[]};};
  const stamped=r=>{const {hash,...body}=r??{};return hash===abilities.hash(body);};
- function canonical(input){const spec=ACTIONS[input?.type],invalid=(key,v)=>key==='branchIds'?(!Array.isArray(v)||!v.length||v.length>16||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!id)):key==='materials'?(!Array.isArray(v)||v.length>256||v.some(r=>!r||Object.keys(r).some(k=>!['fingerprint','quantity'].includes(k))||typeof r.fingerprint!=='string'||!Number.isSafeInteger(r.quantity)||r.quantity<1)):['quantity','dueDay'].includes(key)?!Number.isSafeInteger(v)||v<1||key==='quantity'&&v>999:typeof v!=='string'||!v.trim()||v.length>(key==='text'?2000:600);if(!input||!spec||Array.isArray(input)||Object.keys(input).some(k=>!['type',...spec.fields].includes(k))||spec.required.some(k=>input[k]===undefined)||spec.fields.some(k=>input[k]!==undefined&&invalid(k,input[k])))throw Error('场外命令须使用具体的已登记行动与参数，不能夹带执行者或任意修改');if(input.type==='travel'&&input.mode!==undefined&&!['balanced','fastest','cheapest'].includes(input.mode))throw Error('旅行模式无效');return clone(input);}
+ function canonical(input){const spec=ACTIONS[input?.type],invalid=(key,v)=>key==='locked'?typeof v!=='boolean':key==='branchIds'?(!Array.isArray(v)||!v.length||v.length>16||new Set(v).size!==v.length||v.some(id=>typeof id!=='string'||!id)):key==='materials'?(!Array.isArray(v)||v.length>256||v.some(r=>!r||Object.keys(r).some(k=>!['fingerprint','quantity'].includes(k))||typeof r.fingerprint!=='string'||!Number.isSafeInteger(r.quantity)||r.quantity<1)):['quantity','dueDay'].includes(key)?!Number.isSafeInteger(v)||v<1||key==='quantity'&&v>999:typeof v!=='string'||!v.trim()||v.length>(key==='text'?2000:600);if(!input||!spec||Array.isArray(input)||Object.keys(input).some(k=>!['type',...spec.fields].includes(k))||spec.required.some(k=>input[k]===undefined)||spec.fields.some(k=>input[k]!==undefined&&invalid(k,input[k])))throw Error('场外命令须使用具体的已登记行动与参数，不能夹带执行者或任意修改');if(input.type==='travel'&&input.mode!==undefined&&!['balanced','fastest','cheapest'].includes(input.mode))throw Error('旅行模式无效');return clone(input);}
  function actionSkill(s,action){return action.type==='use-field-ability'?s.技能.列表[action.skillId]??null:['use-restorative-item','use-prebattle-pill'].includes(action.type)?Object.values(s.技能.列表).find(k=>k.sourceKind==='consumable'&&k.sourceItemId===action.itemId)??null:null;}
  function domainOf(action,skill){return action.type==='use-field-ability'&&['consumable','hidden-weapon','soul-device'].includes(skill?.sourceKind)?'物品':ACTIONS[action.type].domain;}
  function actionDomain(s,action,source=actionSkill(s,action)){return ACTIONS[action.type]?domainOf(action,source):null;}
@@ -41,6 +42,11 @@
   if(!c||c.id!==r.executionId||c.type!==ACTIONS[a.type].receipt||c.actorId!==undefined&&c.actorId!==r.executorId||c.entityId!==undefined&&c.entityId!==r.executorId||c.unitId!==undefined&&c.unitId!==r.executorId)throw Error('实际执行回执');
   if((['equip','unequip'].includes(a.type)?c.entityId:a.type==='switch-martial-soul'?c.unitId:c.actorId)!==r.executorId)throw Error('实际执行者缺失');
   if(['itemId','skillId','martialSoulId','slot'].some(key=>a[key]!==undefined&&c[key]!==a[key]))throw Error('实际行动参数');
+  if(a.type==='set-custody-cell-door'){
+   const event=custody.table(s).events.find(e=>e.type==='logistics-facilities'&&e.actorId===r.executorId&&e.sourceId===r.executionId&&e.reason===a.type);
+   if(c.action!==a.type||c.sourceId!==r.executionId||c.facilityId!==a.facilityId||c.cellId!==a.cellId||c.locked!==a.locked||
+    event?.entityId!==a.facilityId||event.record.cells.find(cell=>cell.id===a.cellId)?.locked!==a.locked)throw Error('受控房门操作缺少实际门锁结算');
+  }
   if(a.type==='use-field-ability'&&!same(globalThis.SoulCreationCore.normalizeScope(k,a),c.scope))throw Error('实际施放用途与原命令不符');
   if(['use-field-ability','use-restorative-item'].includes(a.type)&&c.targetId!==(a.targetId??r.executorId))throw Error('实际行动目标');
   if(a.type==='speak-person'){

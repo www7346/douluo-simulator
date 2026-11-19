@@ -1,3 +1,4 @@
+import {evolutionWritingReceipt} from './story-evolution';
 import {storyResourceChanges as resourceChanges} from '../shared/story-result-changes';
 import {CONTRACT_RECEIPT_TYPES,compileContractReceipt,compileContractView,compileContractObservation,contractPenaltyAccount} from './story-contract-writing-facts';
 import {compileFieldOperation,FIELD_CONTROL_RECEIPT_TYPES} from './story-field-control-writing-facts';
@@ -42,15 +43,15 @@ const LABEL_GROUPS:Record<string,string[]>={
  战败与看管:['request-person-growth','set-realm-arrangement','reshape-realm','arrange-realm-resident','end-realm-visit','move-realm-guest','set-resident-permissions','reward-resident','punish-resident','propose-performance-agreement','respond-performance-agreement','end-performance-agreement','deploy-resident','recall-resident','discuss-resident-tactics','propose-custody-transfer','respond-custody-transfer','cancel-custody-transfer','start-custody-auction','bid-custody-auction','pass-custody-auction','cancel-custody-auction','issue-field-control','use-field-ability','stop-maintenance','dismiss-disguise','inspect-disguise','disclose-identity','request-ability-use','respond-ability-use','prepare-cooperation-battle','recover-cooperation-restraints','close-cooperation-preparation','propose-person-cooperation','respond-person-cooperation','impose-person-cooperation','end-person-cooperation','resume-person-cooperation','observe-custody-person','tell-custody-news','send-custody-letter','acquire-custody-facility','visit-custody-cell','set-custody-cell-door','repair-custody-facility','admit-captive','place-captive','withdraw-captive','permit-custody-duty','assign-custody-guard','end-custody-duty','start-custody-escort','pause-custody-escort','resume-custody-escort','cancel-custody-escort','captive-daily','person-duel','capture-person','spare-person','execute-person','search-captive','release-captive','set-restraint-mode','detach-restraint','attach-restraint','permit-restraint','request-restraint-permission','revoke-restraint-permission','respond-restraint-permission-request'],
  赛事:['register-competition','competition-match','competition-withdraw'],
  工坊查询:['inspect-workshop','recommend-research','preview-research','inspect-research','preview-craft','quote-material-sale','quote-item-sale'],
- 工坊结算:['begin-research','choose-research','craft-blueprint','sell-material','sell-item'],
+ 工坊结算:['learn-preset-blueprint','begin-research','choose-research','craft-blueprint','sell-material','sell-item'],
  魂环:['inspect-ring','prepare-ring','inspect-ring-item','prepare-ring-item','inspect-ring-choices','choose-ring'],
- 成长:['inspect-growth','allocate-growth'],
+ 成长:['inspect-evolution','preview-evolution','adopt-evolution','continue-evolution','cancel-evolution','acquire-evolution-source','brew-evolution-item','manifest-soul','inspect-growth','allocate-growth'],
  人物决定:['consider-person-goal','answer-person-plan','ask-release','respond-npc-request'],
- 社会交互:['promise-gold','promise-item','give-gold','give-item','invite','invite-date','fulfill-promise','cancel-promise','attend-invitation','exchange-contact','propose-loot','propose-loot-resolution','collect-loot','invite-party','end-party','propose-relationship','respond-person-relation','end-relationship'],
+ 社会交互:['promise-gold','promise-item','give-gold','give-item','invite','invite-date','invite-realm-guest','fulfill-promise','cancel-promise','attend-invitation','exchange-contact','propose-loot','propose-loot-resolution','collect-loot','invite-party','end-party','propose-relationship','respond-person-relation','end-relationship'],
  交谈:['tell-person','address-person','tell-party'],
  查询:['inspect-inventory','city-history','check-history','person-history','resolve-person','resolve-object','inspect-person','quote-hire'],
  对象记录:['remember-object','instantiate-item','introduce-person','label-person','meet'],
- 时间与移动:['travel','wait-until','wait-until-date','cultivate','resume-long-action','abandon-long-action','escape-captivity'],
+ 时间与移动:['travel','wait-until','wait-until-date','cultivate','resume-long-action','abandon-long-action','escape-captivity','break-custody-cell-door'],
  财物与装备:['device.lock','device.unlock','device.suppress-lock','device.break-rule','device.analyze-lock','device.create-key','device.arcane-lock','intimate-craft','intimate-equip','intimate-detach','host.set-suppression','host.set-form','host.set-appearance','recover','recover-party','buy','sell','equip','unequip','use-item','switch-soul','retract-martial-soul','restrain-desire','break-restraint','store-item','retrieve-item','loot-item','loot-coins','use-prebattle-pill','supply-buy','create-support-consumable'],
  冒险与队伍:['world-event','hire','dismiss','battle-strategy','enter-room','extract-expedition','use-camp','open-chest','harvest-beast','harvest-beasts','start-expedition','bargain-hire','accept-hire-offer','spar','choose-guide'],
  开局:['opening-situation','opening-guidance','inspect-opening'],
@@ -132,7 +133,8 @@ function compileEvent(turn:StoryTurn,r:StoryStepResult,narrative=true,onBattleSo
  }
  if(typeof c.type!=='string')throw Error(`写作事实回执类型缺失：${a.kind}`);
  event.statement=typeof c.summary==='string'?c.summary:typeof r.reason==='string'?r.reason:`${group}的实际结果已记录`;
- if(CONTRACT_RECEIPT_TYPES.includes(c.type)){event.facts=compileContractReceipt(turn,r);event.statement=event.facts.stage;}
+ if(['soul-evolution','soul-evolution-query','soul-manifestation'].includes(c.type)){event.facts=evolutionWritingReceipt(c);event.source.actorId=c.actorId;}
+ else if(CONTRACT_RECEIPT_TYPES.includes(c.type)){event.facts=compileContractReceipt(turn,r);event.statement=event.facts.stage;}
  else if(Object.hasOwn(STORY_CHECK_RECEIPT_FIELDS,c.type)){
   event.facts=compileStoryCheckReceipt(c);event.source.actorId=event.facts.actorId;
   event.statement=c.type==='story-free-action'?`局部行动${event.facts.result}，耗时、检定与现场叙事记录已确定`:`${event.facts.attribute}检定${event.facts.outcome}`;
@@ -242,7 +244,7 @@ export function compileStoryWritingFacts(turn:StoryTurn,observerId=turn.privateP
  const references=storyWritingPersonReferences(events,changes,turn.results.map(r=>r.action));
  const selectedPeople=storyTurnPeople(turn).filter(({person:p})=>(p.scope!=='resident-known'||references.has(p.id)||turn.privatePersonId===p.id)).filter(({person:p})=>battlePeople?battlePeople.has(p.id):!expeditionPeople||expeditionPeople.has(p.id)||references.has(p.id));
  const currentPeople=selectedPeople.map(o=>o.person);
- const participants=currentPeople.map(p=>({...participantRelationships(pick(p,['scope','id','name','playerLabels','identity','occupation','personality','characterization','backgroundContext','cognition','relationships','changeInteractions','eraBasis','locationId','level','lifeStatus','resources','relationshipScore','relationship','partyMembership','soulContactId','canonicalId','preparedPills','gold','membershipKind','speechStyle','communication','escortService','hireAvailability','lastHireInquiry','lastHireOffer']),after.player?.id??before.player?.id),
+ const participants=currentPeople.map(p=>({...participantRelationships(pick(p,['scope','id','name','partySpeakerPerspective','playerLabels','identity','occupation','personality','characterization','backgroundContext','cognition','relationships','changeInteractions','eraBasis','locationId','level','lifeStatus','resources','relationshipScore','relationship','partyMembership','soulContactId','canonicalId','preparedPills','gold','membershipKind','speechStyle','communication','escortService','hireAvailability','lastHireInquiry','lastHireOffer']),after.player?.id??before.player?.id),
   ...(p.rank?{rank:pick(p.rank,['name','allowedTitles'])}:{}),
   ...(p.abilities?{abilities:compileOwnedAbilities(p.abilities)}:{}),
   ...(p.martialSouls?{martialSouls:compileOwnedSouls(p.martialSouls)}:{}),
@@ -255,8 +257,10 @@ export function compileStoryWritingFacts(turn:StoryTurn,observerId=turn.privateP
  // Frozen facts can outlive the call that collected them. Apply the actual
  // audience without mutating their stored source or erasing the owner's memory.
  for(const person of participants){
+  if(person.id===observerId)continue;
+  delete person.partySpeakerPerspective;
   const characterization=person.characterization;
-  if(!characterization||person.id===observerId)continue;
+  if(!characterization)continue;
   delete characterization.personalSettings;
   if(characterization.personalExperience?.ownerId!==observerId)delete characterization.personalExperience;
  }
@@ -266,6 +270,7 @@ export function compileStoryWritingFacts(turn:StoryTurn,observerId=turn.privateP
  const continuity=pick(after,['residentContext','communication','personalKnowledge','personalContacts','partyConversation','narrativeObjects','npcCollaborations','releaseResponses','openingSituations','openingGuidance','inventory','materials','freeActions','captivity']);
  if(after.personContracts)continuity.personContracts=after.personContracts.map(compileContractView);
  Object.assign(continuity,compileCommunicationContext(after));
+ if(after.evolution)continuity.evolution=copy(after.evolution);
  if(after.party)continuity.party=compilePartyContext(after.party);
  if(after.commerce)continuity.commerce=compileCommerceContext(after.commerce);
  if(after.openingSituations)continuity.openingSituations=after.openingSituations.map(compileOpeningSituation);

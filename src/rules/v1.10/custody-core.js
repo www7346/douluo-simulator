@@ -28,7 +28,16 @@
   for(const id of ['restraint-seal-collar','restraint-seal-platform'])DEVICES[id].modes.limited=[];
   function resolveDevice(item){return globalThis.SoulRealmArrangements?.resolveDevice(item)??globalThis.SoulBackgroundRestraints?.resolve(item)??DEVICES[item?.templateId];}
   const normalizePart=part=>({neck:'neck','颈部':'neck',mouth:'mouth','口腔':'mouth','口部':'mouth',hands:'hands','手部':'hands','双手':'hands',legs:'legs','踝部':'legs','双腿':'legs',feet:'feet','足部':'feet',body:'body','躯干与四肢':'body',anchor:'anchor','场景固定':'anchor','眼部':'eyes'})[part]??part;
-  function occupiedParts(state,item){const a=item?.attachment,parts=[];if(a){if(a.part)parts.push(normalizePart(a.part));if(a.slot)parts.push(normalizePart(a.slot));}for(const slot of Object.keys(globalThis.SoulHostCore?.read(item).capabilities.forms?.slots??{}))parts.push(normalizePart(slot));return [...new Set(parts)];}
+  function occupiedParts(state,item){
+    const a=item?.attachment,parts=[];
+    if(a?.part)parts.push(normalizePart(a.part));
+    if(a?.slot)parts.push(normalizePart(a.slot));
+    const host=globalThis.SoulHostCore;
+    if(host?.capabilityActive(state,item,'forms')){
+      for(const slot of Object.keys(host.read(item).capabilities.forms.slots))parts.push(normalizePart(slot));
+    }
+    return [...new Set(parts)];
+  }
   function assertPartAvailable(state,wearerId,part,exceptId=''){const normalized=normalizePart(part);for(const item of Object.values(state.物品?.实例??{})){if(item.id===exceptId)continue;const attached=item.attachment?.wearerId===wearerId,equipped=item.ownerEntityId===wearerId&&Object.values(state.装备?.配置?.[wearerId]?.slots??{}).includes(item.id);if((attached||equipped)&&occupiedParts(state,item).includes(normalized))throw Error('该部位已经佩戴其他器具：'+item.name);}return true;}
   function table(state,create=false){
     if(create){state.世界??={};state.世界.custody??={version:1,defeats:{},byPerson:{},history:[],events:[]};}
@@ -126,13 +135,29 @@
     assertPartAvailable(state,targetId,template.part,itemId);
     return item;
   }
-  function effectSpecs(item,mode=item.attachment?.mode??'locked'){
+  // Source graphs describe the complete issued recipe. The authored mode
+  // policy controls execution separately, without rewriting historical proofs.
+  function effectSourceSpecs(item,mode=item.attachment?.mode??'locked'){
     const template=resolveDevice(item);if(!template||!Object.hasOwn(template.modes,mode))throw Error('拘束器模式无效');
     if(mode==='limited'&&['restraint-seal-collar','restraint-seal-platform','restraint-slime-suit'].includes(item.templateId)){
       const limits=controls.limitSpec(item.attachment?.limits??{soulPowerPercent:0,...(item.templateId==='restraint-seal-platform'?{damagePercent:0}:{}),permission:{allowedKinds:['ordinary'],maxCastRank:0}});
       return [...clone(template.modes[mode]),['status.power_seal',{封印对象:'精细',范围:'全部',限制:limits}]].map(([id,params])=>[id,{...params,持续方式:'来源有效',来源依赖:'道具有效'}]);
     }
     return clone(template.modes[mode]).map(([id,params])=>[id,{...params,持续方式:'来源有效',来源依赖:'道具有效'}]);
+  }
+  function effectEnabled(item,effectId,mode=item.attachment?.mode??'locked'){
+    return effectId!=='status.limb_bind'||mode!=='limited'||item.payload?.backgroundRestraint?.definition?.binding?.retainInLimited!==false;
+  }
+  function effectSpecs(item,mode=item.attachment?.mode??'locked'){
+    return effectSourceSpecs(item,mode).filter(([id])=>effectEnabled(item,id,mode));
+  }
+  // Source-bound limb restrictions follow the currently selected mode. Keep
+  // recorded status/attachment evidence intact; changing mode removes it through
+  // the ordinary device lifecycle. Independent bindings remain independent.
+  function statusEffective(state,status){
+    if(status.模板ID!=='status.limb_bind'||status.扩展?.持续来源合同?.sourceKind!=='restraint')return true;
+    const item=state.物品?.实例?.[status.来源?.物品ID];
+    return !!item?.attachment&&effectEnabled(item,status.模板ID)&&!!resolveDevice(item)?.modes[item.attachment.mode]?.some(([id])=>id==='status.limb_bind');
   }
   function captureQuote(state,actorId,targetId,defeatId,itemIds){
     const defeat=qualification(state,actorId,targetId,defeatId),actor=state.人物.列表[actorId],target=state.战斗单位.列表[targetId];
@@ -599,7 +624,22 @@
           if(ending.length||t.dueAt<=people.now(state)||a?.sourceId!==t.modeSourceId||a.captureSourceId!==t.attachmentSourceId||!a.controllers.includes(t.actorId))throw Error('待执行');
         }else if(ending.length!==1||ending[0].status!==t.status||ending[0].at!==t.endedAt||!atValid(t.endedAt)||t.endedAt<t.createdAt||t.status!=='cancelled'&&t.endedAt!==t.dueAt)throw Error('终结');
         if(t.status==='completed'&&!db.events.some(e=>e.type==='restraint-mode-changed'&&e.sourceId===t.endSourceId&&e.itemId===t.itemId&&e.mode===t.returnMode&&e.at===t.dueAt))throw Error('复锁');
-        if(t.status==='cancelled'&&!db.events.some(e=>['restraint-mode-changed','restraint-detached','restraint-rights-transferred'].includes(e.type)&&e.sourceId===t.endSourceId&&e.itemId===t.itemId&&e.at===t.endedAt&&(e.type!=='restraint-rights-transferred'||e.terms.transferControl&&e.actorId===t.actorId&&e.cancelledTimerIds.includes(t.id))))throw Error('取消');
+        if(t.status==='cancelled'){
+          const cancelledByDevice=db.events.some(e=>['restraint-mode-changed','restraint-detached','restraint-rights-transferred'].includes(e.type)&&e.sourceId===t.endSourceId&&e.itemId===t.itemId&&e.at===t.endedAt&&(e.type!=='restraint-rights-transferred'||e.terms.transferControl&&e.actorId===t.actorId&&e.cancelledTimerIds.includes(t.id)));
+          // A death release cancels timers under the release ID and detaches
+          // each device under its own child ID. The custody loop verifies the death and authority.
+          const cancelledByDeathRelease=!cancelledByDevice&&db.events.some(release=>
+            release.type==='released'&&release.reason==='custodian-dead'&&release.sourceId===t.endSourceId&&
+            release.targetId===t.wearerId&&release.at===t.endedAt&&release.detachedItemIds?.includes(t.itemId)&&
+            ending[0].sourceId===`${release.sourceId}:cancel:${t.id}`&&ending[0].actorId===t.actorId&&ending[0].targetId===t.wearerId&&
+            db.events.some(detach=>
+              detach.type==='restraint-detached'&&detach.sourceId===`${release.sourceId}:${t.itemId}`&&
+              detach.itemId===t.itemId&&detach.targetId===t.wearerId&&detach.at===release.at&&
+              detach.actorId===release.actorId&&detach.custodianDeath?.deathId===release.deathId&&
+              detach.attachment?.captureSourceId===t.attachmentSourceId&&detach.attachment.sourceId===t.modeSourceId&&
+              ending[0].order<detach.order&&detach.order<release.order));
+          if(!cancelledByDevice&&!cancelledByDeathRelease)throw Error('取消');
+        }
         timerIds.add(t.id);
       }catch(error){errors.push(`定时复锁${t?.id}无效：${error.message}`);}
       for(const e of db.events)if(e.type==='restraint-timer-set'&&!timerIds.has(e.timer?.id)||e.type==='restraint-timer-ended'&&!timerIds.has(e.timerId))errors.push('定时复锁事件缺少对应状态');
@@ -654,5 +694,5 @@
     errors.push(...validateDefeatDecisions(state));
     return errors;
   }
-  return Object.freeze({releaseOnCustodianDeath,reconcileDeaths,normalizePart,occupiedParts,assertPartAvailable,replayRequestedPermission,permissionRequestQuote,requestPermission,pendingRequestedPermissions,decideRequestedPermission,resolveDevice,requestedPermissions,requestedPermissionDecision,pendingDefeatDecisions,defeatDecisionOptions,defeatDecisions,replayDefeatDecision,decideDefeat,BATTLE_KINDS,DEVICES,table,active,isIdentity,confined,operationReason,authorityRef,currentAuthority,sameAuthority,hasAuthority,authorityAt,historicalAuthority,stamp,event,resolveDefeat,recordDefeats,expireDefeats,suspendPlans,qualification,attached,effectSpecs,captureQuote,capture,disposition,controlDevice,setDeviceMode,permitDevice,revokePermission,attachQuote,attachDevice,transferDeviceRights,detachQuote,detachDevice,release,nextAt,advanceAt,reconcileDeaths,facts,validate});
+  return Object.freeze({releaseOnCustodianDeath,reconcileDeaths,normalizePart,occupiedParts,assertPartAvailable,replayRequestedPermission,permissionRequestQuote,requestPermission,pendingRequestedPermissions,decideRequestedPermission,resolveDevice,requestedPermissions,requestedPermissionDecision,pendingDefeatDecisions,defeatDecisionOptions,defeatDecisions,replayDefeatDecision,decideDefeat,BATTLE_KINDS,DEVICES,table,active,isIdentity,confined,operationReason,authorityRef,currentAuthority,sameAuthority,hasAuthority,authorityAt,historicalAuthority,stamp,event,resolveDefeat,recordDefeats,expireDefeats,suspendPlans,qualification,attached,effectSpecs,effectSourceSpecs,effectEnabled,statusEffective,captureQuote,capture,disposition,controlDevice,setDeviceMode,permitDevice,revokePermission,attachQuote,attachDevice,transferDeviceRights,detachQuote,detachDevice,release,nextAt,advanceAt,reconcileDeaths,facts,validate});
 });

@@ -6,6 +6,7 @@ import {jsonMatchesText} from '../shared/json-identity';
 import {useEffect,useRef,useState} from 'react';
 import {Button,Panel,ModalActions} from './components';
 import {useGame} from './game-context';
+import {sendMessageOnEnter} from './message-enter';
 import {useServerQuery} from './use-game-query';
 import {useCreationCatalog} from './creation-context';
 import {creationReason,type CreationWorkspace} from '../shared/creation-draft';
@@ -20,8 +21,10 @@ export function CreationCharacterAdvisor({workspace,change,current,flush,disable
  const discussion=workspace.characterDiscussion??blankCreationDiscussion(),proposal=discussion.proposal;
  const stale=!!proposal&&!jsonMatchesText(workspace.config,proposal.base);
  const review=useServerQuery<any>('creation.review-advice',{config:workspace.config,proposal,reserveSouls:workspace.reserveSouls},{enabled:!!proposal&&!stale,delay:120});
+ const canConsult=!disabled&&!working&&!!discussion.request.trim()&&discussion.exchanges.length<20;
  const consult=async()=>{
-  if(active.current)return;const session=view.sessionId,input=discussion.request.trim();if(!input)return;
+  if(!canConsult||active.current)return;
+  const session=view.sessionId,input=discussion.request.trim();
   active.current=true;const cancellation=new AbortController();pending.current=cancellation;setWorking(true);onWorking(true);setError('');
   try{
    await withCreationCancellation(flush(),cancellation.signal);if(controller.getView().sessionId!==session)return;if(cancellation.signal.aborted)throw Error('已停止构思，已保存的草稿和候选保留');
@@ -53,8 +56,8 @@ export function CreationCharacterAdvisor({workspace,change,current,flush,disable
  return <Panel title="与角色顾问讨论">
   <p>说说你想扮演谁，也可以让顾问调整姓名、年龄、家乡、外貌、六项素质{['custom','shrek-student','seven-treasure','clear-sky','blue-dragon'].includes(workspace.config.background.id)?'、天赋与开局机缘':''}。也可以描述自定义武魂，采用后会交给武魂顾问构思，再由你查看候选。武魂数量与六维范围由当前背景决定。</p>
   <details open={discussion.exchanges.length>0}><summary>本次讨论（{discussion.exchanges.length}/20）</summary>{discussion.exchanges.map((entry,index)=><div key={index}><p><strong>你：</strong>{entry.input}</p><p><strong>顾问：</strong>{entry.reply}</p></div>)}</details>
-  <label>你的构想<textarea aria-label="角色构想" maxLength={4000} value={discussion.request} disabled={disabled||working} onChange={e=>{const request=e.target.value;change(value=>({...value,characterDiscussion:{...(value.characterDiscussion??blankCreationDiscussion()),request}}));}} placeholder="我想扮演一位二十五岁的猎魂人，名叫月织，感知敏锐，其他设定先保留。"/></label>
-  <Button disabled={disabled||working||!discussion.request.trim()||discussion.exchanges.length>=20} onClick={()=>void consult()}>{working?'正在处理…':'发送构想'}</Button>
+  <label>你的构想<textarea onKeyDown={e=>sendMessageOnEnter(e,()=>void consult())} enterKeyHint="send" aria-label="角色构想" maxLength={4000} value={discussion.request} disabled={disabled||working} onChange={e=>{const request=e.target.value;change(value=>({...value,characterDiscussion:{...(value.characterDiscussion??blankCreationDiscussion()),request}}));}} placeholder="我想扮演一位二十五岁的猎魂人，名叫月织，感知敏锐，其他设定先保留。"/></label>
+  <Button disabled={!canConsult} onClick={()=>void consult()}>{working?'正在处理…':'发送构想'}</Button>
   {working&&view.modelTask&&<ModelTaskStatus task={view.modelTask} onCancel={()=>{pending.current?.abort();view.modelTask&&controller.cancelModelTask(view.modelTask.id);}}/>}
   {working&&<Button variant="ghost" onClick={()=>{pending.current?.abort();view.modelTask&&controller.cancelModelTask(view.modelTask.id);}}>停止构思</Button>}
   <Button variant="ghost" disabled={disabled||working} onClick={()=>change(value=>({...value,characterDiscussion:blankCreationDiscussion()}))}>清空讨论，保留角色草稿</Button>

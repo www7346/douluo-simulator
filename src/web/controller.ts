@@ -7,7 +7,7 @@ import {readBattlePreferences,effectiveBattlePreferences,battleNeedsWriter,hasBa
 import {storySourceInput} from '../shared/story-source-input';
 import {makeStorySummaryOriginal} from '../shared/story-summary-original';
 import {validatePrivateStoryRoute} from '../shared/story-private-route';
-import {checkedRingDiscussion,ringDiscussionKey,ringDiscussionIdentity,ringActiveDiscussionKey,ringAdviceTarget,retainRingAnswer,finishRingAnswer,type RingDesignDiscussion} from '../shared/ring-design-discussion';
+import {checkedRingDiscussion,ringDiscussionKey,ringDiscussionIdentity,ringActiveDiscussionKey,ringAdviceTarget,ringDiscussionContext,retainRingAnswer,finishRingAnswer,type RingDesignDiscussion} from '../shared/ring-design-discussion';
 import {checkedResearchDiscussion,researchDiscussionKey,researchActiveDiscussionKey,retainResearchAnswer,finishResearchAnswer,type ResearchDesignDiscussion} from '../shared/research-design-discussion';
 import {publishInteraction} from './ui-interaction-timing';
 import type {StoryResponses} from '../shared/story-responses';
@@ -25,7 +25,9 @@ import {isPartyTurn,PARTY_CONVERSATION_ID} from '../shared/story-party-chat';
 import {pendingStoryResearch} from '../shared/story-research';
 import {pendingStoryRingNaming} from '../shared/story-ring-naming';
 import {carryStoryDrafts} from './story-draft';
+import {retainedStoryProse} from './story-pending-prose';
 import {pendingStoryBeliefs} from '../shared/story-person-knowledge';
+import {dialogueParticipants} from '../shared/story-dialogue-memory';
 import {readStoryContext} from '../shared/story-recall';
 import {storyMemorySettings,type StoryMemorySettings} from '../shared/story-memory-settings';
 import {checkedStoryEntry} from '../shared/story-archive';
@@ -43,6 +45,7 @@ import type {ModelListResult, ModelProfile, ModelLog} from '../runtime/model-gat
 import {modelContextBudget} from '../shared/model-context';
 import {resolveModelSettings} from '../runtime/model-settings';
 import {previewModelPrompt,resolveModelPromptParts} from '../runtime/model-prompt-check';
+import {isStoryAuthorTask} from '../runtime/model-response-sections';
 import {openingPlaybackKey} from '../runtime/opening-scene';
 import {storyPromptBudgetSources} from '../runtime/story-prompt-budget';
 import {validateGeneration,validatePrompts,validateRequest,MODEL_TASKS,checkModelTaskSettings} from '../runtime/model-settings';
@@ -55,6 +58,7 @@ import {readFullSaveBundle,type FullSaveBundle} from '../shared/save-bundle';
 import {diagnosticSnapshot,diagnosticValue,stringifyDiagnostic} from '../shared/diagnostic-summary';
 import {emptyStoryPromptConfig,storyInitialVariables,type StoryPromptConfig} from '../runtime/story-prompts';
 import {validateWriterPrompts} from '../runtime/story-writer-prompts';
+import {writingPromptsForFamily} from '../runtime/prompt-presets';
 
 export type PerformanceLevel = 'cinematic' | 'standard' | 'smooth' | 'reduced';
 
@@ -71,7 +75,7 @@ export interface ControllerView {
   busy: boolean;
   modelTask: ModelTaskView | null;
   pendingGeneration?:GameCommand|null;
-  resultRecovery?:ModelRecoveryMetadata&{message:string;phase:'awaiting-generation'|'command'|'ack'|'none'}|null;
+  resultRecovery?:ModelRecoveryMetadata&{message:string;phase:'awaiting-generation'|'command'|'ack'|'none';rejected?:boolean}|null;
   snapshot: GameSnapshot;
   events: GameEvent[];
   notices: UiNotice[];
@@ -355,7 +359,9 @@ export class WebGameController {
     const ledger=(runtime.readSnapshot().state as any).扩展?.story,active=ledger?.active;
     const beforeTurn=active&&active.status!=='complete'?active.number:ledger?.nextTurn??1;
     const current=()=>{if(runtime!==this.runtime||epoch!==this.#sessionEpoch||runtime.revision!==revision)throw new TaskCancelledError('游戏进度已变化，请重新读取故事记忆');};
-    return readStoryContext(async nextId=>{current();const page=record?await this.database.storyPage(record,{limit:25,...(nextId?{nextId}:{})}):{entries:[],headId:null,nextId:null};current();return page;},{query,beforeTurn,privatePersonId,recentLimit,includeHostPrivate});
+    const addressed=active?dialogueParticipants(active):[];
+    const dialoguePersonId=addressed.length===1?addressed[0]:undefined;
+    return readStoryContext(async nextId=>{current();const page=record?await this.database.storyPage(record,{limit:25,...(nextId?{nextId}:{})}):{entries:[],headId:null,nextId:null};current();return page;},{query,beforeTurn,privatePersonId,recentLimit,includeHostPrivate,dialoguePersonId});
   }
   async summarizeCurrentStory():Promise<void>{
     this.#assertSessionAvailable();if(this.#storyRunning||this.#view.busy||this.#view.modelTask)throw Error('请等待当前行动完成');
@@ -376,7 +382,7 @@ export class WebGameController {
       const prompts=await this.storyPrompts(),context=await this.#storyContext(runtime.getSlotHead(),ledger.active.input,ledger.active.privatePersonId);
       if(runtime!==this.runtime||epoch!==this.#sessionEpoch||runtime.revision!==snapshot.revision)throw new TaskCancelledError('旅程已变化，请重新选择正文操作');
       const history=context.history.filter((entry:any)=>entry.number<ledger.active.number),recall=context.recall.filter((entry:any)=>entry.source.turn<ledger.active.number);
-      await this.#runWorkflow('重写本段正文',kind,{branchId:ledger.branchId,turn:ledger.active.number,prompts,history,recall,proseAttemptId:crypto.randomUUID(),...(prompts.prefillMode?{prefillMode:prompts.prefillMode}:{})});
+      await this.#runWorkflow('重写本段正文',kind,{branchId:ledger.branchId,turn:ledger.active.number,prompts,history,recall,dialogue:context.dialogue,proseAttemptId:crypto.randomUUID(),...(prompts.prefillMode?{prefillMode:prompts.prefillMode}:{})});
     }finally{this.#storyRunning=false;this.#work(-1);}
   }
   async rewriteArchivedStory(number:number):Promise<void>{
@@ -387,20 +393,24 @@ export class WebGameController {
     const current=()=>{if(runtime!==this.runtime||epoch!==this.#sessionEpoch||runtime.revision!==revision)throw new TaskCancelledError('旅程已变化，请重新选择旧段正文');};
     this.#storyRunning=true;this.#work(1);
     try{
-      let original:ReturnType<typeof checkedStoryEntry>|undefined,nextId:string|undefined,prior=ledger.active.number;
+      let original:ReturnType<typeof checkedStoryEntry>|undefined,previousId:string|null=null,nextId:string|undefined,prior=ledger.active.number;
       const history:any[]=[],seen=new Set<string>();
       do{
         current();const page=await this.database.storyPage(record,{limit:25,...(nextId?{nextId}:{})});current();
         for(const entry of page.entries){
           if(seen.has(entry.id)||entry.turn.number!==prior)throw Error('故事历史不完整，请保留当前进度。');seen.add(entry.id);prior--;
-          if(entry.turn.number===number){original=checkedStoryEntry(entry);if(original.turn.privatePersonId||isPartyTurn(original.turn))throw Error('已发送的对话保留原话。');}
+          if(entry.turn.number===number){original=checkedStoryEntry(entry);previousId=entry.previousId;if(original.turn.privatePersonId||isPartyTurn(original.turn))throw Error('已发送的对话保留原话。');}
           else if(original&&!entry.turn.privatePersonId&&!isPartyTurn(entry.turn)){history.unshift({number:entry.turn.number,input:storySourceInput(entry.turn),prose:entry.turn.prose});if(history.length>=6)break;}
         }
         nextId=page.nextId??undefined;
       }while(nextId&&(!original||history.length<6));
       if(!original)throw Error('当前旅程没有这段故事。');
       const prompts=await this.storyPrompts();current();
-      await this.#runWorkflow('补写旧段正文','story-rewrite',{branchId:ledger.branchId,turn:ledger.active.number,original,prompts,history,recall:[],proseAttemptId:crypto.randomUUID(),...(prompts.prefillMode?{prefillMode:prompts.prefillMode}:{})});
+      const addressed=dialogueParticipants(original.turn);
+      const earlier=addressed.length===1&&previousId?await readStoryContext(async cursor=>{
+        current();const page=await this.database.storyPage(record,{limit:25,nextId:cursor??previousId!});current();return page;
+      },{query:original.turn.input,beforeTurn:number,dialoguePersonId:addressed[0],recentLimit:0}):null;
+      await this.#runWorkflow('补写旧段正文','story-rewrite',{branchId:ledger.branchId,turn:ledger.active.number,original,prompts,history,recall:[],dialogue:earlier?.dialogue,proseAttemptId:crypto.randomUUID(),...(prompts.prefillMode?{prefillMode:prompts.prefillMode}:{})});
     }finally{this.#storyRunning=false;this.#work(-1);}
   }
   async summarizeStoryStage(privatePersonId?:string):Promise<void>{
@@ -428,7 +438,10 @@ export class WebGameController {
       current();await this.#runWorkflow('整理近期阶段记忆','story-stage-summary',{branchId:ledger.branchId,turn:ledger.active.number,originals:originals.reverse()},false,{},this.#newWorkflowAttempt('story-stage-summary'));
     }finally{this.#work(-1);}
   }
-  async storyPrompts():Promise<StoryPromptConfig>{return await this.database.getSetting<any>('story-prompts')??emptyStoryPromptConfig();}
+  async storyPrompts():Promise<StoryPromptConfig>{
+    const config=await this.database.getSetting<any>('story-prompts')??emptyStoryPromptConfig();
+    return writingPromptsForFamily(config,this.#view.modelProfile.globalPromptPreset?.active);
+  }
   async summarizeArchivedStory(entryId:string):Promise<void>{
     this.#assertSessionAvailable();this.#requireModelEnabled();
     if(this.#storyRunning||this.#view.busy||this.#view.modelTask)throw Error('请等待当前行动完成');
@@ -473,9 +486,10 @@ export class WebGameController {
     const current=()=>{if(runtime!==this.runtime||epoch!==this.#sessionEpoch||runtime.revision!==revision||modelProfile!==this.#view.modelProfile)throw new TaskCancelledError('游戏进度或模型设置已变化，请重新预览');};
     current();const result=await this.query('story.prompt-preview',{revision,text,prompts,previewProfile:JSON.parse(JSON.stringify(publicModelConfiguration(modelProfile))),...context,...(privatePersonId?{privatePersonId}:{}),...(prompts.prefillMode?{prefillMode:prompts.prefillMode}:{})});current();
     const task=result.stage==='host'?'story-host':['npc-gift','npc-custody-trade','npc-custody-auction'].includes(result.stage)?'npc-autonomy':result.stage==='npc-belief'?'npc-belief':result.stage==='npc-response'?'story-social':result.stage==='private'?'private-chat':result.stage==='party'?'party-chat':'story-writer';
+    const advisory=isStoryAuthorTask(task);
     let validation:any,requestPreview:any=null;
     try{
-      const preview=previewModelPrompt(modelProfile,result.messages,{task,promptStructure:result.promptStructure,json:task!=='story-writer'});
+      const preview=previewModelPrompt(modelProfile,result.messages,{task,promptStructure:result.promptStructure,json:!advisory});
       if(result.writingValidation?.status==='failed')throw Error(result.writingValidation.error);
       validation={status:'passed',task,budget:preview.budget};requestPreview={protocol:preview.protocol,body:preview.body,sent:preview.sent};}
     catch(error){validation={status:'failed',task,error:(error as Error).message,budget:(error as any)?.budget};}
@@ -483,7 +497,7 @@ export class WebGameController {
     const config=resolveModelSettings(resolveTaskProfile(modelProfile,task),task);
     const budget=validation.budget??modelContextBudget(messages,config.contextTokens,config.outputTokens,result.promptStructure?.prefill?.content);
     const trace=[...parts.globalIndexes.map(index=>({source:'global-prompts',index,role:messages[index].role,characters:messages[index].content.length})),...result.trace.map((entry:any)=>({...entry,index:parts.sourceIndexes[entry.index],characters:messages[parts.sourceIndexes[entry.index]]?.content.length??entry.characters}))].sort((a,b)=>a.index-b.index);
-    return {...result,messages,trace,validation,requestPreview,contextBudget:{...budget,sources:storyPromptBudgetSources(trace,budget,prompts)}};
+    return {...result,messages,trace,validation,requestPreview,contextBudget:{...budget,advisory,sources:storyPromptBudgetSources(trace,budget,prompts)}};
   }
   async resolveStoryExtraction(accept:boolean):Promise<void>{
     this.#assertSessionAvailable();if(this.#storyRunning||this.#view.busy||this.#view.modelTask)throw Error('请等待当前行动完成');
@@ -596,6 +610,7 @@ export class WebGameController {
     this.#storyRunning=true;this.#set({storyError:null});this.#work(1);
     try{
       let ledger=current();
+      const resumingResolvedTurn=input===undefined&&ledger.active?.status==='resolved';
       if(battleId){
         const reported=(runtime.readSnapshot().state as any).扩展?.battleReports?.[battleId]?.storyTurn;
         if(reported!==undefined&&!battleNeedsWriter(runtime.readSnapshot().state,(runtime.readSnapshot().state as any).扩展?.battleReports?.[battleId])&&(ledger.active?.number!==reported||ledger.active.status==='complete'))return;
@@ -623,12 +638,12 @@ export class WebGameController {
         if(pendingStoryExtraction(state))return;
         if(pendingStoryBeliefs(state).length){
           const belief=pendingStoryBeliefs(state)[0],socialContext=await this.#storyContext(runtime.getSlotHead(),belief.text,belief.listenerId,0);
-          await workflow('等待对方判断这句话','story-belief',{...args,recall:socialContext.recall});
+          await workflow('等待对方判断这句话','story-belief',{...args,recall:socialContext.recall,dialogue:socialContext.dialogue});
         }
         else if(responses.immediateGifts.length||responses.commitments.length){
           const personId=(responses.immediateGifts[0]??responses.commitments[0]).personId;
           const socialContext=await this.#storyContext(runtime.getSlotHead(),ledger.active.input,personId,0);
-          await workflow('等待对方回应约定','story-social',{...args,recall:socialContext.recall});
+          await workflow('等待对方回应约定','story-social',{...args,recall:socialContext.recall,dialogue:socialContext.dialogue});
         }
         else if(responses.cooperation.length)await workflow('等待对方回应合作','person-cooperation',{cooperationId:responses.cooperation[0].id});
         else if(market.trades.length){const trade=market.trades[0];if(trade.buyerId===(state as any).角色.主控单位ID)return;await workflow('等待买主答复报价','person-custody-trade',{offerId:trade.offerId});}
@@ -636,7 +651,7 @@ export class WebGameController {
         else if(responses.controlledGifts.length){const gift=responses.controlledGifts[0];if(gift.personId===(state as any).角色.主控单位ID)return;await workflow('等待接收人回应赠物','person-gift',{commitmentId:gift.id});}
         else if(responses.npcDecisions.length){
           const personId=responses.npcDecisions[0].ownerId;const socialContext=await this.#storyContext(runtime.getSlotHead(),'',personId,0);
-          await workflow('人物在考虑自己的打算','story-autonomy',{...args,recall:socialContext.recall});
+          await workflow('人物在考虑自己的打算','story-autonomy',{...args,recall:socialContext.recall,dialogue:socialContext.dialogue});
         }
         else if(pendingStoryRoom(state))await workflow('探索前方景象','room',{});
         else if(pendingStoryResearch(state))await this.resolveResearchNaming(pendingStoryResearch(state)!,false,false,attempt);
@@ -665,9 +680,12 @@ export class WebGameController {
       }
       if(ledger.active.status==='resolved'){
         // Public outcomes finish from native receipts. NPC/private/group replies retain their own workflows.
-        const publicTurn=!ledger.active.privatePersonId&&!isPartyTurn(ledger.active);
-        if(publicTurn&&!battleId&&!proseAttemptId){
-          const source={revision:runtime.revision,branchId:ledger.branchId,turn:ledger.active.number};
+        const localPublic=!ledger.active.privatePersonId&&!isPartyTurn(ledger.active)&&!battleId&&!proseAttemptId;
+        const source={revision:runtime.revision,branchId:ledger.branchId,turn:ledger.active.number};
+        const retained=localPublic&&resumingResolvedTurn&&retainedStoryProse(await runtime.modelEvidence(),{...source,worldId:runtime.slotId});
+        current();
+        if(runtime.revision!==source.revision)throw new TaskCancelledError('这段故事已变化，请重新查看当前安排。');
+        if(localPublic&&!retained){
           const preview=await runtime.query('story.local-continuation-preview',source);current();
           if(runtime.revision!==source.revision||preview.revision!==source.revision||preview.branchId!==source.branchId||preview.turn!==source.turn)throw new TaskCancelledError('这段故事已变化，请重新查看当前安排。');
           if(!preview.available)throw Error(preview.reason??'还有事项需要处理，请继续当前行动。');
@@ -694,7 +712,7 @@ export class WebGameController {
   }
 
   async saveCreationWorkspace(workspace: Record<string, any>): Promise<void> {
-    this.#assertSessionAvailable();
+    this.#assertSessionAvailable(false,{allowDisconnected:true});
     if(this.#creatingPlayerEpoch===this.#sessionEpoch)throw Error('觉醒已经完成提交，请等待人物创建结果');
     if ((this.#view.snapshot.state as any)?.角色?.已建立) throw new Error('这位魂师已完成觉醒，请另建角色档案');
     if (workspace.version !== 5 || !workspace.config || ![1,2,3,4].includes(workspace.step)) throw new Error('觉醒草稿格式不完整');
@@ -722,7 +740,11 @@ export class WebGameController {
     const worldId=this.runtime.slotId,{slots,backups}=await this.database.listSaveMenu(worldId);
     const profiles=slots.filter(isWorld);
     const positions=new Set([worldId,...[1,2,3].map(n=>`${worldId}:manual:${n}`)]);
-    return {profiles,slots:profiles.some(row=>row.slotId===worldId)?slots.filter(row=>row.profileId===worldId&&positions.has(row.slotId)):[],backups};
+    return {profiles,slots:profiles.some(row=>row.slotId===worldId)?slots.filter(row=>row.profileId===worldId&&positions.has(row.slotId)):[],backups,rejectedResults:await this.database.rejectedWorkflowCount(worldId)};
+  }
+  async exportRejectedResults():Promise<string>{
+    const worldId=this.runtime.slotId,records=await this.database.rejectedWorkflowResults(worldId);
+    return JSON.stringify({format:'douluo-unapplied-results',version:1,worldId,exportedAt:new Date().toISOString(),records});
   }
 
   async listProfiles(): Promise<SaveSlotRecord[]> {
@@ -784,7 +806,7 @@ export class WebGameController {
     const pendingSoulAdvice=advice?this.#soulAdvicePresentation(advice,workspace as CreationWorkspace|null):null;
     const pendingCreationAdvice=creationAdvice?this.#creationAdvisorPresentation(creationAdvice,workspace as CreationWorkspace|null):null,pendingAdvice=pendingSoulAdvice??pendingCreationAdvice;
     const adviceRecovery=pendingAdvice&&!pendingGeneration&&!this.#view.modelTask?{category:pendingAdvice.status==='conflict'?'conflict' as const:'unknown' as const,stage:'model-result-retrieve',kind:creationAdvice?.kind??'advice',canRetrySameJob:true,message:pendingAdvice.message,phase:'none' as const}:null;
-    const recovery=pending.phase==='command'?{phase:'command' as const,stage:'save-progress',category:'transaction' as const,canRetrySameJob:true,message:'上次行动尚待保存。可以先查看或导出存档，再继续原操作。'}:adviceRecovery;
+    const recovery=pending.phase==='command'?{phase:'command' as const,stage:'save-progress',category:pending.rejection?'conflict' as const:'transaction' as const,canRetrySameJob:!pending.rejection,...(pending.rejection?{rejected:true}:{}),message:pending.rejection?'这份旧结果与当前进度不一致，尚未执行。保留进度并继续后，原结果会留在本机备查。':'上次行动尚待保存。可以先查看或导出存档，再继续原操作。'}:adviceRecovery;
     this.#set({pendingGeneration,pendingSoulAdvice,pendingCreationAdvice,...(recovery?{resultRecovery:recovery}:{}),busy:this.#pendingWork>0||Boolean(this.#view.modelTask)||Boolean(pendingGeneration)||Boolean(recovery||this.#view.resultRecovery),snapshot:runtime.readSnapshot(),events:history.map(item => item.event),avatarUrl:this.#avatarUrl(avatar),figureUrl:this.#avatarUrl(figure,'figureUrl'),soulImages:this.#soulImageView(soulImages),
       profileId:runtime.slotId,profileLabel:record?.label ?? '我的旅程',creationWorkspace:workspace?.kind==='player-workbenches'?null:workspace,researchWorkspace:runtime.getResearchWorkspace(),sessionId:epoch,battleTurnError:null,battlePauseRequested:this.#transitioning?false:this.#view.battlePauseRequested,storyError:null,storyConversationRequest:null});
   }
@@ -847,6 +869,8 @@ export class WebGameController {
     if(epoch===this.#sessionEpoch)await this.ensureAutomaticBattle();
   }
 
+  async evolutionAdvice(input:Record<string,unknown>):Promise<any>{this.#requireModelEnabled();return this.#runWorkflow('正在讨论武魂变化','evolution-advice',input);}
+  async respondEvolution(planId:string):Promise<any>{this.#requireModelEnabled();return this.#runWorkflow('等待本人考虑进化方案','evolution-response',{planId});}
   async respondLoot(commitmentId:string):Promise<void>{this.#requireModelEnabled();await this.#runWorkflow('等待对方回应分配','person-loot',{commitmentId});}
 
   async respondCustodyTrade(offerId:string):Promise<void>{this.#requireModelEnabled();await this.#runWorkflow('等待买主答复报价','person-custody-trade',{offerId},false,{},this.#newWorkflowAttempt('person-custody-trade'));}
@@ -1009,9 +1033,12 @@ export class WebGameController {
 
   async consultMartialSoul(description: string, budget: number, draftId: string, session?: Record<string, any>,currentDraft?:Record<string,any>,peerSouls?:Record<string,any>[],options:{target?:SoulAdviceTarget;signal?:AbortSignal}={}): Promise<MartialSoulAdvice> {
     this.#requireModelEnabled();
-    this.#assertSessionAvailable();const runtime=this.runtime,epoch=this.#sessionEpoch;
+    this.#assertSessionAvailable(false,{allowDisconnected:true});
     if(this.#view.modelTask||this.#soulAdviceApplying)throw Error('请先等待当前构思完成');
     options.signal?.throwIfAborted();
+    if(this.#view.connectionError){await this.#restoreModelConnection();options.signal?.throwIfAborted();}
+    const runtime=this.runtime,epoch=this.#sessionEpoch;
+    if(this.#view.modelTask||this.#soulAdviceApplying)throw Error('请先等待当前构思完成');
     await runtime.flushPending();options.signal?.throwIfAborted();
     if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError();
     const input={description,budget,draftId,...(session?{session}:{}),...(currentDraft?{currentDraft}:{}),...(peerSouls?{peerSouls}:{})};
@@ -1175,9 +1202,10 @@ export class WebGameController {
     return saved;
   }
   async consultRingDesign(target:any,options:{signal?:AbortSignal;restart?:boolean}={}):Promise<RingDesignDiscussion>{
-    this.#requireModelEnabled();this.#assertSessionAvailable();
+    this.#requireModelEnabled();this.#assertSessionAvailable(false,{allowDisconnected:true});
     if(this.#view.modelTask)throw Error('请先等待当前AI请求完成');
-    options.signal?.throwIfAborted();await this.#restoreModelConnection();options.signal?.throwIfAborted();
+    options.signal?.throwIfAborted();
+    if(this.#view.connectionError){await this.#restoreModelConnection();options.signal?.throwIfAborted();}
     return this.#withDesignDiscussion(async()=>{
     const runtime=this.runtime,epoch=this.#sessionEpoch;
     const current=()=>{if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError('当前故事已经切换');};
@@ -1192,8 +1220,7 @@ export class WebGameController {
       await runtime.discardRetainedModel();current();
       const {pending,...rest}=discussion;discussion=rest;recovering=false;
     }
-    if(discussion.exchanges.length>=20)throw Error('本轮讨论已有二十次，请清空讨论后继续；已采用的魂技不受影响');
-    const input=discussion.pending?.input??{adviceAttemptId:crypto.randomUUID(),target:ringAdviceTarget(target),description:discussion.request.trim(),exchanges:discussion.exchanges,previous:discussion.answer?.proposals?.map((p:any)=>({proposal:p.proposal,pass:p.pass,reasons:p.reasons,source:p.source,budget:p.budget}))??null};
+    const input=discussion.pending?.input??{adviceAttemptId:crypto.randomUUID(),target:ringAdviceTarget(target),description:discussion.request.trim(),exchanges:ringDiscussionContext(discussion.exchanges),preserveText:discussion.preserveText!==false,previous:(discussion.answer?.proposals?.length?discussion.answer.proposals:discussion.lastProposals)?.map((p:any)=>({proposal:p.proposal,pass:p.pass,reasons:p.reasons,source:p.source,budget:p.budget}))??null};
     if(!input.description)throw Error('请先描述魂兽来源、已有能力与想要的魂技');
     if(!discussion.pending||discussion.pending.notStarted)discussion=await this.saveRingDesignDiscussion(target,{...discussion,pending:{input}},runtime.slotId);current();
     const pointer={worldId:runtime.slotId,target:input.target};
@@ -1236,9 +1263,10 @@ export class WebGameController {
     return committed;
   }
   async consultResearchDesign(request:{category:string;materials?:any[];confirmedDesign?:any;basis?:any;ownedOnly?:boolean;goal?:'purpose'|'value'},options:{signal?:AbortSignal;restart?:boolean}={}):Promise<ResearchDesignDiscussion>{
-    this.#requireModelEnabled();this.#assertSessionAvailable();
+    this.#requireModelEnabled();this.#assertSessionAvailable(false,{allowDisconnected:true});
     if(this.#view.modelTask)throw Error('请先等待当前AI请求完成');
-    options.signal?.throwIfAborted();await this.#restoreModelConnection();options.signal?.throwIfAborted();
+    options.signal?.throwIfAborted();
+    if(this.#view.connectionError){await this.#restoreModelConnection();options.signal?.throwIfAborted();}
     return this.#withDesignDiscussion(async()=>{
     const runtime=this.runtime,epoch=this.#sessionEpoch;
     const current=()=>{if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError('当前故事已经切换');};
@@ -1277,7 +1305,7 @@ export class WebGameController {
     await this.#runWorkflow('记述魂环来历','ring-item',{itemId},false,{},retry?this.#newWorkflowAttempt('ring-item'):undefined);
   }
 
-  async prepareRingItem(payload:{itemId:string;martialSoulId:string;exchangeContracts?:any[];requestedSkills?:any[]}):Promise<string>{
+  async prepareRingItem(payload:{itemId:string;martialSoulId:string;exchangeContracts?:any[];requestedSkills?:any[];evolutionTarget?:any}):Promise<string>{
     const current=(this.#view.snapshot.state as any).物品.实例[payload.itemId];
     const previous=current?.payload?.ringPreparation?.pendingId;
     const events=await this.dispatch('ring.item.prepare',payload);
@@ -1321,7 +1349,7 @@ export class WebGameController {
     return pendingId;
   }
 
-  async prepareRingFromBeast(payload:{beastUnitId:string;martialSoulId:string;exchangeContracts?:any[];requestedSkills?:any[]}):Promise<string> {
+  async prepareRingFromBeast(payload:{beastUnitId:string;martialSoulId:string;exchangeContracts?:any[];requestedSkills?:any[];evolutionTarget?:any}):Promise<string> {
     const events=await this.dispatch('ring.prepare-from-beast',payload);
     const state=this.#view.snapshot.state as any;
     const profile=(Object.values(state.魂兽档案?.列表 ?? {}) as any[]).find(item=>item.单位ID===payload.beastUnitId);
@@ -1421,10 +1449,10 @@ export class WebGameController {
   }
 
   async savePromptSettings(input:ReturnType<WebGameController['settingsDraft']>,keys:Record<string,string>,prompts:StoryPromptConfig):Promise<void>{
-    const previous=await this.storyPrompts();
+    const previous=await this.database.getSetting<JsonValue>('story-prompts')??emptyStoryPromptConfig() as unknown as JsonValue;
     // The asynchronous store is written first; a failed settings write restores it.
     await this.saveStoryPrompts(prompts);
-    try{await this.saveModelLibrary(input,keys);}catch(error){await this.database.putSetting('story-prompts',previous as unknown as JsonValue);throw error;}
+    try{await this.saveModelLibrary(input,keys);}catch(error){await this.database.putSetting('story-prompts',previous);throw error;}
   }
 
   #observeModel=(log:ModelLog)=>{this.#modelTasks.progress(`${log.label} · ${log.status}`);this.#set({modelLogs:[log,...this.#view.modelLogs.filter(item=>item.id!==log.id)].slice(0,8)});};
@@ -1486,7 +1514,7 @@ export class WebGameController {
         if(['creation-advice','creation-item-advice','creation-workshop-advice'].includes(kind)){
           const record=await this.#creationAdvisorRecord(runtime);if(record){const pendingCreationAdvice=this.#creationAdvisorPresentation(record,runtime.getWorkspace() as unknown as CreationWorkspace);this.#set({pendingCreationAdvice,resultRecovery:{category:pendingCreationAdvice.status==='conflict'?'conflict':'unknown',stage:'model-result-retrieve',kind,canRetrySameJob:true,message:pendingCreationAdvice.message,phase:'none'}});}
         }
-        const pending=await runtime.pendingRecovery().catch(()=>({phase:'none' as const}));
+        const pending=await runtime.pendingRecovery().catch(()=>({phase:'none' as const,rejection:undefined}));
         const recoverable=error instanceof CloudError&&['model-save-pending','model-evidence-pending','model-result-pending','model-result-unverified','model-unconfirmed','model-recovery-unavailable','model-expired','session-expired','save-unacknowledged','connection-lost'].includes(error.code);
         if(epoch!==this.#sessionEpoch||runtime!==this.runtime)throw error;
         const terminalAuthor=error instanceof CloudError&&error.recovery?.stage==='model-result-failed'&&['story-writer','story-rewrite'].includes(kind);
@@ -1495,7 +1523,7 @@ export class WebGameController {
         }else if(recoverable||pending.phase!=='none'||error instanceof CloudError&&error.recovery?.stage==='model-result-failed'){
           this.#recoveryWorkflow={runtime,epoch,label,kind,input:clone(input),local,dispatchOptions,attempt};
           const details=error instanceof CloudError?error.recovery:undefined;
-          this.#set({resultRecovery:{category:classifyResultFailure(error),stage:'save-progress',canRetrySameJob:true,...details,message:describeError(error),phase:pending.phase},busy:true});
+          this.#set({resultRecovery:{category:classifyResultFailure(error),stage:'save-progress',canRetrySameJob:!pending.rejection,...details,...(pending.rejection?{rejected:true}:{}),message:describeError(error),phase:pending.phase},busy:true});
         }
       }
       throw error;
@@ -1707,14 +1735,14 @@ export class WebGameController {
       return recoveredHost;
     }catch(error){
       if(runtime===this.runtime&&epoch===this.#sessionEpoch&&!isTaskCancelled(error)){
-        const pending=await runtime.pendingRecovery().catch(()=>({phase:'none' as const}));
+        const pending=await runtime.pendingRecovery().catch(()=>({phase:'none' as const,rejection:undefined}));
         current();
         const details=error instanceof CloudError?error.recovery:undefined;
         if(details?.stage==='model-result-failed'&&['story-writer','story-rewrite'].includes(details.kind??'')&&pending.phase==='none'){
           this.#recoveryWorkflow=null;
           const story=(runtime.readSnapshot().state as any).扩展?.story;
           this.#set({resultRecovery:null,...(story?.active?.status==='resolved'?{storyError:{sessionId:this.#view.sessionId,branchId:story.branchId,turn:story.active.number,message:describeError(error)}}:{})});
-        }else this.#set({resultRecovery:{category:classifyResultFailure(error),stage:'save-progress',canRetrySameJob:true,...details,message:describeError(error),phase:pending.phase}});
+        }else this.#set({resultRecovery:{category:classifyResultFailure(error),stage:'save-progress',canRetrySameJob:!pending.rejection,...details,...(pending.rejection?{rejected:true}:{}),message:describeError(error),phase:pending.phase}});
       }
       throw error;
     }finally{if(runtime===this.runtime&&epoch===this.#sessionEpoch)await this.#syncPendingGeneration();this.#work(-1);}
@@ -1723,13 +1751,36 @@ export class WebGameController {
     const state=this.runtime.readSnapshot().state as any,record=state.世界?.opening?.background;
     if(!wasCreated&&state.角色?.已建立&&record)this.preferences.set(openingPlaybackKey(this.#view.profileId,record.sourceId),{status:'reading',index:0});
   }
+  async keepProgressAfterRejectedResult():Promise<void>{
+    this.#assertSessionAvailable();
+    if(this.#view.modelTask||this.#recoveryFlight||this.#pendingWork||this.#transitioning)throw Error('请先等待当前操作完成');
+    const runtime=this.runtime,epoch=this.#sessionEpoch;
+    this.#work(1);
+    try{
+      await runtime.keepProgressAfterRejectedResult();
+      if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError('当前旅程已切换');
+      this.#recoveryWorkflow=null;this.#set({resultRecovery:null,loadError:null,connectionError:null});
+      await this.#refreshSessionView();this.notify('已保留当前进度，可以继续旅程','success');
+    }catch(error){this.#observeCloudFailure(error);throw error;}
+    finally{this.#work(-1);}
+  }
   async abandonPendingResult():Promise<void>{
-    this.#assertSessionAvailable();if(this.#view.modelTask||this.#recoveryFlight||this.#soulAdviceApplying)throw Error('请先等待当前取回操作结束');
-    const runtime=this.runtime,epoch=this.#sessionEpoch,pending=await runtime.pendingRecovery();
+    this.#assertSessionAvailable(false,{allowDisconnected:true});if(this.#view.modelTask||this.#recoveryFlight||this.#soulAdviceApplying)throw Error('请先等待当前取回操作结束');
+    const runtime=this.runtime;
+    let epoch=this.#sessionEpoch,pending=await runtime.pendingRecovery();
     if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError('当前旅程已切换');
     if(pending.phase==='command'||pending.phase==='ack')throw Error('这次操作已经提交，请先完成保存');
+    if(this.#view.connectionError){
+      await this.#restoreModelConnection();epoch=this.#sessionEpoch;
+      pending=await runtime.pendingRecovery();
+      if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError('当前旅程已切换');
+      if(pending.phase==='command'||pending.phase==='ack')throw Error('这次操作已经提交，请先完成保存');
+    }
+    if(this.#view.modelTask||this.#recoveryFlight||this.#soulAdviceApplying)throw Error('请先等待当前取回操作结束');
     const advice=await this.#soulAdviceRecord(runtime),creationAdvice=await this.#creationAdvisorRecord(runtime),ringPointer=await this.database.getSetting<any>(ringActiveDiscussionKey(runtime.slotId)),researchPointer=await this.database.getSetting<any>(researchActiveDiscussionKey(runtime.slotId));
-    await runtime.discardRetainedModel(this.#view.resultRecovery?.jobId);
+    if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError('当前旅程已切换');
+    try{await runtime.discardRetainedModel(this.#view.resultRecovery?.jobId);}
+    catch(error){if(runtime===this.runtime&&epoch===this.#sessionEpoch)this.#observeCloudFailure(error);throw error;}
     if(runtime!==this.runtime||epoch!==this.#sessionEpoch)throw new TaskCancelledError('当前旅程已切换');
     if(pending.phase==='awaiting-generation'&&pending.command&&!await runtime.cancelPendingGeneration(pending.command))throw Error('原来的操作已经变化，请按当前进度继续');
     if(advice)await this.database.updateSetting(soulAdviceRecoveryKey(runtime.slotId),prior=>checkedSoulAdviceRecovery(prior,runtime.slotId)?.id===advice.id?null:prior);
@@ -1851,11 +1902,11 @@ export class WebGameController {
     }catch(error){this.#preparingUpdate=false;throw error;}
   }
 
-  #assertSessionAvailable(allowRecovery=false): void {
+  #assertSessionAvailable(allowRecovery=false,{allowDisconnected=false}={}): void {
     if(this.#view.connecting&&!allowRecovery)throw new TaskCancelledError('正在连接本机进度，连接完成后即可行动');
     if(this.#desktopInstallPending)throw new TaskCancelledError('正在准备更新，请稍候');
     if (this.#transitioning) throw new TaskCancelledError('正在读取旅程，请稍候');
-    if(!allowRecovery&&this.#view.connectionError)throw new CloudError('connection-lost',this.#view.connectionError,503);
+    if(!allowRecovery&&!allowDisconnected&&this.#view.connectionError)throw new CloudError('connection-lost',this.#view.connectionError,503);
     if (this.#view.loadError&&!allowRecovery) throw new Error(this.#view.loadError);
   }
 
@@ -1995,7 +2046,7 @@ export class WebGameController {
       if (record.profileId !== this.runtime.slotId) throw new Error('请先切换到该存档所属的世界');
       const events = history.map(item => item.event);
       const avatar=await this.database.getSlotAvatar(record),figure=await this.database.getSlotFigure(record);
-      await this.runtime.restoreSnapshot(record.snapshot,events,{avatar,figure,soulImages:await this.database.getSlotSoulImages(record),workspace:record.workspace ?? null,storyHeadId:record.storyHeadId??null,battleReplay:record.battleReplay??null});
+      await this.runtime.restoreSnapshot(record.snapshot,events,{avatar,figure,soulImages:await this.database.getSlotSoulImages(record),workspace:record.workspace ?? null,storyHeadId:record.storyHeadId??null,storyUndoHeadId:record.storyUndoHeadId??null,battleReplay:record.battleReplay??null});
       await this.#forkRestoredStory(previous);
       this.#set({snapshot: this.runtime.getSnapshot(), events: events.slice(-160)});
       this.notify(`已读取“${record.label}”`, 'success');
@@ -2012,9 +2063,9 @@ export class WebGameController {
     await this.#replaceSession(async()=>{
       const runtime=this.runtime,current=runtime.readSnapshot().state as any;
       if(latestReplayBattleId(current)!==battleId)throw Error('当前战斗已变化，请重新选择');
-      const saved=runtime.getRecord(),record=saved?.battleReplay?{...saved,...saved.battleReplay}:null,opening=record?.snapshot.state as any;
+      const saved=runtime.getRecord(),record=saved?.battleReplay?{...saved,...saved.battleReplay,storyUndoHeadId:saved.battleReplay.storyUndoHeadId??null}:null,opening=record?.snapshot.state as any;
       if(!record||record.slotId!==runtime.slotId||opening?.战斗?.id!==battleId||opening.战斗.状态!=='进行中')throw Error('没有这场遭遇的完整战前记录');
-      await runtime.restoreSnapshot(record.snapshot,[],{avatar:await this.database.getSlotAvatar(record),figure:await this.database.getSlotFigure(record),soulImages:await this.database.getSlotSoulImages(record),workspace:record.workspace??null,storyHeadId:record.storyHeadId??null,battleReplay:record.battleReplay??null});
+      await runtime.restoreSnapshot(record.snapshot,[],{avatar:await this.database.getSlotAvatar(record),figure:await this.database.getSlotFigure(record),soulImages:await this.database.getSlotSoulImages(record),workspace:record.workspace??null,storyHeadId:record.storyHeadId??null,storyUndoHeadId:record.storyUndoHeadId??null,battleReplay:record.battleReplay??null});
       await runtime.dispatch({id:crypto.randomUUID(),expectedRevision:runtime.revision,type:'story.fork',payload:{branchId:opening.扩展.story.branchId}});
       const result=await runtime.dispatch({id:crypto.randomUUID(),expectedRevision:runtime.revision,type:'battle.set-automatic',payload:{enabled:false}});
       this.#set({snapshot:result.snapshot,events:result.events});
@@ -2029,11 +2080,26 @@ export class WebGameController {
       if (!record) throw new Error('没有找到该自动备份');
       if (record.slotId !== this.runtime.slotId) throw new Error('请先切换到该备份所属的魂师档案');
       const avatar=await this.database.getSlotAvatar(record),figure=await this.database.getSlotFigure(record);
-      await this.runtime.restoreSnapshot(record.snapshot,[],{avatar,figure,soulImages:await this.database.getSlotSoulImages(record),workspace:record.workspace ?? null,storyHeadId:record.storyHeadId??null,battleReplay:record.battleReplay??null});
+      await this.runtime.restoreSnapshot(record.snapshot,[],{avatar,figure,soulImages:await this.database.getSlotSoulImages(record),workspace:record.workspace ?? null,storyHeadId:record.storyHeadId??null,storyUndoHeadId:record.storyUndoHeadId??null,battleReplay:record.battleReplay??null});
       await this.#forkRestoredStory(previous);
       this.#set({snapshot: this.runtime.getSnapshot(), events: []});
       this.notify('已恢复所选旅程进度', 'success');
     });
+  }
+
+  async prepareStoryWithdrawal(branchId:string,turn:number){
+    this.#assertSessionAvailable(true);
+    const runtime=this.runtime,sessionId=this.#sessionEpoch,record=runtime.getSlotHead();
+    const target=record&&(await this.database.storyWithdrawalTargets(record)).find(row=>row.branchId===branchId&&row.turn===turn);
+    if(!target||!record?.storyUndoHeadId)throw Error('这层楼没有保存发送前的完整进度。启用撤回功能后新发送的内容可以撤回。');
+    if(runtime!==this.runtime||sessionId!==this.#sessionEpoch||record.storyUndoHeadId!==runtime.getSlotHead()?.storyUndoHeadId)throw Error('故事已变化，请重新选择撤回位置');
+    return {...target,headId:record.storyUndoHeadId,sessionId,count:((runtime.readSnapshot().state as any).扩展.story.active?.number??turn)-turn+1};
+  }
+
+  async withdrawStory(target:{id:string;headId:string;sessionId:number}):Promise<void>{
+    if(target.sessionId!==this.#sessionEpoch||target.headId!==this.runtime.getSlotHead()?.storyUndoHeadId)throw Error('故事已变化，请重新选择撤回位置');
+    await this.#replaceSession(()=>this.runtime.withdrawStory(target.id,target.headId));
+    this.notify('已撤回所选楼层及后续内容，回到发送前','success');
   }
 
   async savePlayerAvatar(record: AvatarRecord|null): Promise<void> {

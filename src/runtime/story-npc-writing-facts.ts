@@ -27,7 +27,7 @@ export function compileNpcCollaborations(rows:any[]){return rows.map(r=>{
 /** Only already-filtered, personally observed plan events can describe executed travel. */
 export function compileNpcPlans(rows:any[]){return rows.map(plan=>{
  known(plan,['ownerId','sourceId','goal','motive','agreementStatus','plannedArrival','destinationId','events'],'可知人物行程');
- const stages:Record<string,string>={departed:'已出发并支付本段旅费',arrived:'实际抵达路段终点',waiting:'已到访目的地',succeeded:'本次行程已经结束',missed:'会面窗口已经错过',cancelled:'原安排已取消',blocked:'行程受阻'};
+ const stages:Record<string,string>={departed:'已出发',arrived:'实际抵达路段终点',waiting:'已到访目的地',succeeded:'本次行程已经结束',missed:'会面窗口已经错过',cancelled:'原安排已取消',blocked:'行程受阻'};
  const agreement:Record<string,string>={pending:'原提议待回应',accepted:'原约定已接受，尚待履行',completed:'原约定已履行',rejected:'原提议已拒绝',expired:'原约定已过期',cancelled:'原约定已撤回',ended:'原关系或同行已结束'};
  if(plan.agreementStatus!==undefined&&!agreement[plan.agreementStatus])throw Error('可知人物行程缺少原约定阶段编译');
  const observedEvents=plan.events.map((event:any)=>{

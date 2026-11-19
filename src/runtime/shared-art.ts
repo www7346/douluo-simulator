@@ -1,3 +1,4 @@
+import '../shared/tangmen-item-art.js';
 import '../shared/nine-court-skills.js';
 import type {Artwork} from './art-catalog';
 import {ADULT_WOMAN_FIGURES} from './player-figure-options';
@@ -6,19 +7,24 @@ import canonicalFigureUpgrades from '../shared/canonical-figure-upgrades.json';
 import '../shared/begonia-content-core.js';
 import '../shared/royal-swan-content-core.js';
 import '../shared/yuehua-cat-content.js';
+import '../shared/meng-yiran-content.js';
 import '../shared/canonical-women-support-content.js';
 import '../shared/canonical-women-elements-content.js';
 import '../shared/canonical-women-beasts-content.js';
 import '../shared/canonical-women-content-core.js';
 /** New standalone illustrations are registered here once for all player image pickers. */
 export const SHARED_ART:readonly Artwork[] = [
+  ...['luo-reborn','holy-growth','holy-avatar','thunder-growth','thunder-avatar'].map((id,i)=>({key:'spirit.evolution.'+id,domain:'spirit' as const,label:['复苏罗三炮','圣龙成长形态','黄金圣龙真身','雷龙成长形态','雷霆龙兽真身'][i],src:'/art/soul-evolution-v1/'+id+'.webp',cell:0,columns:1,rows:1})),
+  ...globalThis.SoulTangmenItemArt.ENTRIES.map((entry:any)=>({key:entry.artId,domain:'item',label:entry.name,src:entry.artPath,cell:0,columns:1,rows:1})),
+  {key:'item.realm.collar',domain:'item',label:'魂环项圈',src:'/art/overlays/jiumeitu-metal-collar-ornate.webp',cell:0,columns:1,rows:1,sourceAspect:2},
+  ...['cage','cross','suspended','heels'].map((id,cell)=>({key:'item.realm.'+id,domain:'item',label:['金属笼','十字架固定','悬吊固定','高跟鞋'][cell],src:'/art/realm-equipment-v1/devices.svg',cell,columns:2,rows:2})),
   ...(globalThis as any).SoulNineCourts.courts.map((court:{name:string;artId:string},i:number)=>({key:court.artId,domain:'skill' as const,label:'九美图·'+court.name,src:'/art/jiumeitu/nine-courts.webp',cell:i,columns:3,rows:3})),
   {key:'preset.soul.canonical-snake',domain:'spirit',label:'蛇·青鳞本相（原图）',src:'/art/canonical-women-v1/canonical-snake.webp',cell:0,columns:3,rows:4,inset:.035},
   ...['青鳞毒牙','游蛇步','缠骨蛇信','盘鳞护体','蚀鳞吻','蛇影惊心','灵蛇真身','百鳞归壳','碧牙穿心'].map((name,i)=>({key:'skill.canonical-women.canonical-snake.'+(i+1),domain:'skill',label:'蛇·'+name+'（原图）',src:'/art/canonical-women-v1/canonical-snake.webp',cell:i+1,columns:3,rows:4,inset:.035})),
   {key:'skill.canonical-women.wish-ring.3',domain:'skill',label:'如意环·止戈一瞬（原图）',src:'/art/yuehua-cat-v1/wish-ring-skills.webp',cell:2,columns:3,rows:3,inset:.035},
   {key:'skill.canonical-women.ice-phoenix.8',domain:'skill',label:'冰凤凰·冰冠守望',src:'/art/canonical-women-v1/ice-phoenix.webp',cell:8,columns:3,rows:4,inset:.035},
   ...globalThis.SoulCanonicalWomenContent.PROFILES.flatMap((p:any)=>[
-    {key:p.SOUL.artId,domain:'spirit',label:p.SOUL.name+'·传承本相',src:p.SOUL.artPath,cell:0,columns:p.skillArtPath?1:p.NODES.length?3:1,rows:p.skillArtPath?1:p.NODES.length?4:1,inset:.035},
+    {key:p.SOUL.artId,domain:'spirit',label:p.SOUL.name+'·传承本相',src:p.SOUL.artPath,cell:0,columns:p.soulArtColumns??(p.skillArtPath?1:p.NODES.length?3:1),rows:p.soulArtRows??(p.skillArtPath?1:p.NODES.length?4:1),inset:.035},
     ...p.NODES.map((n:any)=>({key:n.artId,domain:'skill',label:p.SOUL.name+'·'+n.name,src:n.artPath,cell:n.artCell,columns:n.artColumns??p.artColumns??3,rows:n.artRows??p.artRows??4,inset:.035}))
   ]),
   ...globalThis.SoulCanonicalWomenContent.BEASTS.flatMap((p:any)=>[

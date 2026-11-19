@@ -7,6 +7,7 @@ import {useCreationCatalog} from './creation-context';
 import {useServerQuery} from './use-game-query';
 import {ActionSection,Button,Panel,Modal} from './components';
 import RingDesignAdvisor from './components/RingDesignAdvisor';
+import {downloadJson,readSaveFile} from './file-transfer';
 import AbilityDetails from './components/AbilityDetails';
 import type {CreationWorkspace} from '../shared/creation-draft';
 import {CreationItemsSummary} from './CreationItems';
@@ -17,7 +18,7 @@ import {createOpeningSoulEditRequest,requestOpeningSoulEdit,observeOpeningSoulRe
 
 export function BackgroundChooser({draft,change,disabled,onWorking,flow,workspace}:{draft:any;workspace?:CreationWorkspace;change:(workspace:CreationWorkspace|((current:CreationWorkspace)=>CreationWorkspace))=>void;disabled:boolean;onWorking:(v:boolean)=>void;flow?:CreationWorkspace["creationFlow"]}){
  const controller=useGameController(),catalog=useCreationCatalog(),[error,setError]=useState(''),[busy,setBusy]=useState(false),[canonOpen,setCanonOpen]=useState(false),[targetLevel,setTargetLevel]=useState(10),b=draft.background;
- useEffect(()=>setTargetLevel(b.id==='jiumeitu-heir'?b.openingLevel??10:b.canonicalPlayer?.level??10),[b.id,b.openingLevel,b.canonicalPlayer?.characterId,b.canonicalPlayer?.level]);
+ useEffect(()=>setTargetLevel(['custom','jiumeitu-heir'].includes(b.id)?b.openingLevel??10:b.canonicalPlayer?.level??10),[b.id,b.openingLevel,b.canonicalPlayer?.characterId,b.canonicalPlayer?.level]);
  const selectedCharacters=[b.canonicalPlayer?.characterId,...Object.values(b.actors??{}).filter((v:any)=>v.source==='canon').map((v:any)=>v.characterId),...(b.relations??[]).flatMap((v:any)=>[v.actor,v.target]).filter((v:any)=>v?.source==='canon').map((v:any)=>v.characterId)];
  const requiredSources=new Set(catalog.characterSources.filter((v:any)=>selectedCharacters.includes(v.characterId)).map((v:any)=>v.id));
  const choose=async(background:any)=>{const sessionId=controller.getView().sessionId;setBusy(true);onWorking(true);setError('');try{const key=(value:any)=>value.id+':'+(value.buyerId??'')+(value.id==='prince-cat'?':'+(value.perspective??'buyer'):''),currentKey=key(b),nextKey=key({...background,buyerId:background.buyerId??(background.id==='sealed-titled'?'merchant':undefined)});
@@ -28,7 +29,8 @@ export function BackgroundChooser({draft,change,disabled,onWorking,flow,workspac
   }catch(e){setError((e as Error).message);}finally{setBusy(false);onWorking(false);}};
 
  return <Panel title="选择背景"><div className="background-cards">{Object.values(catalog.backgrounds).map((v:any)=><button type="button" key={v.id} data-testid={`background-${v.id}`} aria-pressed={b.id===v.id} disabled={disabled||busy} onClick={()=>void choose({id:v.id})}><strong>{v.name}</strong><p>{playerDescription(v.description)}</p><small>{v.cost?`${v.cost} 造化点`:'预设人物'}</small></button>)}</div>{['prince-cat','sealed-titled'].includes(b.id)&&<fieldset disabled={disabled||busy}><legend>你想扮演谁？</legend>{['buyer','captive'].map(p=><Button key={p} data-testid={`perspective-${p}`} variant={b.perspective===p?'primary':'secondary'} onClick={()=>void choose({id:b.id,...(b.buyerId?{buyerId:b.buyerId}:{}),perspective:p})}>{p==='buyer'?(b.id==='prince-cat'?'扮演雪崩':'扮演买主'):(b.id==='prince-cat'?'扮演猫女':'扮演被囚者')}</Button>)}</fieldset>}{b.id==='sealed-titled'&&<fieldset disabled={disabled||busy}><legend>买主身份</legend>{Object.values(catalog.buyers).map((v:any)=><Button key={v.id} data-testid={`buyer-${v.id}`} variant={b.buyerId===v.id?'primary':'secondary'} onClick={()=>void choose({id:b.id,perspective:b.perspective,buyerId:v.id})}>{v.name} · {v.identity} · {v.level}级</Button>)}</fieldset>}{b.id==='canonical-character'&&<fieldset disabled={disabled||busy}><legend>原著身份与成长</legend><p>{draft.name} · {b.canonicalPlayer?.level??10}级</p><Button onClick={()=>setCanonOpen(true)}>选择原著人物</Button><label>开局等级<input type="number" min={1} max={99} value={targetLevel} onChange={e=>setTargetLevel(Number(e.target.value))}/></label><Button variant="secondary" onClick={()=>void choose({id:b.id,...b,canonicalPlayer:{...b.canonicalPlayer,level:targetLevel,mode:'projection'}})}>按此等级重建魂环与能力</Button><Button variant="secondary" onClick={()=>void choose({id:b.id,...b,canonicalPlayer:{...b.canonicalPlayer,level:catalog.canonicalPeople.find((v:any)=>v.id===b.canonicalPlayer.characterId)?.level??99,mode:'canonical'}})}>{catalog.canonicalPeople.find((v:any)=>v.id===b.canonicalPlayer.characterId)?.identityLoadout?'成年开局':'满级开局（需无限点数）'}</Button><p>重建将载入该等级的默认六维与武魂。若重新设定六维，历史魂环属性点会保留为可分配点数。</p></fieldset>}
- {b.id==='jiumeitu-heir'&&<fieldset disabled={disabled||busy}><legend>九美图开局实力</legend><label>开局等级<input data-testid="jiumeitu-opening-level" type="number" min={10} max={99} value={targetLevel} onChange={e=>setTargetLevel(Number(e.target.value))}/></label><Button data-testid="jiumeitu-apply-level" disabled={!Number.isInteger(targetLevel)||targetLevel<10||targetLevel>99} onClick={()=>void choose({...b,openingLevel:targetLevel})}>按此等级配置开局魂环</Button><p>10级从无环开始；提高等级后，可在魂环配置中选择方案与设计魂技。当前武魂设定会保留。</p></fieldset>}
+ {['custom','jiumeitu-heir'].includes(b.id)&&<fieldset disabled={disabled||busy}><legend>开局实力</legend><label>开局等级<input data-testid={b.id+'-opening-level'} type="number" min={b.id==='custom'?1:10} max={99} value={targetLevel} onChange={e=>setTargetLevel(Number(e.target.value))}/></label><Button data-testid={b.id+'-apply-level'} disabled={!Number.isInteger(targetLevel)||targetLevel<(b.id==='custom'?1:10)||targetLevel>99} onClick={()=>void choose({...b,openingLevel:targetLevel})}>按此等级配置开局魂环</Button><p>10级从无环开始；提高等级后，可在魂环配置中选择方案与设计魂技。当前武魂设定会保留。</p></fieldset>}
+ <fieldset disabled={disabled||busy}><legend>世界设置</legend><label>随机 NPC 性别<select value={b.npcGender??'random'} onChange={e=>change((v:CreationWorkspace)=>({...v,config:{...v.config,background:{...v.config.background,npcGender:e.target.value}}}))}><option value="random">随机</option><option value="male">只生成男性</option><option value="female">只生成女性</option></select></label></fieldset>
  <fieldset disabled={disabled||busy}><legend>跨时代登场</legend>{catalog.characterSources.map((source:any)=><label key={source.id}><input type="checkbox" checked={requiredSources.has(source.id)||(b.characterSources??[]).includes(source.id)} disabled={requiredSources.has(source.id)} onChange={e=>change((v:CreationWorkspace)=>({...v,config:{...v.config,background:{...v.config.background,characterSources:e.target.checked?[...new Set([...(v.config.background.characterSources??[]),source.id])]:(v.config.background.characterSources??[]).filter((id:string)=>id!==source.id)}}}))}/>{source.name} · {source.periodLabel}{requiredSources.has(source.id)&&'（已选人物自动启用）'}<small>{playerDescription(source.description)}</small></label>)}</fieldset>
  {canonOpen&&<OpeningCanonPicker people={catalog.canonicalPeople} disabled={disabled||busy} error={error} onClose={()=>setCanonOpen(false)} onChoose={(characterId:string)=>{setCanonOpen(false);const person=catalog.canonicalPeople.find((v:any)=>v.id===characterId),level=person?.openingLevel??(person?.identityLoadout?person.level:10);setTargetLevel(level);void choose({id:'canonical-character',canonicalPlayer:{characterId,level,mode:'canonical'},characterSources:b.characterSources??[]});}}/>}{error&&<p role="alert">{error}</p>}</Panel>;
 }
@@ -53,6 +55,7 @@ export function SubjectFigureChooser({draft,change,disabled}:{draft:any;change:(
 }
 export function HistoricalRings({draft,update,disabled=false,onEditSoul,onEditMartialSoul}:{draft:any;update:(patch:any)=>void;disabled?:boolean;onEditSoul?:()=>void;onEditMartialSoul?:(side:OpeningSide,ordinal?:number)=>void}){
  const controller=useGameController(),query=useServerQuery<any>('creation.history',{config:draft},{delay:200,keepPrevious:true}),b=draft.background;
+ const [replaceSoul,setReplaceSoul]=useState(false);
  const [designing,setDesigning]=useState<{side:string;ordinal:number}|null>(null),[changingYears,setChangingYears]=useState(false),currentDraft=useRef(draft),designingRef=useRef(designing),alive=useRef(true);currentDraft.current=draft;designingRef.current=designing;
  const [returningEdit,setReturningEdit]=useState<OpeningSoulEditRequest|null>(null),returningRef=useRef(returningEdit);returningRef.current=returningEdit;
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
@@ -68,16 +71,39 @@ export function HistoricalRings({draft,update,disabled=false,onEditSoul,onEditMa
  const designer=designing&&<Modal open title={`设计第${designing.ordinal}魂环`} className="modal--ring-designer" onClose={()=>setDesigning(null)} actions={<Button variant="ghost" onClick={()=>setDesigning(null)}>返回魂环配置</Button>}><RingDesignAdvisor target={{kind:'opening',config:draft,side:designing.side,ordinal:designing.ordinal}} disabled={disabled} onEditMartialSoul={()=>edit(designing.side as OpeningSide,designing.ordinal)} onUnlockSource={unlockSource} onAdopt={async plan=>{const source=currentDraft.current,selection=designingRef.current,sessionId=controller.getView().sessionId;const result=await controller.query('creation.apply-ring-design',{config:source,side:designing.side,ordinal:designing.ordinal,proposal:plan.proposal});if(!alive.current||selection!==designingRef.current||controller.getView().sessionId!==sessionId||currentDraft.current!==source)throw Error('开局设定已改变或设计页已关闭，请重新核对本次方案');update({background:result.config.background,martialSoulDrafts:result.config.martialSoulDrafts});setDesigning(null);}}/></Modal>;
  if(query.error)return <><Panel title="魂环资料暂未读取"><p role="alert">{query.error}</p><p>这次服务器读取没有完成，当前开局设定已保留。</p>{returnLink}<div className="field-actions"><Button onClick={query.retry}>重试读取魂环</Button><Button variant="secondary" disabled={!controller.canReconnect()} onClick={()=>void controller.reconnect()}>重新连接</Button></div></Panel>{designer}</>;
  if(!query.data)return <><Panel title="开局魂环与魂技">{returnLink}<div className="creation-calculation" role="status"><span className="loading-ring" aria-hidden="true"/><span>服务器正在整理双方魂环…</span></div></Panel>{designer}</>;
- const history=query.data,active=b.id==='jiumeitu-heir'?'main':b.perspective==='buyer'?'buyer':'captive',other=active==='buyer'?'captive':'buyer';
+ const history=query.data,active=['custom','jiumeitu-heir'].includes(b.id)?'main':b.perspective==='buyer'?'buyer':'captive',other=active==='buyer'?'captive':'buyer';
  const select=(side:string,index:number,id:string)=>{const choices=side===b.perspective||side==='main'?b.ringChoices??[]:b.actors?.[side]?.ringChoices??[],prefix=choices.slice(0,index),next=id?[...prefix,id]:prefix;update({background:{...b,...(side===b.perspective||side==='main'?{ringChoices:next}:{actors:{...b.actors,[side]:{...b.actors?.[side],ringChoices:next}}})}});};
+ const exportDesigns=async(side:string,ordinal?:number,includeSoul=false)=>{
+  try{const result=await controller.query('creation.export-ring-designs',{config:draft,side,includeSoul,...(ordinal===undefined?{}:{ordinal})});await downloadJson(result.serialized,result.name+(includeSoul?'－武魂与魂技':ordinal===undefined?'－开局魂技':'－第'+ordinal+'环魂技')+'.json');}
+  catch(error){controller.notify((error as Error).message,'danger');}
+ };
+ const importDesigns=async(file:File)=>{
+  const source=currentDraft.current,sessionId=controller.getView().sessionId;setChangingYears(true);
+  try{
+   const serialized=await readSaveFile(file,1_000_000);
+   const result=await controller.query('creation.import-ring-designs',{config:source,side:active,serialized,replaceSoul});
+   if(!alive.current||currentDraft.current!==source||controller.getView().sessionId!==sessionId)return;
+   update({background:result.background,...(result.martialSoulDrafts?{martialSoulDrafts:result.martialSoulDrafts}:{})});
+   controller.notify('已导入 '+result.imported+' 环魂技'+(result.parked?'，其中 '+result.parked+' 环待等级解锁':''),'success');
+  }catch(error){controller.notify((error as Error).message,'danger');}
+  finally{if(alive.current)setChangingYears(false);}
+ };
+ const activeDesigns=(b.ringDesigns??[]).filter((d:any)=>d.requestedSkills?.length);
  return <Panel title="开局魂环与魂技">
   {returnLink}
-  <OpeningHistoryActor actor={history.actors?.[active]??history[active]} side={active} active disabled={disabled||changingYears||query.loading} onSelect={(index,id)=>select(active,index,id)} onEdit={()=>edit(active)} onDesign={ordinal=>setDesigning({side:active,ordinal})} onYears={(ordinal,years,acquisition)=>changeYears(active,ordinal,years,acquisition)}/>
+  {!history.actors?.[active]?.canonical&&<div className="field-actions">
+    {active==='main'&&b.id==='custom'&&<label><input type="checkbox" checked={replaceSoul} onChange={e=>setReplaceSoul(e.target.checked)}/>同时载入文件里的武魂，替换当前第一武魂</label>}
+    <label>导入开局魂技<input type="file" accept=".json,.gz" disabled={disabled||changingYears||query.loading} onChange={e=>{const file=e.target.files?.[0];e.currentTarget.value='';if(file)void importDesigns(file);}}/></label>
+    {activeDesigns.length>0&&<Button variant="secondary" disabled={disabled||changingYears} onClick={()=>void exportDesigns(active)}>导出全部自制魂技</Button>}
+    {activeDesigns.length>0&&<Button variant="secondary" disabled={disabled||changingYears} onClick={()=>void exportDesigns(active,undefined,true)}>导出武魂与魂技</Button>}
+    {activeDesigns.some((d:any)=>d.soulBinding)&&<Button variant="ghost" disabled={disabled||changingYears} onClick={()=>{const first=Math.min(...activeDesigns.filter((d:any)=>d.soulBinding).map((d:any)=>d.ordinal));update({background:{...b,ringDesigns:(b.ringDesigns??[]).filter((d:any)=>!d.soulBinding),ringChoices:(b.ringChoices??[]).slice(0,first-1)}});}}>移除导入的魂技</Button>}
+  </div>}
+  <OpeningHistoryActor actor={history.actors?.[active]??history[active]} side={active} active disabled={disabled||changingYears||query.loading} onSelect={(index,id)=>select(active,index,id)} onEdit={()=>edit(active)} onDesign={ordinal=>setDesigning({side:active,ordinal})} exportRing={ordinal=>activeDesigns.some((d:any)=>d.ordinal===ordinal)?()=>void exportDesigns(active,ordinal):undefined} onYears={(ordinal,years,acquisition)=>changeYears(active,ordinal,years,acquisition)}/>
   {b.id==='sealed-titled'&&<ActionSection title={<>查看{other==='buyer'?'买主':'被囚者'}的魂环与魂技</>} className="background-history-counterpart"><OpeningHistoryActor actor={history.actors?.[other]??history[other]} side={other} active={false} disabled={disabled||changingYears||query.loading} onSelect={(index,id)=>select(other,index,id)} onEdit={()=>edit(other)} onDesign={ordinal=>setDesigning({side:other,ordinal})} onYears={(ordinal,years,acquisition)=>changeYears(other,ordinal,years,acquisition)}/></ActionSection>}
   {designer}
  </Panel>;
 }
-function OpeningHistoryActor({actor,side,active,disabled,onSelect,onEdit,onDesign,onYears}:{actor:any;side:string;active:boolean;disabled:boolean;onSelect:(index:number,id:string)=>void;onEdit:()=>void;onDesign:(ordinal:number)=>void;onYears:(ordinal:number,years?:number,acquisition?:any)=>Promise<void>}){
+function OpeningHistoryActor({actor,side,active,disabled,onSelect,onEdit,onDesign,onYears,exportRing}:{actor:any;side:string;active:boolean;disabled:boolean;onSelect:(index:number,id:string)=>void;onEdit:()=>void;onDesign:(ordinal:number)=>void;onYears:(ordinal:number,years?:number,acquisition?:any)=>Promise<void>;exportRing?:(ordinal:number)=>(()=>void)|undefined}){
  const [resetError,setResetError]=useState(''),[resetting,setResetting]=useState(false);
  if(!actor)return <p role="status">人物魂环资料未读取。</p>;
  const label=side==='main'?'当前人物':side==='buyer'?'买主':'被囚者';
@@ -91,14 +117,14 @@ function OpeningHistoryActor({actor,side,active,disabled,onSelect,onEdit,onDesig
   {actor.rings?.map((ring:any,index:number)=>{const selected=actor.selected?.[index],current=selected?.candidate?.id;return <ActionSection title={<>{ring.martialSoulName?`${ring.martialSoulName} · `:''}第{ring.ordinal}环 · {ring.color?ring.color+' · ':''}{ring.years}年 <small>{selected?.candidate?.title??'等待选择'}</small></>} className="background-ring" key={ring.id??`${ring.martialSoulIndex??0}:${ring.ordinal}`} data-testid={active?`ring-${ring.ordinal}`:`${side}-ring-${ring.ordinal}`}>
 
    {ring.stage&&<p>吸收时：{ring.stage.level}级</p>}{ring.profile?.名称&&<p>魂环来源：{ring.profile.名称}</p>}
-   {!actor.canonical&&<><OpeningRingYears ring={ring} disabled={disabled} onApply={(years,acquisition)=>onYears(ring.ordinal,years,acquisition)}/><Button variant="secondary" disabled={disabled} onClick={()=>onDesign(ring.ordinal)}>和主持人设计魂兽来源与魂技</Button></>}
+   {!actor.canonical&&<><OpeningRingYears ring={ring} disabled={disabled} onApply={(years,acquisition)=>onYears(ring.ordinal,years,acquisition)}/><Button variant="secondary" disabled={disabled} onClick={()=>onDesign(ring.ordinal)}>和主持人设计魂兽来源与魂技</Button>{exportRing?.(ring.ordinal)&&<Button variant="secondary" disabled={disabled} onClick={exportRing(ring.ordinal)}>导出本环魂技</Button>}</>}
    {!actor.canonical&&<p>{ring.designPending?'年限与取得方式已保留，当前没有合适的默认方案。请和主持人完成这枚魂环的魂技设计。':`${ring.candidates.length}套可用魂技方案`}</p>}
    <div className="background-ring-candidates">{ring.candidates.map((candidate:any)=><article key={candidate.id} aria-current={current===candidate.id?'true':undefined}><strong>{candidate.title}</strong><p>{playerDescription(candidate.description)}</p>{candidate.budget&&<small>方案消耗 {candidate.budget.spent} / {candidate.budget.available}</small>}{candidate.skills?.map((skill:any)=><details key={skill.id??skill.name}><summary>{skill.name}</summary><AbilityDetails skill={skill} showName={false} showAvailability={false}/></details>)}{actor.manual?<Button disabled={disabled||current===candidate.id} data-testid={`ring-${ring.ordinal}-choice-${candidate.index+1}`} variant={current===candidate.id?'primary':'secondary'} onClick={()=>onSelect(index,candidate.id)}>{current===candidate.id?'已选定':'选择此方案'}</Button>:<p>{actor.canonical||current===candidate.id?'已配备':'备选方案'}</p>}</article>)}</div>
   </ActionSection>;})}
   <p role="status" data-testid={active?'history-complete':`${side}-history-complete`}>{actor.complete?'开局魂环配置完整':actor.rings.some((ring:any)=>ring.designPending)?'请完成待设计魂环的魂技':'请继续选择下一枚魂环'}</p>
  </section>;
 }
-function OpeningRingYears({ring,disabled,onApply}:{ring:any;disabled:boolean;onApply:(years?:number,acquisition?:any)=>Promise<void>}){
+function OpeningRingYears({ring,disabled,onApply}:{ring:any;disabled:boolean;onApply:(years?:number,acquisition?:any)=>Promise<void>;exportRing?:(ordinal:number)=>(()=>void)|undefined}){
  const current=ring.acquisition??{kind:'hunt',note:''},options=ring.yearRules?.acquisitionKinds??[];
  const [value,setValue]=useState(String(ring.years)),[kind,setKind]=useState(current.kind),[note,setNote]=useState(current.note),[working,setWorking]=useState(false),[error,setError]=useState('');
  useEffect(()=>{setValue(String(ring.years));setKind(current.kind);setNote(current.note);setError('');},[ring.years,ring.mechanicsHash,current.kind,current.note]);

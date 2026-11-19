@@ -144,7 +144,7 @@
  function pending(s,actorId){return Object.values(s.扩展?.personaRewrites?.grants??{}).filter(a=>a.status==='pending'&&(!actorId||a.actorId===actorId)).filter(a=>{try{grant(s,a.id);return true;}catch{return false;}}).map(clone);}
  function reconcile(s){const t=s.扩展?.personaRewrites;if(!t)return;for(const id of Object.keys(t.baselines)){capture(s,id,Object.keys(t.baselines[id]));materialize(s,id);}}
  function validate(s){
-  const errors=[],t=s.扩展?.personaRewrites;
+  const errors=[...((globalThis.SoulPlayerAppearance??(typeof require==='function'?require('./player-appearance-core.js'):null))?.validate(s)??[])],t=s.扩展?.personaRewrites;
   for(const [id,r] of Object.entries(s.扩展?.bodyChanges??{}))try{const n=sourceNode(r),expected=n.params.目标性别==='反转'?(r.previousGender==='女'?'男':'女'):n.params.目标性别==='原始'?r.initialGender:n.params.目标性别;if(!signed(r)||id!==r.sourceStatusId+':body'||id!==r.id||n.effectId!==BODY_EFFECT||!s.人物?.列表?.[r.targetId]||(!['男','女'].includes(r.gender)&&!(n.params.目标性别==='原始'&&r.gender===r.initialGender))||r.gender!==expected||n.params.变化保留!==r.retention||n.params.强度!==r.strength||!Number.isSafeInteger(r.appliedOrder)||r.appliedOrder<1)throw Error('来源');}catch{errors.push('身体变化记录'+id+'无效');}
   if(t){
    if(t.version!==1||!plain(t.grants)||!plain(t.patches)||!plain(t.baselines)||!plain(t.materialized))return [...errors,'人物改造记录不完整'];

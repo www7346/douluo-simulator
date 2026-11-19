@@ -53,7 +53,7 @@ function InventoryNavigation({tab,counts,onSelect}:{tab:string;counts:Record<str
  })}</nav>;
 }
 function routeTab(){const key=new URLSearchParams(location.hash.split('?')[1]??'').get('tab')??'';return TABS[Math.max(0,TAB_KEYS.indexOf(key))]}
-const FILTERS=['全部','魂环','魂导器','魂骨','消耗品','毒药','拘束器','情具','暗器','工具','其他'];
+const FILTERS=['全部','魂环','魂导器','魂骨','消耗品','毒药','拘束器','情具','暗器','图纸','工具','其他'];
 
 export default function InventoryPage() {
   const {controller,state,view}=useGame();

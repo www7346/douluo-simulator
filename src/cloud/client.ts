@@ -39,8 +39,18 @@ export class CloudClient {
     const cancelNative=path==='query'&&signal&&typeof window!=='undefined'?window.douluoDesktop?.cancelQuery:undefined;
     const cancel=()=>cancelNative?.(requestId);
     if(cancelNative)signal!.addEventListener('abort',cancel,{once:true});
-    try{response=await send(this.baseUrl+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-Douluo-Protocol':CLOUD_PROTOCOL,'X-Douluo-Build':this.buildId,'X-Douluo-Request-Id':requestId,...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(payload),cache:'no-store',signal,keepalive});}
-    catch(error){if(path==='query'&&signal?.aborted)throw new CloudError('request-cancelled','已取消这次查看',499,error,requestId);throw new CloudError('connection-lost','网络连接中断，本次操作已保留，可以重新连接后继续',0,error,requestId);}
+    const snapshotRequest=path==='session'||path==='recovery';
+    const deadline=path==='session'||path==='sync'?AbortSignal.timeout(60000):undefined;
+    const transportSignal=deadline?(signal?AbortSignal.any([signal,deadline]):deadline):signal;
+    try{
+      let body:BodyInit=JSON.stringify(payload),compressed=false;
+      if(snapshotRequest&&body.length>=65536&&typeof window!=='undefined'&&!window.douluoDesktop&&typeof window.CompressionStream==='function'){
+        body=await new Response(new Blob([body]).stream().pipeThrough(new CompressionStream('gzip'))).blob();compressed=true;
+      }
+      transportSignal?.throwIfAborted();
+      response=await send(this.baseUrl+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-Douluo-Protocol':CLOUD_PROTOCOL,'X-Douluo-Build':this.buildId,'X-Douluo-Request-Id':requestId,...(token?{Authorization:'Bearer '+token}:{}),...(compressed?{'Content-Encoding':'gzip'}:{})},body,cache:'no-store',signal:transportSignal,keepalive});
+    }
+    catch(error){if(path==='query'&&signal?.aborted)throw new CloudError('request-cancelled','已取消这次查看',499,error,requestId);throw new CloudError('connection-lost',deadline?.aborted?'连接计算服务超时，本机进度仍保留。可以重新连接后继续。':'网络连接中断，本次操作已保留，可以重新连接后继续',0,error,requestId);}
     finally{if(cancelNative)signal!.removeEventListener('abort',cancel);}
     let result:any;try{result=await response.json();}catch(error){if(path==='query'&&signal?.aborted)throw new CloudError('request-cancelled','已取消这次查看',499,error,requestId);throw new CloudError('connection-lost','答复未完整收到，本次操作已保留',response.status,error,requestId);}
     if(!response.ok)throw new CloudError(result.error?.code??'server-error',result.error?.message??'服务暂时无法完成操作',response.status,undefined,requestId);

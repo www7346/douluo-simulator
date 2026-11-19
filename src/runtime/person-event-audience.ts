@@ -7,6 +7,7 @@ import type {GameCommand} from './contracts';
 /** Event visibility is frozen by the verified original command, not its prose. */
 export function personEventAudience(state:any,command:GameCommand):string[]|undefined{
  const actual=command.type==='generation.apply'?command.payload.command as GameCommand:command;
+ if(actual.type==='player.edit-appearance')return [state.角色.主控单位ID];
  if(!actual.type.startsWith('person.'))return undefined;
  const p=actual.payload as any;
  if(actual.type==='person.respond-contract'||actual.type==='person.respond-contract-order'){const order=actual.type==='person.respond-contract-order'?rules.personContracts.table(state).orders.find((o:any)=>o.id===p.orderId):null,r=rules.personContracts.get(state,order?.contractId??p.contractId);return r?(r.forcedSourceStatusId?[r.proposerId]:r.parties):[];}

@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs';
-import {readdir,readFile,writeFile} from 'node:fs/promises';
+import {readdir,readFile,writeFile,mkdir} from 'node:fs/promises';
 import {resolve,relative,extname} from 'node:path';
 import {createHash} from 'node:crypto';
 import type {Plugin} from 'vite';
@@ -38,6 +38,7 @@ export function cloudDeliveryPlugin(root:string,build:string):Plugin {
       await writeFile(resolve(out,'version.json'),JSON.stringify({app:'douluo-independent-web',delivery:'cloud',build})+'\n');
       await writeFile(resolve(out,'update.js'),readFileSync(resolve(root,'scripts/cloud-update.js')));
       await writeFile(resolve(out,'update.html'),'<!doctype html><html lang="zh-CN"><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>更新游戏</title><style>body{background:#f5efdf;color:#60492e;font:18px/1.8 system-ui;max-width:660px;margin:12vh auto;padding:24px}button,a{display:inline-block;padding:12px 24px;border:1px solid #b09256;border-radius:6px;background:#fffbf0;color:inherit;margin:12px 8px 0 0;text-decoration:none}button:disabled{opacity:.5}</style><h1>更新旅程界面</h1><p id="message" role="status">正在检查…</p><button id="retry">重试更新</button><a href="/#/saves">查看本机存档</a><script src="/update.js" defer></script></html>');
+      await mkdir(resolve(root,'build/cloud'),{recursive:true});
       await writeFile(resolve(root,'build/cloud/resource-audit.json'),JSON.stringify({build,files,essentialBytes:files.filter(file=>file.shell).reduce((n,file)=>n+file.bytes,0),publicBytes:files.reduce((n,file)=>n+file.bytes,0)},null,2)+'\n');
     }},
   };

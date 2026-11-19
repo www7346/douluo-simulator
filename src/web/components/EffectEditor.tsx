@@ -1,0 +1,40 @@
+import {effectFamilyNames} from './EffectCatalogue';
+import {useEffect,useState} from 'react';
+import {matchesEffectSearch} from '../../shared/effect-search';
+import {ActionSection,Button} from '../components';
+import {effectProse} from '../../runtime/effect-prose';
+type Any=Record<string,any>;
+const copy=<T,>(value:T):T=>structuredClone(value);
+
+function AttributeBatch({params,types,nodes,disabled,onChange}:{params:Any;types:string[];nodes:any[];disabled:boolean;onChange:(nodes:any[])=>void}){
+ const [selected,setSelected]=useState<string[]>([]),[error,setError]=useState('');
+ return <details><summary>批量设置属性防护</summary><p>将本项防护的模式、数值和持续时间应用到所选属性；已有同属性防护会更新。</p><div className="effect-attribute-options">{types.map(type=><label key={type}><input type="checkbox" disabled={disabled} checked={selected.includes(type)} onChange={e=>setSelected(e.target.checked?[...selected,type]:selected.filter(t=>t!==type))}/>{type}</label>)}</div><Button variant="secondary" disabled={disabled||!selected.length} onClick={()=>{
+  const rows=copy(nodes);for(const type of selected){const at=rows.findIndex(([id,p]:any)=>id==='status.resistance_shift'&&(p.类型??types[0])===type),next=['status.resistance_shift',{...copy(params),类型:type}];if(at>=0)rows[at]=next;else rows.push(next);}
+  if(rows.length>12){setError('每项能力最多12个效果，请减少本次选择，或在另一项能力中继续添加。');return;}setError('');onChange(rows);
+ }}>应用到所选属性</Button>{error&&<p role="alert">{error}</p>}</details>;
+}
+
+/** Optional structured input preserves advanced registered fields without inventing game rules. */
+export function JsonInput({label,value,onApply,disabled}:{label:string;value:any;onApply:(v:any)=>void;disabled:boolean}){
+ const identity=JSON.stringify(value??{}),[text,setText]=useState(identity),[error,setError]=useState('');
+ useEffect(()=>{setText(identity);setError('');},[identity]);
+ return <ActionSection title={<>{label}</>} className="opening-workshop__advanced"><label>{label}<textarea spellCheck={false} disabled={disabled} value={text} onChange={e=>setText(e.target.value)}/></label><Button variant="secondary" disabled={disabled||text===identity} onClick={()=>{try{onApply(JSON.parse(text));setError('');}catch{setError('这项设定尚未填写完整，请检查括号、逗号和字段值。');}}}>应用这项设定</Button>{error&&<p role="alert">{error}</p>}</ActionSection>;
+}
+
+export function EffectEditor({branches,effects,disabled,onChange,allowPassive=true,allowOptional=true}:{branches:Any[];effects:Any;disabled:boolean;onChange:(v:Any[])=>void;allowPassive?:boolean;allowOptional?:boolean}){
+ const [filter,setFilter]=useState(''),[family,setFamily]=useState(''),entries=Object.entries(effects??{}) as [string,Any][],choices=entries.filter(([,e])=>(!family||e.family===family)&&matchesEffectSearch(e,filter)).sort((a,b)=>(a[1].displayName??a[1].name).localeCompare(b[1].displayName??b[1].name,'zh'));
+ const edit=(i:number,patch:Any)=>onChange(branches.map((b,j)=>i===j?{...b,...patch}:b));
+ const node=(i:number,j:number,change:(v:any)=>any)=>edit(i,{nodes:branches[i].nodes.map((n:any,k:number)=>j===k?change(n):n)});
+ return <section aria-label="作品实际能力"><h3>实际能力</h3><p>按顺序选择释放方式、目标与效果。可以搜索、按类别筛选或复制已有效果，再预览实际作用与消耗。</p><label>查找能力<input disabled={disabled} value={filter} placeholder="例如：护盾、反弹、吸收、复活" onChange={e=>setFilter(e.target.value)}/></label><label>筛选效果类别<select value={family} disabled={disabled} onChange={e=>setFamily(e.target.value)}><option value="">全部类别</option>{Object.entries(effectFamilyNames).filter(([key])=>entries.some(([,e])=>e.family===key)).map(([key,name])=><option key={key} value={key}>{name}</option>)}</select></label>
+  {branches.map((branch,i)=><fieldset key={branch.id} disabled={disabled} className="opening-workshop__branch"><legend>{branch.label||`能力${i+1}`}</legend><div className="opening-workshop__grid"><label>能力名称<input value={branch.label??''} onChange={e=>edit(i,{label:e.target.value})}/></label><label>生效方式<select value={branch.activation} onChange={e=>edit(i,{activation:e.target.value})}><option value="active">主动使用</option>{allowPassive&&<option value="passive">常驻生效</option>}</select></label>{allowOptional&&<label className="opening-workshop__check"><input type="checkbox" checked={!!branch.optional} onChange={e=>edit(i,{optional:e.target.checked})}/>使用时可选</label>}</div>
+   {!branch.nodes?.length&&<p role="status">这项附加能力尚未添加效果，请在下方补充，或移除这项能力。</p>}
+   {(branch.nodes??[]).map(([id,params]:[string,Any],j:number)=>{const meta=effects?.[id],bounds={...meta?.optionalParameterBounds,...meta?.parameterBounds},defaults=meta?.parameterDefaults??{},keys=[...new Set([...Object.keys(defaults),...Object.keys(bounds),...Object.keys(params??{})])];return <article key={`${j}:${id}`} className="opening-workshop__node"><div className="opening-workshop__node-head"><strong>{j+1}. {meta?.displayName??meta?.name??'未登记效果'}</strong><div><Button variant="ghost" disabled={j===0} aria-label={`上移第${j+1}个效果`} onClick={()=>{const rows=[...branch.nodes];[rows[j-1],rows[j]]=[rows[j],rows[j-1]];edit(i,{nodes:rows});}}>上移</Button><Button variant="ghost" disabled={j===branch.nodes.length-1} aria-label={`下移第${j+1}个效果`} onClick={()=>{const rows=[...branch.nodes];[rows[j+1],rows[j]]=[rows[j],rows[j+1]];edit(i,{nodes:rows});}}>下移</Button><Button variant="ghost" disabled={branch.nodes.length>=12} aria-label={`复制第${j+1}个效果`} onClick={()=>{const rows=copy(branch.nodes);rows.splice(j+1,0,copy(rows[j]));edit(i,{nodes:rows});}}>复制</Button><Button variant="ghost" aria-label={`移除第${j+1}个效果`} onClick={()=>edit(i,{nodes:branch.nodes.filter((_:any,k:number)=>k!==j)})}>移除</Button></div></div>
+    {meta?.description&&<p>{effectProse(id,{...meta.exampleParameters,...params},'',{}).join('；')||meta.description}</p>}{meta?.hitRule?.inline&&<p>只改变这项攻击的判定。请在同一项能力中搭配释放方式、敌方目标、物理或魂力攻击检定与伤害，无需另外添加自身增益。</p>}
+    {id==='status.resistance_shift'&&Array.isArray(bounds.类型)&&<AttributeBatch params={{...defaults,...params}} types={bounds.类型} nodes={branch.nodes} disabled={disabled} onChange={nodes=>edit(i,{nodes})}/>}
+    <div className="opening-workshop__grid">{keys.map(key=>{const range=bounds[key],value=params?.[key]??defaults[key],set=(v:any)=>node(i,j,n=>[n[0],{...n[1],[key]:v}]);if(Array.isArray(range)&&range.length===2&&range.every(v=>typeof v==='number'))return <label key={key}>{key}<input type="number" min={range[0]} max={range[1]} value={value??''} onChange={e=>set(Number(e.target.value))}/></label>;if(Array.isArray(range))return <label key={key}>{key}<select value={value??''} onChange={e=>set(range.find(v=>String(v)===e.target.value)??e.target.value)}>{value===undefined&&<option value="">沿用默认</option>}{range.map((v:any)=><option key={String(v)} value={String(v)}>{String(v)}</option>)}</select></label>;if(typeof value==='boolean')return <label className="opening-workshop__check" key={key}><input type="checkbox" checked={value} onChange={e=>set(e.target.checked)}/>{key}</label>;if(typeof value==='number')return <label key={key}>{key}<input type="number" value={value} onChange={e=>set(Number(e.target.value))}/></label>;if(value===undefined||typeof value==='string')return <label key={key}>{key}<input value={value??''} onChange={e=>set(e.target.value)}/></label>;return null;})}</div><JsonInput label="完整效果参数" value={params} disabled={disabled} onApply={v=>node(i,j,n=>[n[0],v])}/>
+   </article>;})}
+   <label>添加效果<select disabled={branch.nodes.length>=12} value="" onChange={e=>{if(e.target.value){const meta=effects[e.target.value];edit(i,{nodes:[...(branch.nodes??[]),[e.target.value,copy(meta.parameterDefaults??{})]]});}}}><option value="">选择能力…</option>{Object.entries(effectFamilyNames).map(([family,name])=><optgroup key={family} label={name}>{choices.filter(([,e])=>e.family===family).map(([id,e])=><option key={id} value={id}>{e.displayName??e.name}</option>)}</optgroup>)}</select></label><Button variant="ghost" onClick={()=>onChange(branches.filter((_,j)=>i!==j))}>移除这项能力</Button>
+  </fieldset>)}
+  <Button variant="secondary" disabled={disabled||branches.length>=4} onClick={()=>onChange([...branches,{id:'branch-'+crypto.randomUUID(),label:`能力${branches.length+1}`,activation:'active',optional:false,nodes:[]}])}>添加一项能力</Button>
+ </section>;
+}

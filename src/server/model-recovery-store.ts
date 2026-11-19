@@ -25,7 +25,7 @@ const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).d
 const error=(message:string)=>new CloudError('model-recovery-record',message,409);
 const STORY_STAGES=new Set(['world-people','generation','generation-repair','generation-rebuild','story-host','story-social','story-belief','story-autonomy','story-writer','room','person-growth','person-conversation','ring-skills','ring-item','research','title','combat','person-performance-agreement','person-cooperation','person-custody-trade','person-custody-auction','person-gift']);
 /** Interactive setup/connection probes are independent user operations, not a pending game turn. */
-export function hasPersistentModelRecovery(kind:string){return STORY_STAGES.has(kind)||['ring-advice','research-advice','person-rewrite','story-rewrite','story-summary','story-stage-summary'].includes(kind);}
+export function hasPersistentModelRecovery(kind:string){return STORY_STAGES.has(kind)||['evolution-advice','evolution-response','ring-advice','research-advice','person-rewrite','story-rewrite','story-summary','story-stage-summary'].includes(kind);}
 export function defaultModelRecoveryDirectory(){return resolve(process.env.DOULUO_MODEL_RECOVERY_DIR??'output/local-runtime/model-recovery');}
 /** Actual turn identity spans rule revisions and all of its necessary model stages. */
 export function modelRecoveryIdentity(worldId:string,snapshot:any,request:any){

@@ -1,6 +1,7 @@
 import {playerDescription} from '../runtime/player-copy';
 import {ModelObservationDetachedError} from '../runtime/model-task';
 import {assetUrl} from './asset-delivery';
+import {sendMessageOnEnter} from './message-enter';
 import {jsonEqual} from '../shared/json-identity';
 import SpiritIllustration from './components/SpiritIllustration';
 import SoulImageEditor from './components/SoulImageEditor';
@@ -35,7 +36,7 @@ export function CreationSoulWorkbench({workspace,change,flush,current,onSettings
   const proposalConfig=proposal?replaceWorkspaceSoul(workspace,index,proposal).config:null;
   const proposalQuery=useServerQuery<any>('creation.preview',{config:proposalConfig},{enabled:Boolean(proposal),delay:120});
   const proposalPreview=proposalQuery.data?.souls[index];
-  const request=workspace.requests[index] ?? '';
+  const request=workspace.requests[index] ?? '',canConsult=!working&&view.modelEnabled;
   const templateEntry=catalog.templates[template];
   const manual=(update:(value:CreationWorkspace)=>CreationWorkspace)=>change(value=>rememberManualSoul(update(value),index));
   const proposeReplacement=(value:Record<string,any>)=>setReplacement(value);
@@ -107,9 +108,9 @@ export function CreationSoulWorkbench({workspace,change,flush,current,onSettings
         {advisor?.session?.advisorMessage&&<blockquote>{playerDescription(creationReason(advisor.session.advisorMessage))}</blockquote>}
         {advisor?.session?.question&&<div className="awakening-advisor__question"><h3>{creationReason(advisor.session.question.text)}</h3><div>{advisor.session.question.options?.map((option:string,optionIndex:number)=><Button key={optionIndex} disabled={working||!view.modelEnabled} variant="secondary" onClick={()=>void consult(option)}>{creationReason(option)}</Button>)}</div></div>}
         {proposal&&<section className="awakening-proposal" aria-label="顾问的新提案"><small>等待你的选择</small><h3>{creationReason(proposal.name||'未命名的构想')}</h3><p>{playerDescription(creationReason(proposal.form))}</p><dl><div><dt>定位</dt><dd>{creationReason(proposal.role)}</dd></div><div><dt>属性</dt><dd>{proposal.attributes.map((entry:any)=>friendly(entry.id)).join(' · ')||'尚未选择'}</dd></div><div><dt>能力</dt><dd>{proposal.channels.map(friendly).join(' · ')||'尚未选择'}</dd></div><div><dt>造化点</dt><dd>{proposalPreview?.inspection.pricing.total} · <GradeBadge grade={proposalPreview?.inspection.quality}/></dd></div></dl>{(proposalPreview?.problems.length??0)>0&&<p className="awakening-proposal__notice">尚有 {proposalPreview.problems.length} 处设定需要完善，可以采用后继续编辑。</p>}<Button disabled={working} onClick={()=>{change(value=>{const adopted=replaceWorkspaceSoul(value,index,proposal);return {...adopted,advisors:{...adopted.advisors,[index]:{...adopted.advisors[index],proposal:null}}};});controller.notify('已采用这份构想，可以继续调整','success');}}>采用这份构想</Button></section>}
-        <label className="awakening-advisor__input">你的想法<textarea value={request} disabled={working} onChange={event=>change(value=>({...value,requests:{...value.requests,[index]:event.target.value}}))} placeholder="例如：一只驾驭火焰的狐狸，擅长魅惑与守护。" maxLength={1800}/></label>
+        <label className="awakening-advisor__input">你的想法<textarea value={request} disabled={working} enterKeyHint="send" onKeyDown={e=>sendMessageOnEnter(e,()=>{if(canConsult&&request.trim())void consult();})} onChange={event=>change(value=>({...value,requests:{...value.requests,[index]:event.target.value}}))} placeholder="例如：一只驾驭火焰的狐狸，擅长魅惑与守护。" maxLength={1800}/></label>
                 {operation?.kind==='advisor'&&advisorStage==='saving'&&<p role="status">AI 答复已收到，正在保存候选…</p>}
-        <div className="awakening-advisor__actions"><Button disabled={working||!view.modelEnabled} onClick={()=>void consult()} data-testid={`consult-soul-${index}`}>{operation?.kind==='advisor'?'AI 请求处理中…':advisor?'继续讨论':'请 AI 顾问一起构思'}</Button>{operation?.kind==='advisor'&&<Button variant="ghost" onClick={stop}>停止这次请求</Button>}</div>
+        <div className="awakening-advisor__actions"><Button disabled={!canConsult} onClick={()=>void consult()} data-testid={`consult-soul-${index}`}>{operation?.kind==='advisor'?'AI 请求处理中…':advisor?'继续讨论':'请 AI 顾问一起构思'}</Button>{operation?.kind==='advisor'&&<Button variant="ghost" onClick={stop}>停止这次请求</Button>}</div>
       </aside>}
     </div>
     <Modal open={Boolean(replacement)} title="更换这份武魂构想" onClose={()=>setReplacement(null)} actions={<><Button variant="ghost" onClick={()=>setReplacement(null)}>保留现有构想</Button><Button onClick={()=>{if(!replacement)return;manual(value=>replaceWorkspaceSoul(value,index,replacement));setReplacement(null);}}>使用这份构想</Button></>}><p>第 {index+1} 武魂将更换为「{replacement?.name || '空白构想'}」。现有讨论记录会保留，你可以从新的设定继续讨论。</p></Modal>

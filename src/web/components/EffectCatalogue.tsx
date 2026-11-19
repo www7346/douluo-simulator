@@ -1,0 +1,8 @@
+import {useState} from 'react';
+import {matchesEffectSearch} from '../../shared/effect-search';
+export const effectFamilyNames:Record<string,string>={release:'释放距离',targeting:'目标与范围',check:'命中与抵抗',payload:'伤害与恢复',status:'强化与控制',movement:'移动',reaction:'反击与反弹',zone:'区域',domain:'领域',summon:'召唤',transform:'变化',modifier:'效果调整',sustain:'持续维持',contract:'契约',trigger:'触发',passive:'常驻能力'};
+export function EffectCatalogue({effects}:{effects:any[]}){
+ const [query,setQuery]=useState(''),[family,setFamily]=useState('');
+ const rows=effects.filter(e=>(!family||e.family===family)&&matchesEffectSearch(e,query));
+ return <details className="effect-catalogue"><summary>查看可用效果与条件</summary><p>先选想实现的作用，再查看来源、年限和组合要求。说明中的数值为初始示例，最终效果以方案预览为准。</p><div className="opening-workshop__grid"><label>搜索效果<input type="search" value={query} placeholder="护盾、反弹、复活、减伤…" onChange={e=>setQuery(e.target.value)}/></label><label>效果类别<select value={family} onChange={e=>setFamily(e.target.value)}><option value="">全部效果</option>{Object.entries(effectFamilyNames).filter(([id])=>effects.some(e=>e.family===id)).map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label></div><p role="status">找到 {rows.length} 项效果</p><div className="effect-catalogue__list">{rows.map(e=><article key={e.id}><strong>{e.name}</strong><p>{e.description}</p><small>至少{e.minimumAgeTier}魂环{e.eligibleNow?' · 当前可以设计':e.sourceCanBeDesigned?' · 采用前会核对所需年限与武魂能力':` · ${[!e.ageAllowed&&'魂环年限不足',!e.martialSoulAllowed&&'武魂方向未开放',!e.bridgeAvailable&&'当前来源不支持'].filter(Boolean).join('，')}`}</small>{e.requires?.length>0&&<p>搭配：{e.requires.map((id:string)=>effects.find(row=>row.id===id)?.name??'所需前置效果').join('、')}</p>}</article>)}</div></details>;
+}

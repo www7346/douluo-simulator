@@ -1,4 +1,5 @@
-import {promptMessage} from '../runtime/model-prompt-templates';
+import {promptDataMessage,promptMessage} from '../runtime/model-prompt-templates';
+import {conversationWriterMessages} from '../runtime/story-writer-prompts';
 import {partyProposalReplies} from '../shared/story-party-proposals';
 import {compileStoryPrompt,conversationPromptConfig} from '../runtime/story-prompts';
 import {partyReplyAudience,partySpeakerFacts} from '../runtime/story-party-chat';
@@ -18,14 +19,16 @@ import {preflightStoryWritingCycle} from './story-writing-capacity';
 
 export {STORY_PARTY_AUTHOR_CONTRACT} from './story-author-contract';
 
+type PartyReply = {speakerId:string;text:string};
+
 function partyPromptForTurn(snapshot:GameSnapshot,input:Record<string,any>,worldId:string|null) {
  const state=snapshot.state as any, ledger=state.扩展.story, turn=ledger.active;
  if(turn?.status!=='resolved'||input.branchId!==ledger.branchId||input.turn!==turn.number)throw Error('队伍消息尚未结算或已经完成');
  const message=partyMessageForTurn(turn), recipients=message?partyReplyAudience(state,message):[];
  const base=createStoryWritingPackage(snapshot,worldId,turn);
- const config=conversationPromptConfig(input.prompts??undefined);
+ const originalConfig=input.prompts??undefined,config=conversationPromptConfig(originalConfig);
  // Reuse only the common source of this message. Each speaker still has a separate view and recovery key.
- return function prepare(speakerId?:string) {
+ return function prepare(speakerId?:string,earlierReplies:readonly PartyReply[]=[]) {
   const audience=speakerId===undefined?recipients:recipients.filter(person=>person.personId===speakerId);
   if(speakerId!==undefined&&!audience.length)throw Error('这位人物没有收到本次群消息');
   let writingPackage=base;
@@ -34,8 +37,20 @@ function partyPromptForTurn(snapshot:GameSnapshot,input:Record<string,any>,world
    writingPackage=derivePartySpeakerPackage(base,speakerId,compileStoryWritingFacts({...turn,before:facts,after:facts},speakerId));
   }
   const writingView=selectStoryWritingView(writingPackage);
-  const compiled=compileStoryPrompt(config,{target:'party',trigger:'normal',user:state.人物.列表[state.角色.主控单位ID].name,character:'队伍成员',slots:{
-   main:[promptMessage('party-chat'),{role:'system',content:JSON.stringify({factSource:{id:writingPackage.id,origin:writingPackage.origin,factsHash:writingPackage.factsHash},writingFacts:writingView.facts,replyAudienceIds:audience.map(person=>person.personId)})}],
+  // Only this turn's validated group replies are visible to a connected recipient.
+  // The request (including these exact lines) is also part of the author recovery key.
+  const sameTurnReplies=earlierReplies.flatMap(reply=>{
+   const sender=recipients.find(person=>person.personId===reply.speakerId);
+   return speakerId&&sender&&sender.personId!==speakerId?[{...reply,speaker:sender.name}]:[];
+  });
+  const packet={
+   factSource:{id:writingPackage.id,origin:writingPackage.origin,factsHash:writingPackage.factsHash},
+   writingFacts:writingView.facts,
+   replyAudienceIds:audience.map(person=>person.personId),
+   ...(sameTurnReplies.length?{sameTurnReplies}:{})
+  };
+  const compiled=compileStoryPrompt(config,{target:'party',trigger:'normal',user:state.人物.列表[state.角色.主控单位ID].name,character:speakerId?state.人物.列表[speakerId]?.name??'队伍成员':'队伍成员',slots:{
+   main:[...conversationWriterMessages(originalConfig??config,promptMessage('party-chat'),'party'),promptDataMessage(packet,{},'system')],
    chatHistory:[{role:'user',content:message?.text??''}],
   }});
   if(compiled.prefill)throw Error('群回复使用说话人JSON协议，不能套用小说预填充；原配置未更改');
@@ -56,7 +71,7 @@ export async function runPartyReplies(snapshot:GameSnapshot,worldId:string,input
  if(generated){
   for(const speakerId of ids){
    signal.throwIfAborted();
-   const own=input.speakerId===speakerId?p:prepare(speakerId);
+   const own=input.speakerId===speakerId?p:prepare(speakerId,messages);
    preflightStoryWritingCycle(gateway,own.writingPackage,own.compiled.messages,own.promptStructure,{authorTask:'party-chat'});
    const written=await writeStoryAuthor({source:own.writingPackage,gateway,messages:own.compiled.messages,promptStructure:own.promptStructure,task:'party-chat',signal,diagnostics,recoveryBudget,recovery});resumed=resumed||written.resumed;
    const value=readStoryAuthorJson(written.raw),rows=Array.isArray(value?.messages)?value.messages:Array.isArray(value)?value:[{speakerId:value?.speakerId??speakerId,text:typeof value?.text==='string'?value.text:written.raw}];

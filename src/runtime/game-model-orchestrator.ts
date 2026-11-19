@@ -5,6 +5,7 @@ import {creativeMessages} from './model-prompts';
 import {materialWritingContext,soulWritingContext,beastWritingContext,establishedName} from './creative-context';
 import {abilityWritingMeaning,researchAbilityWritingSource} from './ability-writing';
 import {martialSoulWritingMeaning,martialSoulTraitMeaning,martialSoulDesignAuthority} from './martial-soul-writing';
+import {martialSoulChannelDescription} from './martial-soul-channels';
 import {checkedDesign,reviewDesignAuthority} from './model-design-authority';
 import {ModelProposalValidationError} from '../shared/model-proposal-validation-error';
 
@@ -63,7 +64,7 @@ export async function requestMartialSoulAdvice(
     currentMeaning:contextDraft?martialSoulWritingMeaning(contextDraft):null,
     categories: Object.values(rules.martialSoul.CATEGORY_REGISTRY).filter((item: any) => item.selectable !== false).map((item: any) => ({id:item.id,name:item.name,family:item.family,cost:item.cost})),
     attributes: Object.values(rules.martialSoul.ATTRIBUTE_REGISTRY).map((item: any) => ({id:item.id,name:item.name,minimumInvestment:item.minimumInvestment,maximumInvestment:item.maximumInvestment,levels:Array.from({length:item.maximumInvestment-item.minimumInvestment+1},(_,index)=>({investment:index+item.minimumInvestment,weight:10+rules.martialSoul.attributeStrength({id:item.id,investment:index+item.minimumInvestment})}))})),
-    channels: Object.values(rules.martialSoul.CHANNEL_REGISTRY).map((item: any) => ({id:item.id,name:item.name,cost:item.cost,attributeHints:rules.martialSoul.channelAttributeIds(item.id),effects:item.effectIds.map((id:string)=>rules.effects.EFFECT_REGISTRY[id]?.displayName??id)})),
+    channels: Object.values(rules.martialSoul.CHANNEL_REGISTRY).map((item: any) => ({id:item.id,name:item.name,description:martialSoulChannelDescription(item.id),cost:item.cost,attributeHints:rules.martialSoul.channelAttributeIds(item.id),effects:item.effectIds.map((id:string)=>rules.effects.EFFECT_REGISTRY[id]?.displayName??id)})),
     baseActionModes: Object.values(rules.martialSoul.BASE_ACTION_MODES).map((item: any) => ({id:item.id,name:item.name,
       levels:[0,1,2].map(powerTier=>({powerTier,cost:rules.martialSoul.componentCost(rules.martialSoul.normalizeDraft({baseAction:{mode:item.id,powerTier,attributeId:'attribute.ice'}})).total}))})),
     pricing:{positiveCosts:['categories.cost','attributes.investment','channels.cost','traits.cost','baseActionModes.levels.cost'],weaknessRefundMaximumFraction:0.25,refundRounding:'向下取整',budget},
@@ -78,7 +79,14 @@ export async function requestMartialSoulAdvice(
       question:{text:'是否采用',options:['采用','调整'],allowDelegate:true},
     },
   };
-  return checkedDesign(gateway,{task:'martial-soul-advisor',messages:creativeMessages('martial-soul-advisor',registry),read:value=>{
+  return checkedDesign(gateway,{task:'martial-soul-advisor',messages:creativeMessages('martial-soul-advisor',registry),correctionBase:()=>{
+    // The correction already carries the candidate's compiled effects and itemized pricing.
+    // Keep the original choices in session.draft and retain its totals and checks.
+    const {currentMeaning:_meaning,currentInspection,...context}=registry;
+    if(!currentInspection)return creativeMessages('martial-soul-advisor',context);
+    const {ledger:_ledger,...pricing}=currentInspection.pricing;
+    return creativeMessages('martial-soul-advisor',{...context,currentInspection:{...currentInspection,pricing}});
+  },read:value=>{
     if(!value||typeof value!=='object'||Array.isArray(value)||!['question','proposal'].includes((value as any).mode))throw new ModelProposalValidationError('AI武魂顾问必须选择question或proposal模式',{responseShape:registry.responseShape});
     const advanced = rules.martialSoul.advanceAdvisorSession(session, options.session ? description : '', value, {budget});
     if(options.requireCompleteProposal){

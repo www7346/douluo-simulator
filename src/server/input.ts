@@ -50,7 +50,16 @@ export function parseSnapshotBytes(bytes:Buffer):GameSnapshot {
 // Internal rewards, generated candidates, narrative settlements and arbitrary battle
 // creation are deliberately absent. Those are invoked by server-owned workflows.
 const fields:Record<string,string[]>={
+  'evolution.acquire-source':['sourceId','quantity','mode'],
+  'evolution.brew':['sources','name'],
+  'evolution.adopt':['actorId','soulId','payerId','goal','target','stages','sources','materials','rings','repairLimit','artId'],
+  'evolution.progress':['planId','minutes','sources'],
+  'evolution.cancel':['planId'],
+  'manifestation.action':['soulId','operation'],
   'person.apply-rewrite':['grantId','patchId','expectedToken','patch'],
+  'player.edit-appearance':['mode','description','expectedAppearance'],
+  'ring.edit-skill-description':['skillId','description'],
+  'summon.order':['unitId','mode','targetId','skillId','destinationId'],
   'party.recover':['personId'],
   'character.quick-action':['characterId','action'],
   'story.begin':['branchId','turn','input','privatePersonId','partyChat'],
@@ -67,7 +76,7 @@ const fields:Record<string,string[]>={
   'opening.guidance':['action','giftId'],
   'workflow.apply':['ticket'],
   'research.naming-status':['pendingId','mechanicsHash','phase','reason'],
-  'ring.prepare-choice':['presetId','lootId','martialSoulId','requestedEffects','requestedBranches','requestedSkills','requestedEffectIds','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules'],
+  'ring.prepare-choice':['evolutionTarget','presetId','lootId','martialSoulId','requestedEffects','requestedBranches','requestedSkills','requestedEffectIds','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules'],
   'player.create':['mode','name','age','gender','origin','appearance','background','opening','situations','avatar','attributes','martialSoulCount','martialSoulDrafts','difficulty','openingWorkshop'],
   'battle.action':[...BATTLE_ACTION_FIELDS],
   'battle.auto-until-player':['limit'],
@@ -76,7 +85,7 @@ const fields:Record<string,string[]>={
   'battle.set-preferences':['scope','preferences'],
   'battle.set-strategy':['focusTargetId','protectTargetId','reservePercent','retreatPercent'],
   'battle.report':['battleId'],
-  'world.intent':['fixture','hands','legs','footwear','mouth','contractId','contractKind','versionHash','clauseId','orderId','source','lines','replace','reservePercent','agreementId','terms','realmId','regionId','environment','permissions','nodeId','deviceNodeId','keyItemId','lockId','knowledgeId','method','branchIds','targetItemId','statusId','carrierItemId','claim','decision','covert','accountId','quoteVersion','auctionClass','maximumGold','direction','merchantId','enabled','flags','filters','messageId','text','catalogId','operatorId','releaseAfterMinutes','assetKind','assetRef','materials','type','remainsId','destinationId','modeId','mode','entityId','martialSoulId','itemId','quantity','shopId','templateId','materialId','fingerprint','equipmentSlot','slot','targetId','characterId','recipeId','blueprintId','request','eventId','modifierSkillId','skillId','maintenanceSourceId','defeatId','restraintItemIds','relockAfterMinutes','limits','force','permissionId','facilityId','cellId','locked','amount','targetIds','guardIds','escortId','dutyId','minutes','relationship','relationId','accept','reason','factIds','rescueId','cooperationId','preparationId','deviceOperations','executorId','action','basis','membership','dungeonId','allowTravel','allowCombat','durationMinutes','buyerId','gold','expiresInMinutes','deviceTerms','offerId','reserveGold','auctionId','quoteEventId','forced','level','percent','formId','preset'],
+  'world.intent':['stayBehind','reconLocationId','fixture','hands','legs','footwear','mouth','contractId','contractKind','versionHash','clauseId','orderId','source','lines','replace','reservePercent','agreementId','terms','realmId','regionId','environment','permissions','nodeId','deviceNodeId','keyItemId','lockId','knowledgeId','method','branchIds','targetItemId','statusId','carrierItemId','claim','decision','covert','accountId','quoteVersion','auctionClass','maximumGold','direction','merchantId','enabled','flags','filters','messageId','text','catalogId','operatorId','releaseAfterMinutes','assetKind','assetRef','materials','type','remainsId','destinationId','modeId','mode','entityId','martialSoulId','itemId','quantity','shopId','templateId','materialId','fingerprint','equipmentSlot','slot','targetId','characterId','recipeId','blueprintId','request','eventId','modifierSkillId','skillId','maintenanceSourceId','defeatId','restraintItemIds','relockAfterMinutes','limits','force','permissionId','facilityId','cellId','locked','amount','targetIds','guardIds','escortId','dutyId','minutes','relationship','relationId','accept','reason','factIds','rescueId','cooperationId','preparationId','deviceOperations','executorId','action','basis','membership','dungeonId','allowTravel','allowCombat','durationMinutes','buyerId','gold','expiresInMinutes','deviceTerms','offerId','reserveGold','auctionId','quoteEventId','forced','level','percent','formId','preset'],
   'world.resolve-battle':[],
   'growth.allocate':['unitId','attribute','steps'],
   'growth.allocate-batch':['sourceKey','allocations'],
@@ -97,6 +106,8 @@ const fields:Record<string,string[]>={
   'character.fulfill-promise':['characterId','commitmentId'],
   'character.attend-invitation':['characterId','commitmentId'],
   'character.respond-npc-request':['requestId','action','itemId'],
+  'world.set-npc-gender':['mode'],
+  'world.work':['days'],
   'world.cultivate':['days','hours','minutes'],
   'character.request-growth':['personId','source'],
   'conversation.create':['personIds','title'],'conversation.send':['conversationId','text'],
@@ -118,10 +129,10 @@ const fields:Record<string,string[]>={
   'expedition.withdraw-personally':['agreementId'],
   'supply.buy':['templateId','quantity','maximumGold'], 'inventory.claim-stored':['itemId'],
   'material.sell':['fingerprint','quantity','accountId','quoteVersion'], 'item.sell':['itemId','quantity'],
-  'ring.item.prepare':['presetId','itemId','entityId','martialSoulId','ringIndex','slotIndex','requestedEffects','requestedBranches','requestedSkills','requestedEffectIds','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules'],
+  'ring.item.prepare':['evolutionTarget','presetId','itemId','entityId','martialSoulId','ringIndex','slotIndex','requestedEffects','requestedBranches','requestedSkills','requestedEffectIds','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules'],
   'ring.reroll':['pendingId','candidateId','candidateIndex'],
   'ring.replace-preset':['pendingId','candidateId'],
-  'ring.prepare-from-beast':['presetId','beastUnitId','entityId','martialSoulId','ringIndex','slotIndex','requestedEffects','requestedBranches','requestedSkills','requestedEffectIds','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules'],
+  'ring.prepare-from-beast':['evolutionTarget','presetId','beastUnitId','entityId','martialSoulId','ringIndex','slotIndex','requestedEffects','requestedBranches','requestedSkills','requestedEffectIds','exchangeContracts','requirements','resourceCosts','maintenanceCosts','castModes','defaultCastMode','cooldownTurns','usageRules'],
   'ring.confirm-choice':['pendingId','candidateId'],
   'ring.self-condense':['martialSoulId'],
   'research.begin':['presetId','category','concept','materials','confirmed','expectedMechanicsHash','hostDesign','confirmedDesign'],
@@ -144,6 +155,7 @@ export function validateCommand(command:GameCommand):GameCommand {
   if(command.type==='player.create'&&!payload?.background)throw new CloudError('invalid-command','请选择新版背景；旧角色方案仅可查看与导出');
   if(!payload||typeof payload!=='object'||Array.isArray(payload))throw new CloudError('invalid-command','操作参数不完整');
   if(Object.keys(payload).some(key=>!fields[command.type].includes(key)))throw new CloudError('invalid-command','操作包含不支持的参数');
+  if(Object.hasOwn(payload,'stayBehind')&&(payload.type!=='travel'||!Array.isArray(payload.stayBehind)||payload.stayBehind.length>3||payload.stayBehind.some(id=>typeof id!=='string'||!id||id.length>160)||new Set(payload.stayBehind).size!==payload.stayBehind.length))throw new CloudError('invalid-command','留队名单只能包含本次旅行选择的队友');
   if(command.type==='world.intent'&&['fixture','hands','legs','footwear','mouth'].some(key=>Object.hasOwn(payload,key))&&payload.type!=='set-realm-arrangement')throw new CloudError('invalid-command','固定与装备选项只能用于画境安排');
   if(command.type==='world.intent'&&!(WORLD_INTENT_TYPES as readonly string[]).includes(String(payload.type)))throw new CloudError('invalid-command','不支持这项世界操作');
   if(command.type==='battle.auto-until-player'&&payload.limit!==undefined&&(!Number.isSafeInteger(payload.limit)||Number(payload.limit)<8||Number(payload.limit)>48))throw new CloudError('input-limit','自动行动次数超出本次上限');

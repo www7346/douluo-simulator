@@ -82,7 +82,7 @@
  'loc-tang-heaven-dou':SHOP_IDS.filter(id=>id.startsWith('tang-'))
  });
  const quantity=id=>id.startsWith('tang-')?6:(c.BASIC.find(v=>v[0]===id)?.[1]??Object.values(c.REGIONS).flat().find(v=>v[0]===id)?.[1]??(cards.find(v=>v.id===id)?.category==='丹药药剂'?4:1));
- const stockAt=id=>(REGIONS[id]??[]).map(v=>[v,quantity(v)]);
+ const stockAt=id=>(REGIONS[id]??[]).map(v=>[v,quantity(v)]).concat(REGIONS[id]?(globalThis.SoulExpeditionEngine?.presetBlueprintStock?.(id)??[]):[]);
  const auction=[];
  function auctionCard(id,name,category,appearance,origin,reason,definition){auction.push({id,name,category,appearance,origin,purchaseReason:reason,regions:['天斗拍卖中心'],supply:{channel:'审定原型材料渠道',automaticShareCap:.25,unique:false},valuation:'实际机制估值；常规1000、珍品50000门槛及类别资格',...definition});}
  for(const [id,name]of CONTRACT_PAPERS){const t=templates[id];auctionCard('auction-'+id,name,'灵魂契约纸',t.description,t.lore,t.purpose,{kind:'item',templateId:id});}

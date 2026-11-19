@@ -34,6 +34,12 @@
   }
   function custodyRecord(s,actorId,targetId){const r=custody.active(s,targetId);if(!r||r.custodianId!==actorId)throw Error('没有该人物的当前看管权限');if(custody.isIdentity(r)){const unit=s.战斗单位.列表[targetId],blocked=controls.restrictions(s,targetId).blocked,controlled=globalThis.SoulInfluenceCore.authority(s,actorId,targetId,'移动');if(unit?.存活状态==='存活'&&unit.资源.生命.当前>0&&!controlled.available&&!(blocked.gesture?.length&&blocked.movement?.length))throw Error('身份归属本身不能将清醒自由人物关押；须先取得真实身体或移动控制');}return r;}
   function facility(s,id){return rows(s,'facilities').find(f=>f.id===id);}
+  function currentRoom(s,actorId){
+    const p=actions.positionOf(s,actorId);
+    if(p.kind!=='location'||!p.sceneId)return null;
+    const f=rows(s,'facilities').find(f=>f.locationId===p.locationId&&f.cells.some(c=>c.spaceId===p.sceneId));
+    return f?{facility:f,cell:f.cells.find(c=>c.spaceId===p.sceneId)}:null;
+  }
   function facilityAt(s,actorId,id,managed=true){
     const f=facility(s,id),p=actions.positionOf(s,actorId);awake(s,actorId);
     if(!f||managed&&!f.operatorIds.includes(actorId)||p.kind!=='location'||p.locationId!==f.locationId||p.sceneId&&!p.sceneId.startsWith(`${f.id}:`))throw Error('必须实际到达有权限的关押设施');
@@ -72,7 +78,7 @@
     }else throw Error('未知设施操作');
     const actorName=s.人物.列表[r.actorId]?.name??'你',targetName=s.人物.列表[r.targetId]?.name??'对方',cellName=r.cellId?`第${f.cells.findIndex(c=>c.id===r.cellId)+1}间看管室`:'';
     const summary=r.type==='visit-custody-cell'?`${actorName}${r.cellId?'进入了'+f.name+'的'+cellName:'离开房间，回到'+f.name+'的公共通道'}。`:r.type==='set-custody-cell-door'?`${actorName}${r.locked?'锁上':'打开'}了${f.name}的${cellName}房门。`:r.type==='admit-captive'?`${actorName}将${targetName}安置到${f.name}的${cellName}，房门保持当前开闭状态。`:r.type==='withdraw-captive'?`${actorName}将${targetName}领到自己实际所在的${p.spaceId?f.name+'房间':'公共通道'}，原有拘束继续生效。`:`${actorName}完成了${f.name}的修整。`;
-    save(s,'facilities',f,r.actorId,sourceId,r.type);return {facilityId:f.id,targetId:r.targetId??'',summary};
+    save(s,'facilities',f,r.actorId,sourceId,r.type);return {facilityId:f.id,targetId:r.targetId??'',...(r.type==='set-custody-cell-door'?{cellId:r.cellId,locked:r.locked}:{}),summary};
   }
   function permitDuty(s,r,sourceId){
     awake(s,r.actorId);actions.resolve(s,{actorId:r.actorId,battleId:null,targetIds:[r.targetId]});if(r.actorId===r.targetId||!['guard','escort'].includes(r.mode))throw Error('职责许可需要真实的另一人和具体职责');
@@ -110,7 +116,7 @@
   function setTransit(s,e,run){travel.publishTransit(s,run);}
   function handoff(s,id,from,toActionId,sourceId){custody.event(s,'transit-handoff',id,id,`${sourceId}:${id}`,{personId:id,from:clone(from),toActionId});}
   function beginLeg(s,e,sourceId,h,resumed=null){
-    const route=e.path.routes[e.legIndex],from=resumed?.from??e.currentLocationId,to=route.from===from?route.to:route.from,offset=resumed?.elapsedMinutes??0,cost=resumed?0:route.costGold;
+    const route=e.path.routes[e.legIndex],from=resumed?.from??e.currentLocationId,to=route.from===from?route.to:route.from,offset=resumed?.elapsedMinutes??0,cost=0;
     h.assertRoute(s,e.leaderId,route,to);
     if(wallet(s,e.leaderId).gold<cost)throw Error('押送旅费不足');wallet(s,e.leaderId).gold-=cost;e.paidGold+=cost;e.status='travelling';e.currentLocationId='';
     const run={sourceId,legIndex:e.legIndex,routeId:route.id,from,to,totalMinutes:route.minutes,startOffset:offset,endOffset:offset,startedAt:resumed?.startedAt??now(s),beganAt:now(s),progressedAt:now(s),endedAt:null,costGold:cost,personIds:clone(e.personIds),resumes:clone(resumed),arrived:false};
@@ -268,12 +274,12 @@
       if(e.id!==`escort:${e.sourceId}`||!s.人物.列表[e.leaderId]||!e.guardIds.includes(e.leaderId)||new Set(e.personIds).size!==e.personIds.length||!same([...e.guardIds,...e.custodyRefs.map(r=>r.personId)],e.personIds)||!['travelling','paused','arrived','cancelled'].includes(e.status)||!e.runs.length)throw Error('押送合同');
       const first=db.events.find(v=>v.type==='logistics-escorts'&&v.entityId===e.id);
       if(!first||!same(first.record.custodyRefs,e.custodyRefs)||e.custodyRefs.some(ref=>ref.personId!==ref.authority?.personId||ref.custodyId!==ref.authority?.custodyId||!custody.authorityAt(s,ref.authority,e.leaderId,first.at,first.order)))throw Error('押送开始时看管权限');
-      if(!Array.isArray(e.path.routes)||!e.path.routes.length||!same(e.path.routeIds,e.path.routes.map(r=>r.id))||e.path.routes.some(r=>!same(r,h.routes[r.id]))||!h.locations[e.destinationId]||!e.guardPermissions||Object.keys(e.guardPermissions).length!==e.guardIds.length||e.guardPermissions[e.leaderId]!==null)throw Error('押送路径或护送许可');
+      if(!Array.isArray(e.path.routes)||!e.path.routes.length||!same(e.path.routeIds,e.path.routes.map(r=>r.id))||e.path.routes.some(r=>!h.routeSnapshotMatches(r,h.routes[r.id]))||!h.locations[e.destinationId]||!e.guardPermissions||Object.keys(e.guardPermissions).length!==e.guardIds.length||e.guardPermissions[e.leaderId]!==null)throw Error('押送路径或护送许可');
       let paid=0;const runIds=new Set();for(const [index,run] of e.runs.entries()){
         const route=h.routes[run.routeId],previous=e.runs[index-1],started=db.events.find(v=>v.type==='logistics-escorts'&&v.entityId===e.id&&v.record.runs.some(r=>r.sourceId===run.sourceId));
         travel.validate(s,run,route.mode==='sea'?[]:e.personIds,route.mode==='sea'?e.personIds:[]);if(run.travel.actionId!==e.id)throw Error('押送共享路程来源');
         if(!started||e.custodyRefs.some(ref=>!custody.authorityAt(s,ref.authority,e.leaderId,started.at,started.order)))throw Error('路段开始时原看管权限');
-        if(!route||runIds.has(run.sourceId)||run.routeId!==e.path.routes[run.legIndex]?.id||run.totalMinutes!==route.minutes||![route.from,route.to].includes(run.from)||run.to!==(route.from===run.from?route.to:route.from)||run.endOffset<run.startOffset||run.endOffset>route.minutes||run.progressedAt<run.beganAt||run.progressedAt>at||run.costGold!==(run.resumes?0:route.costGold)||!same(run.personIds,e.personIds)||run.personIds.some(id=>!s.人物.列表[id]||(s.人物.列表[id].life?.death?.at<run.beganAt||s.人物.列表[id].life?.death?.at===run.beganAt&&!(e.status==='cancelled'&&run.endedAt===run.beganAt&&run.endOffset===run.startOffset)))||run.arrived&&run.endOffset!==route.minutes)throw Error('路段进度');
+        if(!route||runIds.has(run.sourceId)||run.routeId!==e.path.routes[run.legIndex]?.id||run.totalMinutes!==route.minutes||![route.from,route.to].includes(run.from)||run.to!==(route.from===run.from?route.to:route.from)||run.endOffset<run.startOffset||run.endOffset>route.minutes||run.progressedAt<run.beganAt||run.progressedAt>at||![0,run.resumes?0:route.costGold].includes(run.costGold)||!same(run.personIds,e.personIds)||run.personIds.some(id=>!s.人物.列表[id]||(s.人物.列表[id].life?.death?.at<run.beganAt||s.人物.列表[id].life?.death?.at===run.beganAt&&!(e.status==='cancelled'&&run.endedAt===run.beganAt&&run.endOffset===run.startOffset)))||run.arrived&&run.endOffset!==route.minutes)throw Error('路段进度');
         if(previous&&(previous.endedAt===null||previous.endedAt>run.beganAt||run.legIndex!==(previous.arrived?previous.legIndex+1:previous.legIndex)||previous.arrived&&previous.to!==run.from))throw Error('押送路段顺序');
         if(run.resumes){for(const id of run.personIds){const old=priorSource(s,run.resumes,id);if(!old||old.arrived||old.after>run.beganAt||old.routeId!==run.routeId||old.from!==run.from||old.to!==run.to||old.endOffset!==run.startOffset||old.startedAt!==run.startedAt||!db.events.some(ev=>ev.type==='transit-handoff'&&ev.personId===id&&ev.sourceId===`${run.sourceId}:${id}`&&ev.toActionId===e.id&&same(ev.from,run.resumes)))throw Error('续行来源');}}
         else if(run.startOffset!==0||run.startedAt!==run.beganAt)throw Error('首次出发进度');
@@ -296,5 +302,5 @@
     }
     return errors;
   }
-  return Object.freeze({FACILITIES,INTENTS,execute,nextAt,progressAt,refreshTravelAt,advanceAt,busyReason,guardedBy,barrier,breakDoor,transitSource,transitConsumed,facts,validate,save,facility,occupants,escortRoster,assertEscortDestination});
+  return Object.freeze({FACILITIES,INTENTS,execute,nextAt,progressAt,refreshTravelAt,advanceAt,busyReason,guardedBy,barrier,breakDoor,transitSource,transitConsumed,facts,validate,save,facility,currentRoom,occupants,escortRoster,assertEscortDestination});
 });

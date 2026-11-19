@@ -72,7 +72,9 @@
   }
   if(!Object.hasOwn(device.modes,definition.mode))throw Error('当前拘束部位不能采用这个模式，请选择锁定或解放');
   const mechanicalHash=abilities.hash({version:2,templateHash:abilities.hash(base),binding:b??null,modes:device.modes});
-  const activeBinding=device.modes[definition.mode].some(([id])=>id==='status.limb_bind');
+  // Keep the declared recipe and its issued proof stable. Custody applies the
+  // authored mode policy when reading/activating effects, including saved ones.
+  const activeBinding=!(definition.mode==='limited'&&b?.retainInLimited===false)&&device.modes[definition.mode].some(([id])=>id==='status.limb_bind');
   return {definition,device,priceGold,mechanicalHash,activeBinding,contract:{version:2,definition,templateHash:abilities.hash(base),mechanicalHash}};
  }
  function resolve(item){

@@ -8,7 +8,7 @@ import {abilityWritingMeaning} from '../runtime/ability-writing';
 import {soulWritingContext} from '../runtime/creative-context';
 import {requestMartialSoulDraft} from '../runtime/game-model-orchestrator';
 import {creativeMessages} from '../runtime/model-prompts';
-import type {ModelGateway} from '../runtime/model-gateway';
+import {ModelGatewayError,type ModelGateway} from '../runtime/model-gateway';
 import {rules} from '../rules';
 import {validateCommand} from './input';
 import {issueWorkflowTicket,stateFingerprint,supportsWorkflowCommand} from './workflow-ticket';
@@ -111,15 +111,30 @@ export async function completeGeneratedCommand(snapshot:GameSnapshot,worldId:str
  };
  const abilityResponse={kind:'对应kind',id:'对应id',fingerprint:'原样fingerprint',name:'正式技能名',description:'依据机制的自然介绍'};
  for(const target of targets.filter(t=>t.kind==='person'&&!labeled(t))){
-  const person=target.value,output=gateway.checkTaskSettings('character-profile').outputTokens??4096;
+  const person=target.value;
+  if(person.扩展?.characterProfile?.status==='complete'&&!repairIds.includes(person.id)){
+   labels.push(...validateBatch([target],[{kind:target.kind,id:target.id,fingerprint:target.fingerprint,profileSource:'existing'}]));
+   continue;
+  }
+  const output=gateway.checkTaskSettings('character-profile').outputTokens??4096;
   const first=targets.filter(t=>t.kind!=='person'&&t.ownerId===person.id&&!labeled(t)).slice(0,Math.min(6,Math.max(0,Math.floor((output-2500)/500))));
-  const result=await gateway.structured(creativeMessages('character-profile',{person:{id:person.id,name:person.name,age:person.age,gender:person.gender,appearance:person.appearance,personality:person.personality,occupation:person.occupation,faction:person.faction,level:state.成长.列表[person.id]?.魂力等级??0},
+  const messages=creativeMessages('character-profile',{person:{id:person.id,name:person.name,age:person.age,gender:person.gender,appearance:person.appearance,personality:person.personality,occupation:person.occupation,faction:person.faction,level:state.成长.列表[person.id]?.魂力等级??0},
    location:rules.world.LOCATION_TEMPLATES[person.locationId]?.name,existingProfile:person.扩展?.characterProfile?.data,positioning:rules.world.NPC_ARCHETYPES[person.扩展?.archetypeId]?.creationGuidance,
    souls:(Object.values(state.武魂.列表) as any[]).filter(s=>s.持有者单位ID===person.id).map(soulWritingContext),knownHistory:person.扩展?.共同经历??[],
    ...(target.allowPersonalName?{personalNameInstruction:'现有姓名是店铺职称。为此人提供2至5字中文个人姓名，保留店铺、职业及交易关联。'}:{}),
    ...(first.length?abilityPacket(first,'character-profile'):{}),
-   response:{...(target.allowPersonalName?{name:'中文个人姓名'}:{}),profile:{biography:'人物小传',values:'价值取向与性格细节',speech:'表达习惯',shortTermGoal:'短期目标',longTermGoal:'长期目标'},...(first.length?{abilities:[abilityResponse]}:{})}}),
-   (value:any)=>validateBatch([target,...first],[{kind:target.kind,id:target.id,fingerprint:target.fingerprint,profile:value.profile,...(target.allowPersonalName?{name:value.name}:{})},...(first.length?Array.isArray(value.abilities)?value.abilities:[]:[])]),{task:'character-profile',signal,repairValidation:true});
+   response:{...(target.allowPersonalName?{name:'中文个人姓名'}:{}),profile:{biography:'人物小传',values:'价值取向与性格细节',speech:'表达习惯',shortTermGoal:'短期目标',longTermGoal:'长期目标',examples:[{prompt:'对方的话或动作',reply:'本人会怎样回应'}]},...(first.length?{abilities:[abilityResponse]}:{})}});
+  const localProfile=(snapshot.state as any).人物?.列表?.[person.id]?undefined:person.扩展?.characterProfile?.data;
+  let result:GenerationLabel[];
+  try{
+   result=await gateway.structured(messages,
+    (value:any)=>validateBatch([target,...first],[{kind:target.kind,id:target.id,fingerprint:target.fingerprint,profile:value.profile,...(target.allowPersonalName?{name:value.name}:{})},...(first.length?Array.isArray(value.abilities)?value.abilities:[]:[])]),
+    {task:'character-profile',signal,repairValidation:!localProfile,...(localProfile?{repairFormat:false}:{})});
+  }catch(error){
+   signal.throwIfAborted();
+   if(!localProfile||!(error instanceof ModelGatewayError)||['cancelled','evaluation-limit','evaluation-ledger','model-recovery-record'].includes(error.kind))throw error;
+   result=validateBatch([target],[{kind:target.kind,id:target.id,fingerprint:target.fingerprint,profile:localProfile,profileSource:'preset'}]);
+  }
   labels.push(...result);progress.data.labels.push(...result);progress.save();
  }
  const missing=targets.filter(t=>t.kind!=='person'&&!labeled(t));

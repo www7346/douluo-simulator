@@ -30,7 +30,7 @@
     return result;
   }
   const readIndexes=new WeakMap(),limitReads=new WeakMap();
-  function liveStatus(state,status){return status.状态!=='已结束'&&globalThis.SoulDeviceOperations?.statusEffective(state,status)!==false&&globalThis.SoulDeviceLocks?.statusEffective(state,status)!==false&&(status.快照?.参数?.来源依赖!=='道具有效'||!sourceInvalidReason(state,status));}
+  function liveStatus(state,status){return status.状态!=='已结束'&&globalThis.SoulDeviceOperations?.statusEffective(state,status)!==false&&globalThis.SoulDeviceLocks?.statusEffective(state,status)!==false&&globalThis.SoulCustodyCore?.statusEffective(state,status)!==false&&(status.快照?.参数?.来源依赖!=='道具有效'||!sourceInvalidReason(state,status));}
   function statusIndex(state){const index=new Map();for(const status of Object.values(state.状态实例?.列表??{}))if(liveStatus(state,status)){const rows=index.get(status.目标单位ID)??[];rows.push(status);index.set(status.目标单位ID,rows);}return index;}
   function withReadIndex(state,read){const previous=readIndexes.get(state);if(!previous){readIndexes.set(state,statusIndex(state));limitReads.set(state,new Map());}try{return globalThis.SoulHostCore?globalThis.SoulHostCore.withReadIndex(state,read):read();}finally{if(!previous){readIndexes.delete(state);limitReads.delete(state);}}}
   function invalidateReadIndex(state,linked=true){readIndexes.delete(state);limitReads.delete(state);if(linked)globalThis.SoulHostCore?.invalidateReadIndex(state,false);}
@@ -255,7 +255,12 @@
     return requirements.flatMap(kind=>(limits.blocked[kind]??[]).map(source=>`${LABELS[kind]}条件不满足：${source.reason}`))[0]??'';
   }
   // Passive effects have no casting gesture or payment; only their actual source can be sealed.
-  function passiveReason(state,actorId,skill){return skillReason(state,actorId,skill,{requirements:[],costs:[],internalPassive:true});}
+  function passiveReason(state,actorId,skill){
+    const soulId=skill?.sourceMartialSoulId||skill?.来源武魂ID||skill?.source?.martialSoulId;
+    const soul=state.武魂?.列表?.[soulId];
+    if(soul?.持有者单位ID===actorId&&globalThis.SoulManifestation?.hasTrait(soul))return '这项魂技由外放武魂承载';
+    return skillReason(state,actorId,skill,{requirements:[],costs:[],internalPassive:true});
+  }
   function martialSoulSealed(state,actorId,soulId=activeSoulId(state,actorId)){return !!soulId&&(restrictions(state,actorId).seals.some(s=>s.kind==='武魂'&&(!s.soulId||s.soulId===soulId))||effectiveLimits(state,actorId).permissions.some(p=>p.soulIds&&!p.soulIds.includes(soulId)));}
   function statusSources(state,actorId,effectId){return [...new Set(active(state,actorId).filter(v=>v.模板ID===effectId).map(v=>v.来源?.单位ID).filter(id=>id&&state.战斗单位?.列表?.[id]))];}
   function targetReason(state,actorId,{harmfulTargetIds=[],approachTargetIds=[],perceivedSourceIds=[]}={}){const resistance=globalThis.SoulConsciousness?.resistanceReason(state,actorId,{harmfulTargetIds});if(resistance)return resistance;if(harmfulTargetIds.some(id=>statusSources(state,actorId,'status.charm').includes(id)))return '魅惑状态下不能主动伤害魅惑来源';if(approachTargetIds.some(id=>perceivedSourceIds.includes(id)&&statusSources(state,actorId,'status.fear').includes(id)))return '恐惧状态下不能主动接近已感知的恐惧来源';return '';}

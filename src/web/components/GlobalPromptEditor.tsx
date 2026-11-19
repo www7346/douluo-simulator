@@ -1,21 +1,38 @@
-import {useState} from 'react';
+import {useState,type ReactNode} from 'react';
 import {AUTHOR_PROMPT_TASKS,toggleGlobalPrompt,type GlobalPrompt,type GlobalPromptConfiguration,type GlobalPromptFamily} from '../../runtime/model-global-prompts';
 import {MODEL_TASKS} from '../../runtime/model-settings';
 import {movePromptItem} from '../../shared/prompt-order';
 import {ActionSection,Button} from '../components';
 import PromptOrderList from './PromptOrderList';
 import PromptSourceNote from './PromptSourceNote';
-import {WRITING_PRESETS,WRITING_MODEL_LABELS,writingSet,writingSetLabel,type WritingPresetId,type WritingModelFamily,type WritingPresetSet} from '../../runtime/writing-preset-catalog';
+import {isPersonalWritingPresetId,WRITING_PRESETS,WRITING_MODEL_LABELS,writingSet,writingSetLabel,type WritingPresetId,type WritingPresetSet} from '../../runtime/writing-preset-catalog';
+import {currentPersonalWriterPreset,writerPresetOwner,writerPromptParts} from '../../runtime/story-writer-prompts';
+import type {StoryPromptConfig} from '../../runtime/story-prompts';
+import type {WritingPresetAddition} from '../../runtime/prompt-presets';
 
-export default function GlobalPromptEditor({value,onChange,onSwitch,writerStyle,disabled=false}:{value:GlobalPromptConfiguration;onChange:(value:GlobalPromptConfiguration)=>void;onSwitch:(family:GlobalPromptFamily)=>void;writerStyle:string;disabled?:boolean}){
+export default function GlobalPromptEditor({value,onChange,onSwitch,onFork,storyPrompts,writerEditor,disabled=false}:{value:GlobalPromptConfiguration;onChange:(value:GlobalPromptConfiguration)=>void;onSwitch:(family:GlobalPromptFamily)=>void;onFork:(addition:WritingPresetAddition,onCreated:()=>void)=>void;storyPrompts:StoryPromptConfig;writerEditor:ReactNode;disabled?:boolean}){
  const parts=value.globalPrompts??[],[selected,setSelected]=useState(''),[error,setError]=useState('');
  const family=value.globalPromptPreset?.active??'custom';
  const savedSet=writingSet(family);
- const [preset,setPreset]=useState<WritingPresetId|''>((savedSet?.preset.id??(family==='gemini'?'meow':family==='deepseek'?'dream':'')) as WritingPresetId|''),[manualFamily,setManualFamily]=useState<WritingModelFamily|''>(savedSet?.modelFamily??(family==='gemini'?'gemini':family==='deepseek'?'deepseek':''));
+ const personal=currentPersonalWriterPreset(storyPrompts);
+ const personalEntries=Object.entries(storyPrompts.personalWriterPresets??{});
+ const [draftPreset,setDraftPreset]=useState<WritingPresetId|null>(null);
+ const preset=draftPreset??(personal?family:savedSet?.preset.id??(family==='gemini'?'meow':family==='deepseek'?'dream':''));
+ const manualFamily=draftPreset?'':(personal?writingSet(personal.source)?.modelFamily:savedSet?.modelFamily)??(family==='gemini'?'gemini':family==='deepseek'?'deepseek':'');
+ const pending=draftPreset?writerPromptParts({...storyPrompts,writerPreset:draftPreset}).filter(part=>writerPresetOwner(part.id)===draftPreset):null;
  const changeParts=(globalPrompts:GlobalPrompt[])=>onChange({...value,globalPrompts});
  const part=parts.find(item=>item.id===selected);
  const edit=(patch:Partial<GlobalPrompt>)=>{if(part)changeParts(parts.map(item=>item.id===part.id?{...item,...patch}:item));};
- const choose=(nextPreset:WritingPresetId|'',nextFamily:WritingModelFamily|'')=>{try{if(nextPreset&&nextFamily)onSwitch(`${nextPreset}:${nextFamily}` as WritingPresetSet);setPreset(nextPreset);setManualFamily(nextFamily);setSelected('');setError('');}catch(e){setError((e as Error).message);}};
+ const apply=(next:GlobalPromptFamily)=>{try{onSwitch(next);setDraftPreset(null);setSelected('');setError('');}catch(e){setError((e as Error).message);}};
+ const choose=(id:string)=>{
+  if(isPersonalWritingPresetId(id))apply(id);
+  else{setDraftPreset(id as WritingPresetId);setSelected('');setError('');}
+ };
+ const add=()=>{
+  const row:GlobalPrompt={id:crypto.randomUUID(),name:'新全局提示词',content:'',enabled:true,position:'before'};
+  if(savedSet)onFork({kind:'global',part:row},()=>setSelected(row.id));
+  else{changeParts([...parts,row]);setSelected(row.id);}
+ };
  const editor=part?<section className="writer-prompt-content" aria-label="编辑全局提示词">
    <PromptSourceNote source={part.source}/>
    <label>提示词内容<textarea aria-label="全局提示词内容" rows={12} maxLength={24000} spellCheck={false} value={part.content} onChange={e=>edit({content:e.target.value})}/></label>
@@ -30,16 +47,28 @@ export default function GlobalPromptEditor({value,onChange,onSwitch,writerStyle,
   </section>:null;
  return <fieldset className="writer-prompt-editor" disabled={disabled}>
   <h3>全局提示词</h3><p>发送顺序：前注入 → 本用途要求 → 资料前注入 → 任务资料 → 后注入。各位置内按列表排序，仅发送符合用途、模型与渠道的条目。</p>
-  <div className="form-grid" role="group" aria-label="预设与适配模型"><label>选择预设<select aria-label="选择写作预设" value={preset} onChange={e=>choose(e.target.value as WritingPresetId,manualFamily)}><option value="" disabled>请选择预设</option>{WRITING_PRESETS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label><label>适配模型<select aria-label="预设适配模型" value={manualFamily} disabled={!preset} onChange={e=>choose(preset,e.target.value as WritingModelFamily)}><option value="" disabled>请选择适配模型</option>{Object.entries(WRITING_MODEL_LABELS).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label></div>
-  <p>选择预设，再手动选择适配模型，下方条目随即切换。</p>
-  <Button variant="secondary" aria-pressed={family==='custom'} onClick={()=>{try{onSwitch('custom');setPreset('');setManualFamily('');setSelected('');setError('');}catch(e){setError((e as Error).message);}}}>自定义套组</Button>
-  <p role="status">{`当前套组：${writingSetLabel(family)} · ${parts.length} 条`}</p>
-  <p>正文文风：{writerStyle}。可在“小说正文”中修改。</p>
-  <p className="muted">只发送当前套组；各套的文本、开关和顺序分别保留。应用后点击“保存设置”，下一次请求生效。</p>
-  {!!value.replyTools?.length&&<p>已启用预设工具：{value.replyTools.map(t=>t.name).join('、')}。</p>}
+  <div className="form-grid" role="group" aria-label="预设与适配模型">
+   <label>选择预设<select aria-label="选择写作预设" value={preset} onChange={e=>choose(e.target.value)}>
+    <option value="" disabled>请选择预设</option>
+    <optgroup label="内置预设">{WRITING_PRESETS.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</optgroup>
+    {personalEntries.length>0&&<optgroup label="我的预设">{personalEntries.map(([id,item])=>item&&<option key={id} value={id}>{item.name}</option>)}</optgroup>}
+   </select></label>
+   <label>适配模型<select aria-label="预设适配模型" value={manualFamily} disabled={!preset||(!draftPreset&&!!personal)} onChange={e=>apply(`${preset}:${e.target.value}` as WritingPresetSet)}>
+    <option value="" disabled>请选择适配模型</option>{Object.entries(WRITING_MODEL_LABELS).map(([id,label])=><option key={id} value={id}>{label}</option>)}
+   </select></label>
+  </div>
+  <p>先选预设查看正文条目，再选适配模型应用对应开关。</p>
+  <Button variant="secondary" aria-pressed={family==='custom'} onClick={()=>apply('custom')}>自定义套组</Button>
+  <p role="status">{`当前套组：${personal?.name??writingSetLabel(family)} · ${parts.length} 条`}</p>
+  {pending&&<section aria-label="待应用的正文条目"><h4>{WRITING_PRESETS.find(item=>item.id===preset)?.label} · 正文条目</h4><ul>{pending.map(row=><li key={row.id}>{row.name}</li>)}</ul></section>}
+  <p className="muted">各预设保留正文文本和顺序，各适配模型分别记住套组条目的开关。点击“保存设置”后生效。</p>
   {error&&<p role="alert">{error}</p>}
+  {pending?<p>选择适配模型后即可调整该套组的开关。</p>:<>
+  {(savedSet||personal)&&writerEditor}
+  {!!value.replyTools?.length&&<p>已启用预设工具：{value.replyTools.map(t=>t.name).join('、')}。</p>}
   <PromptOrderList items={parts.map(p=>({...p,detail:(p.position==='after'?'后注入':p.position==='before-context'?'要求后、资料前':'前注入')+' · '+(p.tasks===undefined?'所有用途':p.tasks.filter(task=>MODEL_TASKS.some(entry=>entry.id===task)).length===AUTHOR_PROMPT_TASKS.length&&AUTHOR_PROMPT_TASKS.every(task=>p.tasks!.includes(task))?'正文与重写':p.tasks.filter(task=>MODEL_TASKS.some(entry=>entry.id===task)).length+' 项用途')+' · '+(p.models?.join('、')||'所有模型')+' · '+(p.channel==='official'?'官方':p.channel==='compatible'?'兼容渠道':'所有渠道')}))} selected={part?.id} expandedContent={editor} label="全局提示词顺序" onSelect={id=>setSelected(current=>current===id?'':id)} onMove={(from,to)=>changeParts(movePromptItem(parts,from,to))} onToggle={(id,enabled)=>changeParts(toggleGlobalPrompt(parts,id,enabled))} canRemove={()=>true} onRemove={id=>changeParts(parts.filter(item=>item.id!==id))}/>
-  <Button variant="secondary" disabled={parts.length>=100} onClick={()=>{const id=crypto.randomUUID();changeParts([...parts,{id,name:'新全局提示词',content:'',enabled:true,position:'before'}]);setSelected(id);}}>新增全局提示词</Button>
+  <Button variant="secondary" disabled={parts.length>=100} onClick={add}>新增全局提示词</Button>
   {!parts.length&&<p>还没有全局提示词，点击新增即可开始。</p>}
+  </>}
  </fieldset>;
 }

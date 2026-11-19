@@ -1,7 +1,8 @@
 import {expandStoryMacros,inspectStoryMacroReferences} from './story-macros';
 import type {ChatMessage} from './model-gateway';
 import type {PrefillMode} from './model-protocol';
-import type {WriterPromptPart} from './story-writer-prompts';
+import {writerPromptTargets,type WriterPromptPart} from './story-writer-prompts';
+import type {PersonalWritingPresetId,WritingPresetId,WritingPresetSet} from './writing-preset-catalog';
 
 export const STORY_PROMPT_SLOTS = ['main','worldInfoBefore','personaDescription','charDescription','charPersonality','scenario','worldInfoAfter','dialogueExamples','chatHistory'] as const;
 export type StoryPromptSlot = typeof STORY_PROMPT_SLOTS[number];
@@ -19,9 +20,19 @@ export interface StoryPromptModule extends ImportedPrompt {
   enabled:boolean; targets:StoryPromptTarget[]; original:ImportedPrompt;
 }
 export type StoryPromptPart = {kind:'slot';id:StoryPromptSlot;enabled:boolean}|{kind:'module';id:string};
+export interface PersonalWriterPreset {
+  name:string;
+  source:WritingPresetSet;
+  writerPrompts:WriterPromptPart[];
+  style:string;
+  nsfw:string;
+}
 export interface StoryPromptConfig {
   version:1; style:string; nsfw:string; modules:StoryPromptModule[]; layout:StoryPromptPart[];
   writerPrompts?:WriterPromptPart[];
+  writerPreset?:WritingPresetId|'custom'|PersonalWritingPresetId;
+  writerPresetSwitches?:Partial<Record<WritingPresetSet,Record<string,boolean>>>;
+  personalWriterPresets?:Partial<Record<PersonalWritingPresetId,PersonalWriterPreset>>;
   writerTargetChars?:number;
   prefillId?:string;
   prefillMode?:PrefillMode;
@@ -94,7 +105,7 @@ export function parseTavernPromptCatalog(source:string):PromptCatalog {
 
 /** Chat replies have their own JSON format. Keep player-selected chat modules in order. */
 export function conversationPromptConfig(raw:StoryPromptConfig = emptyStoryPromptConfig()):StoryPromptConfig {
-  return {...raw,style:'',prefillId:undefined,
+  return {...raw,style:'',nsfw:'',prefillId:undefined,
     modules:raw.modules.filter(module=>module.id!==raw.prefillId),
     layout:raw.layout.filter(part=>part.kind!=='module'||part.id!==raw.prefillId)};
 }
@@ -194,8 +205,8 @@ export function compileStoryPrompt(config:StoryPromptConfig,context:StoryPromptC
         if(i<history.length)append(`history:${i}`,history[i]);
       }
       if(context.target!=='host'){
-        if(config.style.length&&(config.writerPrompts===undefined||config.writerPrompts.some(p=>p.kind==='style'&&p.enabled!==false)))append('style',{role:'system',content:config.style});
-        if(config.nsfw.length&&(config.writerPrompts===undefined||config.writerPrompts.some(p=>p.kind==='nsfw'&&p.enabled!==false)))append('nsfw',{role:'system',content:config.nsfw});
+        if(config.style.length&&(config.writerPrompts===undefined||config.writerPrompts.some(p=>p.kind==='style'&&p.enabled!==false&&writerPromptTargets(p).some(target=>target===context.target))))append('style',{role:'system',content:config.style});
+        if(config.nsfw.length&&(config.writerPrompts===undefined||config.writerPrompts.some(p=>p.kind==='nsfw'&&p.enabled!==false&&writerPromptTargets(p).some(target=>target===context.target))))append('nsfw',{role:'system',content:config.nsfw});
       }
     }else for(const message of context.slots[part.id]??[])append(`slot:${part.id}`,message);
   }

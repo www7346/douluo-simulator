@@ -44,6 +44,10 @@ export function adoptModelLibrary(profile:Omit<ModelProfile,'apiKey'>):Omit<Mode
  return normalizeModelLibrary({...profile,modelLibrary,assignments,taskOverrides,writer:undefined});
 }
 export function assignedModelId(profile:ModelLibraryFields,task:string){return [...taskChain(task)].reverse().map(id=>profile.assignments?.[id]).find(Boolean)??profile.modelLibrary?.[0]?.id;}
+export function separateWriterProfile(profile:Omit<ModelProfile,'apiKey'>){
+ const writer=profile.writer;
+ return writer&&{...writer,globalPrompts:profile.globalPrompts,replyTools:profile.replyTools??writer.replyTools,promptOverrides:{...profile.promptOverrides,...writer.promptOverrides},apiKey:writer.apiKey??''};
+}
 export function resolveTaskProfile<T extends Omit<ModelProfile,'apiKey'>>(profile:T,task:string):T {
  assertActiveModelTask(task);
  if(!profile.modelLibrary)return profile;

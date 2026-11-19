@@ -33,11 +33,7 @@ function martialSoulDraftFrom(source = {}) {
       channels: [...new Set(list(raw?.channels ?? raw?.表达机制).map(value => clean(value)).filter(Boolean))],
       traits: list(raw?.traits ?? raw?.先天特性).map(entry => ({templateId: clean(entry?.templateId ?? entry), parameter: clean(entry?.parameter), level: Number(entry?.level ?? 1)})).filter(entry => entry.templateId),
       weaknesses: list(raw?.weaknesses ?? raw?.限制).map(entry => ({templateId: clean(entry?.templateId ?? entry), parameter: clean(entry?.parameter), level: Number(entry?.level ?? 1)})).filter(entry => entry.templateId),
-      baseAction: {
-        mode: clean(raw?.baseAction?.mode ?? raw?.基础动作?.方式),
-        powerTier: Number(raw?.baseAction?.powerTier ?? raw?.基础动作?.威力档 ?? 0),
-        attributeId: clean(raw?.baseAction?.attributeId ?? raw?.基础动作?.属性)
-      },
+      baseAction: clone(inspection.draft.baseAction),
       sourceDescription: clean(raw?.sourceDescription ?? raw?.玩家描述, `导入的${clean(raw?.name ?? raw?.名称, '武魂')}配置`),
       playerConfirmed: false
     };

@@ -1,4 +1,6 @@
 import {assertRingBudgetAlternative} from './ring-budget-alternative';
+import {preserveRingDesignText} from '../shared/ring-design-editing';
+import {ringDiscussionContext} from '../shared/ring-design-discussion';
 import {fitOpeningRingYears} from './opening-ring-years';
 import {completeOpeningRingSoul} from './opening-ring-soul';
 import {effectDesignEntry,effectCompositionRules,designPromptCatalogue} from './effect-design-catalogue';
@@ -32,11 +34,11 @@ function effectEntries(skills:any[]):Array<[string,any]>{
  return skills.flatMap(s=>rules.effects.ringRequestEffectSpecs(s).map((row:any)=>[row.effectId,row.params] as [string,any]));
 }
 function openingHistoryActor(config:any,side:string){
- if(!(config.background?.id==='jiumeitu-heir'&&side==='main'||config.background?.id==='sealed-titled'&&['buyer','captive'].includes(side)))throw Error('请选择当前创建人物的开局魂环');
+ if(!(['custom','jiumeitu-heir'].includes(config.background?.id)&&side==='main'||config.background?.id==='sealed-titled'&&['buyer','captive'].includes(side)))throw Error('请选择当前创建人物的开局魂环');
  return rules.backgrounds.resolveActor(config,side);
 }
 function saveOpeningRingSelection(config:any,side:string,ringDesigns:any[],ringChoices:string[]){
- const b=config.background;if(b.id==='jiumeitu-heir'&&side==='main'){b.ringDesigns=ringDesigns;b.ringChoices=ringChoices;return;}
+ const b=config.background;if(['custom','jiumeitu-heir'].includes(b.id)&&side==='main'){b.ringDesigns=ringDesigns;b.ringChoices=ringChoices;return;}
  b.actors={...b.actors,[side]:{...b.actors?.[side],ringDesigns,ringChoices}};
  if(b.perspective===side){b.ringDesigns=ringDesigns;b.ringChoices=ringChoices;}
 }
@@ -100,8 +102,8 @@ function failureDiagnostic(error:unknown):RingDesignDiagnostic{
  return {kind:'generation',code:'proposal-compilation',message,action:'retry'};
 }
 export function inspectRingDesign(state:any,target:any,proposal:any):any{
- if(!object(proposal)||Object.keys(proposal).some(k=>!['name','description','acquisition','source','skills','sourceProofVersion','sourceLocked','unsupportedMechanisms'].includes(k))||!text(proposal.name,30)||!text(proposal.description,600))throw Error('请提供完整的魂环方案名称、说明和技能设计');
- let canonical=clone(proposal),context:any,sourceAdjustment:any,yearAdjustment:any,martialSoulAdjustment:any,openingConfig:any,inspectionTarget=target;
+ if(!object(proposal)||Object.keys(proposal).some(k=>!['name','description','acquisition','source','skills','sourceProofVersion','sourceLocked','unsupportedMechanisms','evolutionTarget'].includes(k))||!text(proposal.name,30)||!text(proposal.description,600))throw Error('请提供完整的魂环方案名称、说明和技能设计');
+ let canonical=clone(proposal),context:any,sourceAdjustment:any,yearAdjustment:any,martialSoulAdjustment:any,openingConfig:any,inspectionTarget=target,evolution:any;
  const diagnostics:RingDesignDiagnostic[]=[];
  const failed=()=>({id:'ring-design:'+rules.abilities.hash(canonical),pass:false,name:proposal.name,description:proposal.description,proposal:canonical,diagnostics,summary:ringDiagnosticSummary(diagnostics),reasons:diagnostics.map(x=>x.message),...(sourceAdjustment?{sourceAdjustment}:{}),...(yearAdjustment?{yearAdjustment}:{}),...(martialSoulAdjustment?{martialSoulAdjustment}:{})});
  try{
@@ -118,7 +120,12 @@ export function inspectRingDesign(state:any,target:any,proposal:any):any{
    diagnostics.push({kind:'source',code:'locked-source-redefinition',message:'这枚开局魂环的来源已由玩家固定；模型不能通过重填source改写它。请先明确解除来源固定，再调整来源。',action:'adjust-design'});
    canonical={...canonical,source:clone(context.currentDesign.source),sourceLocked:true};return failed();
   }
-  const collected=collectRingRequirements(requestedSkills,rules.effects.ringExpressionForSource(context.soul,context.profile));
+  if(proposal.evolutionTarget){
+   if(context.opening)throw Error('开局历史请直接调整创建武魂；新魂环牵引用于当前真实武魂');
+   evolution=rules.evolution.planRingExpression(context.soul,proposal.evolutionTarget,context.profile);
+   for(const ringId of context.soul.魂环ID列表){const ring=state.魂环.列表[ringId];if(!ring.扩展?.evolutionSealed&&ring.魂技ID列表.some((id:string)=>!rules.evolution.compatible(state.技能.列表[id],evolution.soul)))throw Error('本次变化与旧魂技不兼容，请先重构或封存对应魂环');}
+  }
+  const collected=collectRingRequirements(requestedSkills,evolution?.soul??rules.effects.ringExpressionForSource(context.soul,context.profile));
   diagnostics.push(...collected.diagnostics);
   if(context.opening&&!collected.diagnostics.length){
    const completion=completeOpeningRingSoul(target.config,target.side,context,collected.requirements);
@@ -134,11 +141,11 @@ export function inspectRingDesign(state:any,target:any,proposal:any):any{
    context=ringDesignContext(state,inspectionTarget,canonical.source,proposal.acquisition,1);
   }
   if(context.opening&&context.ordinal===7&&!rules.effects.fixedRealmPolicy(context.soul)&&!effectEntries(requestedSkills).some(([id])=>id==='transform.martial_avatar'))diagnostics.push({kind:'constraint',code:'seventh-ring-avatar',message:'第七环须保留武魂真身，不能改成其他魂技。',action:'adjust-design'});
-  const requirementDiagnostics=diagnoseRingRequirements(context,collected.requirements);
+  const requirementDiagnostics=diagnoseRingRequirements(evolution?{...context,soul:evolution.soul}:context,collected.requirements);
   diagnostics.push(...requirementDiagnostics.filter(d=>!context.opening||d.code!=='age-mechanism'));
   if(diagnostics.length){if(context.opening)diagnostics.push(...requirementDiagnostics.filter(d=>d.code==='age-mechanism'));return failed();}
   const compile=(source:any)=>rules.effects.compileRingSkills({martialSoul:source.soul,beastProfile:source.profile,beastSkills:source.beastSkills,ringOrdinal:source.ordinal,
-   options:{requestedSkills,preferredSkillCount:requestedSkills.length,compatibility:source.compatibility.ratio,casterLevel:source.stage?.level,autoAllocate:false,allowProceduralFallback:false}});
+   options:{requestedSkills,...(proposal.evolutionTarget?{evolutionTarget:proposal.evolutionTarget}:{}),preferredSkillCount:requestedSkills.length,compatibility:source.compatibility.ratio,casterLevel:source.stage?.level,autoAllocate:false,allowProceduralFallback:false}});
   let compiled:any,yearFailure:any;
   if(context.opening&&(requirementDiagnostics.some(d=>d.code==='age-mechanism')||requestedSkills.length>rules.effects.ringSkillLimit(context.profile)))yearFailure={};
   else try{compiled=compile(context);}catch(error){if(!context.opening||!(error as any)?.ringBudget)throw error;yearFailure=error;}
@@ -151,20 +158,21 @@ export function inspectRingDesign(state:any,target:any,proposal:any):any{
   }
   for(const [i,skill]of compiled.skills.entries()){
    const timing=rules.effects.designActionTimingErrors(skill);if(timing.length)throw Error(timing.join('；'));
+   const balance=rules.effects.designBalanceErrors(skill);if(balance.length){diagnostics.push(...balance.map((message:string)=>({kind:'constraint' as const,code:'design-balance',message,action:'adjust-design' as const})));return failed();}
    skill.name=requestedSkills[i].name;skill.description=requestedSkills[i].description??globalThis.SoulSkillProse.compose(skill);rules.abilities.seal(skill);
   }
   let presentationState=state;
   if(context.opening)presentationState=openingRingPresentationState(context.actor,context.soul).state;
-  const presented=ringPackagePresentation(presentationState,context.soul,compiled,context.opening?context.actor.ringCount:context.ordinal);
+  const presented=ringPackagePresentation(presentationState,evolution?.soul??context.soul,compiled,context.opening?context.actor.ringCount:context.ordinal);
   const design={ordinal:context.ordinal,...(context.effectiveSource!==undefined?{source:clone(context.effectiveSource)}:context.opening?{years:context.profile.年限}:{}),...(context.sourceProofVersion!==undefined?{sourceProofVersion:context.sourceProofVersion}:{}),...(canonical.sourceLocked?{sourceLocked:true}:{}),...(context.effectiveAcquisition?{acquisition:clone(context.effectiveAcquisition)}:{}),requestedSkills};
   return {id:'ring-design:'+rules.abilities.hash({key:context.key,proposal:canonical}),pass:true,name:proposal.name,description:proposal.description,sourceKey:context.key,source:{name:context.profile.名称,years:context.profile.年限},compatibility:context.compatibility,budget:compiled.budget,
-    ...presented,requestedSkills,design,acquisition:context.effectiveAcquisition?{...context.effectiveAcquisition,label:rules.backgroundHistory.ACQUISITION_KINDS[context.effectiveAcquisition.kind]}:null,warnings:context.stage?.gates.承载.机缘豁免?['本方案按明确登记的特殊取得经历免除承载门槛，仍需满足技能年限、桥梁、预算与当前等级的释放限制。']:[],proposal:canonical,diagnostics:[],summary:ringDiagnosticSummary([],true),...(sourceAdjustment?{sourceAdjustment}:{}),...(yearAdjustment?{yearAdjustment}:{}),...(martialSoulAdjustment?{martialSoulAdjustment,openingConfig}:{}),reasons:[]};
+    ...presented,requestedSkills,...(evolution?{evolutionTarget:clone(proposal.evolutionTarget),evolutionPreview:{name:evolution.soul.名称,form:rules.evolution.definition(evolution.soul).form,charges:evolution.growth.charges,cost:evolution.growth.cost}}:{}),design,acquisition:context.effectiveAcquisition?{...context.effectiveAcquisition,label:rules.backgroundHistory.ACQUISITION_KINDS[context.effectiveAcquisition.kind]}:null,warnings:context.stage?.gates.承载.机缘豁免?['本方案按明确登记的特殊取得经历免除承载门槛，仍需满足技能年限、桥梁、预算与当前等级的释放限制。']:[],proposal:canonical,diagnostics:[],summary:ringDiagnosticSummary([],true),...(sourceAdjustment?{sourceAdjustment}:{}),...(yearAdjustment?{yearAdjustment}:{}),...(martialSoulAdjustment?{martialSoulAdjustment,openingConfig}:{}),reasons:[]};
  }catch(error){diagnostics.push(failureDiagnostic(error));return failed();}
 }
 export function ringDesignCatalogue(state:any,target:any){
  const context=ringDesignContext(state,target),bridges=rules.effects.resolveBridges(context.soul,context.profile,context.beastSkills),core=rules.martialSoul;
  const tier=rules.foundation.getAgeTier(context.profile.年限);
- return {phase:context.opening?'opening-history':'actual-ring',sourceKey:context.key,source:{name:context.profile.名称,years:context.profile.年限,color:rules.foundation.getAgeTier(context.profile.年限).颜色,description:context.profile.扩展?.描述??'',attributes:context.profile.属性谱,locked:!context.opening,automaticPlaceholder:context.opening&&!context.effectiveSource},
+ return {evolutionDesign:!context.opening?{current:rules.evolution.definition(context.soul),rule:'可在方案顶层填写完整 evolutionTarget，由本次真实魂环支付逐组件结构费用；预算按变化前武魂计算，魂技使用剩余额度。跨类型只可先建立保留旧结构的过渡形态；不兼容旧魂技应先单独重构或封存。',attributes:Object.values(core.ATTRIBUTE_REGISTRY),categories:Object.values(core.CATEGORY_REGISTRY),channels:Object.values(core.CHANNEL_REGISTRY),traits:core.TRAIT_TEMPLATES}:null,evolutionGuides:!context.opening&&context.ordinal>=3&&context.ordinal<=9?rules.evolutionContent.GUIDES.map((g:any)=>rules.evolutionContent.guideStep(context.soul,g.id,context.ordinal)):[],phase:context.opening?'opening-history':'actual-ring',sourceKey:context.key,source:{name:context.profile.名称,years:context.profile.年限,color:rules.foundation.getAgeTier(context.profile.年限).颜色,description:context.profile.扩展?.描述??'',attributes:context.profile.属性谱,locked:!context.opening,automaticPlaceholder:context.opening&&!context.effectiveSource},
   sourceInstruction:context.opening?'创建阶段保留技能原意、参数、费用、次数及来源名称与主题。按正式目录补齐来源能力和桥梁，按完整效果提高所需年限。武魂缺少的通道和属性按创建点数最小补齐，采用时保留已有投入和其他武魂。调整固定来源先征得玩家允许。普通猎杀按历史承载核验，特殊取得使用玩家指定的经历。':'实际游玩沿用已取得魂环的来源与年限，设计该来源支持的技能。',
   currentDesign:context.currentDesign,contractDesign:rules.effects.contractDesignGrammar(),unsupportedMechanisms:clone(unsupportedRingMechanisms),
   sourceLockInstruction:context.opening?'玩家明确固定来源能力时，提交 sourceLocked:true 和完整 source。需要调整时列出改动，由玩家决定。其余开局提案按来源设计规则填写。':'实际来源已固定，proposal 只提交技能方案。',
@@ -173,7 +181,7 @@ export function ringDesignCatalogue(state:any,target:any){
   martialSoul:{name:context.soul.名称,definition:context.soul.扩展?.结构化武魂?.definition},ringOrdinal:context.ordinal,compatibility:context.compatibility,budget:context.budget,
   sourceDesign:context.opening?{minimumYears:1,maximumYears:Number.MAX_SAFE_INTEGER,acquisitionKinds:Object.entries(rules.backgroundHistory.ACQUISITION_KINDS).map(([kind,label])=>({kind,label,requiresNote:kind!=='hunt'})),capacity:context.stage?.gates?.承载,absorptionLevel:context.stage?.level,categories:Object.values(core.CATEGORY_REGISTRY).filter((c:any)=>c.family==='生物'&&c.selectable!==false).map((c:any)=>({id:c.id,name:c.name})),attributes:Object.values(core.ATTRIBUTE_REGISTRY).map((a:any)=>({id:a.id,name:a.name})),channels:Object.values(core.CHANNEL_REGISTRY).map((c:any)=>({id:c.id,name:c.name,effects:c.effectIds}))}:null,
   ageRules:{tier:tier.名称,mechanismLimit:tier.机制上限,maximumSkillCount:rules.effects.ringSkillLimit(context.profile),minimumRawValuePerSkill:rules.effects.ringSkillMinimumBudget(context.profile),requiredEffects:context.opening&&context.ordinal===7&&!rules.effects.fixedRealmPolicy(context.soul)?['transform.martial_avatar']:[]},
-  compositionRules:effectCompositionRules(),
+  compositionRules:effectCompositionRules(),balanceRules:{...rules.effects.DESIGN_BALANCE_POLICY,instructions:['持续减伤最多75%，点数无需全部花完。','直接死亡须有目标豁免，可重复使用时还须实际消耗及冷却或次数限制。','防护、复苏或死亡不能同时零消耗、无冷却且不限次数。']},
   effects:Object.entries(rules.effects.EFFECT_REGISTRY).filter(([,e]:[string,any])=>e.authorable!==false).map(([id,e]:[string,any])=>{
    const bridgeAvailable=bridges.some((b:any)=>b.effectIds.includes(id)),martialSoulAllowed=core.allowsEffect(context.soul,id,{}),ageAllowed=rules.effects.TIER_RANK[tier.名称]>=rules.effects.TIER_RANK[e.minimumAgeTier]&&rules.effects.MECHANISM_RANK[tier.机制上限]>=rules.effects.MECHANISM_RANK[e.mechanismLevel];
    return {...effectDesignEntry(id,e),id,name:e.displayName,family:e.family,minimumAgeTier:e.minimumAgeTier,mechanismLevel:e.mechanismLevel,baseCost:e.baseCost,parameterBounds:e.parameterBounds,parameterDefaults:e.parameterDefaults,...(e.optionalParameterBounds?{optionalParameterBounds:e.optionalParameterBounds}:{}),...(e.structuredParameterBounds?{structuredParameterBounds:e.structuredParameterBounds}:{}),bridgeAvailable,martialSoulAllowed,ageAllowed,sourceCanBeDesigned:context.opening,martialSoulCanBeCompleted:context.opening,eligibleNow:(context.opening||bridgeAvailable)&&martialSoulAllowed&&ageAllowed};}),
@@ -214,6 +222,7 @@ function ringRepairPreservesIntent(before:any,after:any,correctDependencies=fals
   const next=after.proposals[i];if(!object(proposal)||!object(next))return false;
   if(proposal.sourceLocked===true&&next.sourceLocked!==true)return false;
   if(proposal.acquisition!==undefined&&!same(proposal.acquisition,next.acquisition))return false;
+  if(!same(proposal.evolutionTarget??null,next.evolutionTarget??null))return false;
   for(const key of ['name','description','years'])if(proposal.source?.[key]!==undefined&&proposal.source[key]!==next.source?.[key])return false;
   for(const [key,registry]of [['categories',rules.martialSoul.CATEGORY_REGISTRY],['attributes',rules.martialSoul.ATTRIBUTE_REGISTRY],['channels',rules.martialSoul.CHANNEL_REGISTRY]] as const)if(Array.isArray(proposal.source?.[key])&&proposal.source[key].filter((id:string)=>registry[id]).some((id:string)=>!next.source?.[key]?.includes(id)))return false;
   if(!Array.isArray(proposal.skills)||!proposal.skills.length)return !next.skills?.length;
@@ -242,18 +251,20 @@ function ringRepairPreservesIntent(before:any,after:any,correctDependencies=fals
 }
 export async function requestRingDesignAdvice(gateway:ModelGateway,state:any,input:any,signal?:AbortSignal,progress?:DesignAdviceProgressStore){
  if(signal?.aborted)throw signal.reason??Error('魂环设计已取消，原构想保留。');
- if(!text(input.description,4000)||!Array.isArray(input.exchanges??[])||(input.exchanges??[]).length>20||(input.exchanges??[]).some((e:any)=>!text(e.input,4000)||!text(e.reply,2000)))throw Error('请填写魂兽来源、已有能力与希望领悟的魂技；讨论最多二十轮');
+ if(!text(input.description,4000)||!Array.isArray(input.exchanges??[])||(input.exchanges??[]).some((e:any)=>!text(e.input,4000)||!text(e.reply,2000))||input.preserveText!==undefined&&typeof input.preserveText!=='boolean')throw Error('请填写完整的魂兽来源与魂技构想');
+ input={...input,exchanges:ringDiscussionContext(input.exchanges??[])};
  const catalogue=ringDesignCatalogue(state,input.target),saved=progress?.read();
  const promptCatalogue=()=>designPromptCatalogue(catalogue,gateway.hasPromptOverride?.('ring-design-advisor')??true);
  let initial:any;
  if(saved?.initial===undefined){
-  const messages=creativeMessages('ring-design-advisor',{...promptCatalogue(),request:input.description,exchanges:input.exchanges??[],previous:input.previous??null});
+  const messages=creativeMessages('ring-design-advisor',{...promptCatalogue(),request:input.description,preserveExistingText:input.preserveText!==false,exchanges:input.exchanges??[],previous:input.previous??null});
   // Local prompt/profile compilation must pass before marking a stage as sent.
   preflightDesignAdvice(gateway,messages,'ring-design-advisor');
   progress?.reserve?.('initial');
   initial=await gateway.structured(messages,value=>value,{task:'ring-design-advisor',signal,parseStructured:parseDesignAdviceWire,repairFormat:false,repairValidation:false});
   progress?.write('initial',initial);
  }else initial=clone(saved.initial);
+ initial=preserveRingDesignText(initial,input.previous,input.preserveText!==false);
  const initialReview=reviewedRingAnswer(state,input.target,initial,catalogue.sourceKey);
  if(initialReview.mode==='question')return initialReview;
  // Opening budgets are fitted by raising the authored age. An old cached
@@ -266,7 +277,7 @@ export async function requestRingDesignAdvice(gateway:ModelGateway,state:any,inp
  const retryable=budgetOnly||initialReview.diagnostics?.some((d:any)=>d.kind==='generation')&&!initialReview.diagnostics?.some((d:any)=>['martial-soul','unsupported','constraint'].includes(d.kind));
  let repaired:any=saved?.repaired;
  if(repaired===undefined&&retryable&&!used&&(gateway.recoveryBudget?.remaining??1)>0){
-  const messages=creativeMessages('ring-design-advisor',{...promptCatalogue(),request:input.description,exchanges:input.exchanges??[],previous:input.previous??null,
+  const messages=creativeMessages('ring-design-advisor',{...promptCatalogue(),request:input.description,preserveExistingText:input.preserveText!==false,exchanges:input.exchanges??[],previous:input.previous??null,
    repair:{attempt:1,maximum:1,original:initial,diagnostics:initialReview.diagnostics,...(budgetOnly?{mode:'budget-alternative',instruction:'原稿已经保留。proposals 按原顺序返回预算内备选，沿用各方案的技能、效果、分支、来源、属性、目标、条件、费用、次数、契约处罚、长期机制和年限。可降低伤害骰数、骰面、非负伤害或命中加值、状态持续回合或分钟（至少1），或将强化数值向零调整。在 reply 列出实际下调的数值。每套备选均须通过规则与预算核验。'}:{instruction:'返回完整 question/proposal 协议，修正错误节点、格式和遗漏字段。释放或目标与 requires 不符时，按同分支正式依赖给出备选并说明具体变化。沿用玩家原构想、武魂、方案和技能数量、合法效果及明确参数、年限、来源主题和固定偏好，从原始资料读取来源。'})}});
   preflightDesignAdvice(gateway,messages,'ring-design-advisor');
   progress?.reserve?.('repaired');
@@ -274,6 +285,7 @@ export async function requestRingDesignAdvice(gateway:ModelGateway,state:any,inp
   progress?.write('repaired',repaired);
  }
  if(repaired!==undefined){
+  repaired=preserveRingDesignText(repaired,input.previous,input.preserveText!==false);
   try{if(isUnparsedDesignAdvice(repaired))throw Error('格式仍未完整');checkedRingAdvice(repaired);}catch{
    return {...reviewedRingAnswer(state,input.target,repaired,catalogue.sourceKey),repair:{attempted:true,maximum:1,finished:false}};
   }

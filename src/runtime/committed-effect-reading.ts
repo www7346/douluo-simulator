@@ -22,6 +22,8 @@ export function playerOutcomeReading(o:any):string{
  if(o.kind==='拘束逐层解除结果')return (v.removedLayers??[]).map((r:any)=>`拘束${r.before}层 → ${r.after}层`).join('；');
  if(o.kind==='伤害防护结算'){const r=v.resistance;return r?`${r.type}伤害${r.mode}，剩余伤害${r.finalAmount}`:'伤害防护已生效';}
  if(o.kind==='已解除的状态与区域')return `解除${(v.removedStatusIds??[]).length}项状态、${(v.removedZoneIds??[]).length}处区域效果`;
+ if(o.kind==='侦察见闻')return v.report.place+' · '+v.report.observations.join('，');
+ if(o.kind==='召唤物的天生招式')return '召唤物已掌握自身招式';
  if(o.kind==='召唤出的单位及继承技能')return `召出${(v.summonedUnitIds??[]).length}名助战者`;
  if(o.kind==='实际复制的技能')return `复制了${(v.copiedSkillIds??[]).length}项魂技`;
  if(o.kind==='已被打断的技能')return '打断了对方的魂技';

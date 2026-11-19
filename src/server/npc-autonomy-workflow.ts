@@ -20,6 +20,7 @@ import {storyTurnFacts} from '../runtime/story-turns';
 import {compileStoryPrompt,emptyStoryPromptConfig} from '../runtime/story-prompts';
 import {issueWorkflowTicket} from './workflow-ticket';
 import {checkedStoryRecall,personStoryRecall} from '../shared/story-recall';
+import {personalDialogue} from '../shared/story-dialogue-memory';
 import {selectPersonStorySummaries} from '../shared/story-summary';
 
 function prepareGoalOptions(state: any, personId: string) {
@@ -86,12 +87,12 @@ export function prepareNpcAutonomyPrompt(snapshot:GameSnapshot,input:any){
  const context=compileStoryCurrentContext(facts,turn.number,person.id),recall=personStoryRecall(state,person.id,checkedStoryRecall(input.recall,turn.number,person.id)),summaries=selectPersonStorySummaries(state,turn.number,person.id,recall.map(r=>r.source.turn),topic);
  const travelAvailability=cooperation?rules.world.appointmentTravelAvailability(state,cooperation):null;
  const goalOptions = operation === 'goal' ? prepareGoalOptions(state, person.id) : null;
- const audience=cooperation?{channel:'NPC之间实际当面交谈',personIds:[cooperation.initiatorId,person.id]}:{channel:facts.communication?.mode==='soul-device'?'远程魂导通讯':'本人当面说明',personIds:[person.id,playerId]};
+ const audience=cooperation?{channel:'NPC之间实际当面交谈',personIds:[cooperation.initiatorId,person.id]}:{channel:facts.communication?.label??'本人当面说明',personIds:[person.id,playerId]};
  const protocol = goalOptions
    ? Object.fromEntries(Object.entries(NPC_DECISION_PROTOCOLS.goal).filter(([kind]) => goalOptions.options.allowedKinds.includes(kind)))
    : NPC_DECISION_PROTOCOLS[operation];
  const responseSchema=npcDecisionResponseSchema(protocol);
- const packet={operation,context,residentContext:residentNarrativeContext(state,person.id),cognition:personCognition(state,person.id),relationships:perceivedRelations(state,person.id),worldSpeech:rules.social.speechFacts(state,person.id).slice(-8),audience,ownSituation:{personId:person.id,position:rules.actions.positionOf(state,person.id),locationName:rules.interiorSpaces.membership(state,person.id)?.space.name??state.地图.地点[person.locationId]?.name,characterization:storyPersona(state,person),playerRelationship:storyBackgroundContext(state,playerId,person.id)},selfBudget:{gold:state.钱包.列表[person.walletId].gold},recall,summaries,ownCollaborations:compileNpcCollaborations(npcCollaborationFacts(state,person.id)),
+ const packet={operation,context,participantDialogue:personalDialogue(state,input.dialogue,person.id,turn.number),residentContext:residentNarrativeContext(state,person.id),cognition:personCognition(state,person.id),relationships:perceivedRelations(state,person.id),worldSpeech:rules.social.speechFacts(state,person.id).slice(-8),audience,ownSituation:{personId:person.id,position:rules.actions.positionOf(state,person.id),locationName:rules.interiorSpaces.membership(state,person.id)?.space.name??state.地图.地点[person.locationId]?.name,characterization:storyPersona(state,person),playerRelationship:storyBackgroundContext(state,playerId,person.id)},selfBudget:{gold:state.钱包.列表[person.walletId].gold},recall,summaries,ownCollaborations:compileNpcCollaborations(npcCollaborationFacts(state,person.id)),
   ...goalOptions,
   ...(['goal','seek-partner'].includes(operation)?{candidates:npcPartnerCandidates(state,person.id).map(({id,name,occupation})=>({id,name,occupation}))}:{}),
   ...(job.kind==='release-response'?{request:{text:job.text,captivityId:job.captivityId,createdAt:job.createdAt}}:{}),

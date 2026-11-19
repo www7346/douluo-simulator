@@ -3,6 +3,7 @@ const copy=<T>(v:T):T=>structuredClone(v);
 const pick=(v:any,keys:string[])=>Object.fromEntries(keys.filter(k=>v&&Object.hasOwn(v,k)).map(k=>[k,copy(v[k])]));
 const COMMON=['type','id','transactionType','summary'];
 export const WORKSHOP_RECEIPT_FIELDS:Record<string,readonly string[]>={
+ 'preset-blueprint-learned':['actorId','presetId','name','itemId','blueprintId','studyHash'],
  'workshop-inspected':['operation','data'],
  'research-materials-consumed':['actorId','pendingId','category','concept','consumedMaterials','totalUnits','totalMaterialValue','mechanicBudget','llmCandidatesRequired','choiceRule','mechanicsHash','namingRequest','choices'],
  'research-blueprint-created':['actorId','recipientId','pendingId','chosenIndex','blueprintId','prototypeItemId','productValue','requiredValue','bridgeClauses','discardedCandidateIndexes'],
@@ -30,6 +31,7 @@ export function compileWorkshopReceipt(turn:StoryTurn,r:StoryStepResult){
  const actorId=c.actorId??turn.after?.player?.id??null;
  const readyChoices=c.choices??(research?.status==='candidates-ready'?research:null);
  if(c.type!=='workshop-inspected'&&(!c.actorId||(['research-blueprint-created','blueprint-crafted'].includes(c.type)&&c.recipientId!==c.actorId)))throw Error('工坊回执缺少实际材料主体和成品收件人');
+ if(c.type==='preset-blueprint-learned')return {actorId,stage:`已掌握${c.name}的制作图纸`,name:c.name,presetId:c.presetId,blueprintId:c.blueprintId,sourceItemId:c.itemId,productCreated:false};
  if(c.type==='research-materials-consumed')return {actorId,...(research?.presetId?{presetId:research.presetId}:{}),stage:'研发材料已投入，方案已准备好',researchId:c.pendingId,category:c.category,concept:c.concept,
   consumedMaterials:copy(c.consumedMaterials??null),investedUnits:c.totalUnits,investedCraftValue:c.totalMaterialValue,candidateCount:c.choiceRule?.finalCount??c.llmCandidatesRequired,...pick(research?.candidates?.length===1?research.candidates[0]:null,['confirmedDesign','designQuote']),
   namingResult:readyChoices?candidates(readyChoices):null,remainingStep:readyChoices?'选择一个已形成的候选':'完成候选名称描述后选择方案',mechanicsHash:c.mechanicsHash};

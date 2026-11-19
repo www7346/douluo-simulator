@@ -1,4 +1,5 @@
 import {makeStorySummaryOriginal} from '../shared/story-summary-original';
+import {withdrawnStorySnapshot} from '../shared/story-restoration';
 import {isPartyTurn} from '../shared/story-party-chat';
 import {assertCurrentSnapshot} from '../shared/snapshot-version';
 import {RemoteEngine} from '../cloud/remote-engine';
@@ -8,7 +9,8 @@ import {isAutomaticBattleCommand,type GameCommand,type GameEvent,type GameSnapsh
 import { GameDatabase, type AvatarRecord, type SaveOptions, type SaveSlotRecord } from './storage';
 import {researchWorkspace} from './research-workbench';
 import {workspaceFormat} from '../shared/workspace-format';
-import {assertSoulImageSlot,type SoulImageInput} from './soul-images';
+import {assertCharacterImageSlot,type SoulImageInput} from './soul-images';
+import {playerEditableRingSkill} from './ability-sources';
 import type {ModelLog} from './model-gateway';
 import {jsonEqual} from '../shared/json-identity';
 import type {CalculationProgress} from '../shared/calculation-progress';
@@ -29,6 +31,7 @@ export interface PendingRecovery {
   phase:'awaiting-generation'|'command'|'ack'|'none';
   command?:GameCommand;
   original?:GameCommand;
+  rejection?:PendingOperation['rejection'];
 }
 
 export class GameRuntime {
@@ -80,7 +83,7 @@ export class GameRuntime {
     if(this.#loaded&&this.#usesReceipts){
       await this.#retryAcknowledgement();
       const pending=await this.#database.getSetting<any>(`cloud-pending:${this.#slotId}`) as PendingOperation|null;
-      if(pending?.phase==='command'&&pending.command.type==='workflow.apply'&&pending.command.id!==this.#deferredCommandId)await this.#dispatch(pending.command,{});
+      if(pending?.phase==='command'&&!pending.rejection&&pending.command.type==='workflow.apply'&&pending.command.id!==this.#deferredCommandId)await this.#dispatch(pending.command,{});
     }
   }
   flushPending():Promise<void>{return this.#enqueue(()=>this.#settlePending());}
@@ -165,12 +168,23 @@ export class GameRuntime {
         const source=(pending.command.payload as any).ticket?.data?.command;
         const original=pending.phase==='awaiting-generation'?pending.command:pending.command.type==='workflow.apply'&&source?.type==='generation.apply'?source.payload?.command:undefined;
         if(original&&(!validCommand(original)||original.expectedRevision!==pending.command.expectedRevision||(pending.command.payload as any).ticket&&(pending.command.payload as any).ticket.data?.worldId!==this.#slotId))throw new CloudError('save-unacknowledged','生成结果与当前待恢复操作不一致，请保留当前页面并导出故障诊断',409);
-        return {phase:pending.phase,command:structuredClone(pending.command),...(original?{original:structuredClone(original)}:{})};
+        return {phase:pending.phase,command:structuredClone(pending.command),...(original?{original:structuredClone(original)}:{}),...(pending.rejection?{rejection:pending.rejection}:{})};
       }
       return {phase:await this.#database.getSetting(`cloud-ack:${this.#slotId}`)?'ack':'none'};
     });
   }
   async discardRetainedModel(expectedJobId?:string):Promise<void>{await this.#engine.discardRetainedModel?.(expectedJobId);}
+  keepProgressAfterRejectedResult():Promise<void>{return this.#enqueue(async()=>{
+    const pending=await this.#database.getSetting<any>(`cloud-pending:${this.#slotId}`) as PendingOperation|null;
+    if(pending?.phase!=='command'||!pending.rejection||pending.command.type!=='workflow.apply')throw Error('这次操作还需要继续保存');
+    // Recheck the same command: a changed service can still accept its original
+    // result. Network uncertainty, busy responses and existing receipts never
+    // authorize releasing a pending command.
+    try{await this.#dispatch(pending.command,{});return;}
+    catch(error){if(!(error instanceof CloudError)||!['stale-workflow','invalid-workflow'].includes(error.code)||![409,422].includes(error.status))throw error;}
+    await this.#database.archiveRejectedWorkflow(this.#slotId,pending.command);
+    if(this.#deferredCommandId===pending.command.id)this.#deferredCommandId=null;
+  });}
   cancelPendingGeneration(original:GameCommand|null):Promise<boolean>{return this.#enqueue(()=>original?this.#database.cancelAwaitingGeneration(this.#slotId,original):Promise.resolve(false));}
   /** Recheck the exact pending command without requesting or discarding a model job. */
   retryPendingGeneration(original:GameCommand):Promise<boolean>{return this.#enqueue(async()=>{
@@ -266,7 +280,9 @@ export class GameRuntime {
         // Resume the same durable operation; never invent a new command on reload.
         const pending=await this.#database.getSetting<any>(`cloud-pending:${this.#slotId}`) as PendingOperation|null;
         this.#deferredCommandId=!resumePending&&pending?.phase==='command'?pending.command.id:null;
-        if(resumePending&&pending&&pending.phase!=='awaiting-generation')try{await this.#database.traceDiagnostic(this.#slotId,'operation.resume',{operationId:pending.command.id,revision:pending.command.expectedRevision},()=>this.#dispatch(pending.command,{}));}catch(error){
+        if(resumePending&&pending&&!pending.rejection&&pending.phase!=='awaiting-generation')try{await this.#database.traceDiagnostic(this.#slotId,'operation.resume',{operationId:pending.command.id,revision:pending.command.expectedRevision},()=>this.#dispatch(pending.command,{}));}catch(error){
+          const retained=await this.#database.getSetting<any>(`cloud-pending:${this.#slotId}`) as PendingOperation|null;
+          if(retained?.rejection&&jsonEqual(retained.command,pending.command))return;
           // A rejected command was not committed and #dispatch has cleared it.
           // Keep its diagnostic without making the saved journey unreadable.
           if(!(error instanceof CloudError)||error.code!=='generation-required'&&(!rejectedCloudCommand(pending.command,error)||await this.#database.getSetting(`cloud-pending:${this.#slotId}`)))throw error;
@@ -308,6 +324,9 @@ export class GameRuntime {
       await this.#ensureLoaded();
       await this.#retryAcknowledgement();
       const before = this.readSnapshot();
+      // A new runtime may be used without an initial save (e.g. an isolated
+      // local game). The first input still needs its exact preceding world.
+      if(!this.#stored)await this.#persist({backup:false},before);
       let retainedTakeover=false;
       if(this.#usesReceipts){
         const pending=await this.#database.beginCloudOperation({worldId:this.#slotId,command,phase:'command',createdAt:new Date().toISOString(),...(Object.hasOwn(options,'avatar')?{options}:{})});
@@ -327,7 +346,11 @@ export class GameRuntime {
         const workspace=this.getWorkspace() as any;
         if(command.type==='research.begin'&&workspace?.kind==='player-workbenches'&&workspace.drafts?.research)workspace.drafts.research.selection={};
         const receipt=result.cloudReceipt;
+        const priorStory=(before.state as any).扩展?.story,nextStory=(result.snapshot.state as any).扩展?.story;
+        const storyOpening=!result.idempotent&&priorStory&&nextStory?.active?.number===priorStory.nextTurn&&nextStory.nextTurn===priorStory.nextTurn+1&&(!priorStory.active||priorStory.active.status==='complete')
+          ?{branchId:nextStory.branchId,turn:nextStory.active.number}:undefined;
         await this.#persist({backup:!result.idempotent,events:result.events,...options,
+          ...(storyOpening?{storyOpening}:{}),
           ...(checkpoint ? {checkpoint} : {}),
           ...((result.snapshot.state as any).战斗?.状态==='进行中'&&((before.state as any).战斗?.状态!=='进行中'||(before.state as any).战斗?.id!==(result.snapshot.state as any).战斗.id)?{battleOpening:true}:{}),
           ...(command.type==='research.begin'&&workspace?.kind==='player-workbenches'?{workspace}:{}),
@@ -340,6 +363,7 @@ export class GameRuntime {
       } catch (error) {
         if(!this.#usesReceipts)await this.#engine.restore(before);
         else if(error instanceof CloudError&&error.code==='generation-required')await this.#database.markAwaitingGeneration(this.#slotId,command);
+        else if(command.type==='workflow.apply'&&error instanceof CloudError&&['stale-workflow','invalid-workflow'].includes(error.code)&&[409,422].includes(error.status))await this.#database.markRejectedWorkflow(this.#slotId,command,error.code as NonNullable<PendingOperation['rejection']>);
         else if(rejectedCloudCommand(command,error))await this.#database.clearRejectedCloudOperation(this.#slotId,command.id);
         throw error;
       }finally{this.#reportCalculation(null);}
@@ -367,12 +391,16 @@ export class GameRuntime {
   }
 
   saveSoulImage(slot:string,image:SoulImageInput|null):Promise<void>{
-    assertSoulImageSlot(slot);
+    assertCharacterImageSlot(slot);
     const saved=image?structuredClone(image):null;
     return this.#enqueue(async()=>{
       const state=this.readSnapshot().state as any;
-      const count=state?.角色?.已建立?state.成长.列表[state.角色.主控单位ID].武魂ID列表.length:(this.getWorkspace() as any)?.config?.martialSoulDrafts?.length;
-      if(!count||Number(slot)>count)throw new Error('这个武魂尚未建立，请重新打开武魂面板');
+      if(slot.startsWith('skill:')){
+        if(!playerEditableRingSkill(state,slot.slice('skill:'.length)))throw Error('只能更换本人已获得的魂环技能图片');
+      }else{
+        const count=state?.角色?.已建立?state.成长.列表[state.角色.主控单位ID].武魂ID列表.length:(this.getWorkspace() as any)?.config?.martialSoulDrafts?.length;
+        if(!count||Number(slot)>count)throw new Error('这个武魂尚未建立，请重新打开武魂面板');
+      }
       const images=await this.#database.getSlotSoulImages(this.#stored);
       if(saved)images[slot]=saved;else delete images[slot];
       await this.#persist({soulImages:images,backup:false});
@@ -398,6 +426,7 @@ export class GameRuntime {
         label,expectedStoredRevision:current?.revision ?? null,expectedStorageVersion:current ? current.storageVersion ?? 0 : null,
         events:history.map(record => record.event),replaceEvents:true,avatar,figure,soulImages,workspace:this.getWorkspace(),
         storyHeadId:this.#stored?.storyHeadId??null,
+        storyUndoHeadId:this.#stored?.storyUndoHeadId??null,
         battleReplay:this.#stored?.battleReplay??null,
         profileId:this.#slotId,kind:slotId === this.#slotId ? 'profile' : 'checkpoint',
       });
@@ -405,7 +434,7 @@ export class GameRuntime {
     },slotId));
   }
 
-  restoreSnapshot(snapshot: GameSnapshot, events: GameEvent[] = [], options: Pick<SaveOptions,'label'|'avatar' | 'figure' | 'soulImages' | 'workspace' | 'storyHeadId' | 'storyHistory' | 'battleReplay' | 'battleReplayImport'> = {}): Promise<void> {
+  restoreSnapshot(snapshot: GameSnapshot, events: GameEvent[] = [], options: Pick<SaveOptions,'label'|'avatar' | 'figure' | 'soulImages' | 'workspace' | 'storyHeadId' | 'storyUndoHeadId' | 'storyHistory' | 'battleReplay' | 'battleReplayImport'> = {}): Promise<void> {
     return this.#enqueue(() => this.#database.traceDiagnostic(this.#slotId,'journey.restore',{revision:snapshot.revision},async () => {
       // A valid backup must remain recoverable even when connecting the broken current save failed.
       if(!this.#stored)this.#stored=await this.#database.loadSlot(this.#slotId);
@@ -421,10 +450,31 @@ export class GameRuntime {
         }
         await this.#engine.restore(snapshot);
         if(options.workspace&&this.#engine.query)await this.#engine.query('workspace.validate',{workspace:options.workspace});
-        await this.#persist({events,replaceEvents:true,resetCloudOperation:true,checkpoint:{key:'restore',label:'读取其他进度前'},...options});
+        await this.#persist({events,replaceEvents:true,resetCloudOperation:true,checkpoint:{key:'restore',label:'读取其他进度前'},storyUndoHeadId:null,...options});
         this.#loaded=true;
       } catch (error) {try{if(wasLoaded)await this.#engine.restore(before);}catch(rollbackError){await this.#database.recordDiagnostic(this.#slotId,{stage:'journey.restore.rollback',status:'failed',error:rollbackError});}this.#loaded=wasLoaded;throw error;}
     }));
+  }
+
+  withdrawStory(id:string,expectedHead:string):Promise<void>{
+    return this.#enqueue(async()=>{
+      await this.#ensureLoaded();await this.#retryAcknowledgement();
+      if(!this.#stored||this.#stored.storyUndoHeadId!==expectedHead)throw Error('故事已变化，请重新选择撤回位置');
+      const record=await this.#database.storyWithdrawalBefore(this.#stored,id),before=this.getSnapshot();
+      const snapshot=withdrawnStorySnapshot(record.snapshot,before.revision,crypto.randomUUID());
+      const [avatar,figure,soulImages,events]=await Promise.all([this.#database.getSlotAvatar(record),this.#database.getSlotFigure(record),this.#database.getSlotSoulImages(record),this.#database.listEvents(this.#slotId)]);
+      await this.#engine.discardRetainedModel?.();
+      try{
+        await this.#engine.restore(snapshot);
+        await this.#persist({avatar,figure,soulImages,workspace:record.workspace??null,storyHeadId:record.storyHeadId??null,
+          storyUndoHeadId:record.storyUndoHeadId??null,battleReplay:record.battleReplay??null,resetCloudOperation:true,
+          events:events.filter(row=>row.revision<=record.revision).map(row=>row.event),replaceEvents:true});
+        this.#deferredCommandId=null;
+      }catch(error){
+        try{await this.#engine.restore(before);}catch(rollbackError){this.#loaded=false;await this.#database.recordDiagnostic(this.#slotId,{stage:'story.withdraw.rollback',status:'failed',error:rollbackError});}
+        throw error;
+      }
+    });
   }
 
   #checkpoint(command: GameCommand, before: GameSnapshot, after: GameSnapshot): SaveOptions['checkpoint'] {

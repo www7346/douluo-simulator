@@ -6,6 +6,8 @@
  const CATEGORIES=Object.freeze(['魂导器','丹药','毒药','暗器','拘束器','工具','情具']),RECIPIENTS=Object.freeze(['player','buyer','captive']),PLACEMENTS=Object.freeze(['inventory','equipped','worn','stash']);
  const DEFINITION_FIELDS=['requestedBranches','soulPowerCost','durabilityCost','cooldownTurns','requirements','resourceCosts','maintenanceCosts','usageRules','castModes','defaultCastMode','medicine','modifiers','equipmentKind','fixedFormId','deviceCategory','templateId','restraint','ageTier','mechanismCap','outputScale','nativeCastRank','minimumCastRank','soulPowerCostRate','host','targetConditions','effectConditions'];
  const DESIGN_FIELDS=['id','category','name','description','appearance','quantity','recipient','placement','adopted','definition','artId','customImage'];
+ const BRANCH_FIELDS=['id','label','activation','optional','priority','targetPolicy','nodes'];
+ function designGrammar(){return clone({designFields:DESIGN_FIELDS,definitionFields:DEFINITION_FIELDS,branchFields:BRANCH_FIELDS});}
  const PAYLOAD_FIELDS=['activeSkill','passiveEffectGraph','modifiers','equipmentKind','fixedForm','deviceCategory','backgroundRestraint','description','form','artId','presetId','customImage','templateId','intimate','host'];
  function integer(v,label,min=0,max=Number.MAX_SAFE_INTEGER){if(!Number.isSafeInteger(v)||v<min||v>max)throw Error(label+'必须是'+min+'至'+max+'之间的整数');return v;}
  function only(v,fields,label){if(!object(v)||Object.keys(v).some(k=>!fields.includes(k)))throw Error(label+'含有不支持的设定');}
@@ -33,7 +35,7 @@
  }
  function graphs(definition){
   const branches=definition.requestedBranches??[];if(!Array.isArray(branches)||!branches.length)throw Error('请为作品添加实际效果');
-  const ids=new Set();for(const b of branches){only(b,['id','label','activation','optional','priority','targetPolicy','nodes'],'效果分支');if(typeof b.id!=='string'||!/^[a-zA-Z0-9_-]+$/.test(b.id)||ids.has(b.id)||!['active','passive'].includes(b.activation)||!Array.isArray(b.nodes))throw Error('效果分支编号、方式或节点格式无效');ids.add(b.id);for(const n of b.nodes)if(!Array.isArray(n)||n.length!==2||typeof n[0]!=='string'||!object(n[1]))throw Error('请选择已登记效果并填写参数');}
+  const ids=new Set();for(const b of branches){only(b,BRANCH_FIELDS,'效果分支');if(typeof b.id!=='string'||!/^[a-zA-Z0-9_-]+$/.test(b.id)||ids.has(b.id)||!['active','passive'].includes(b.activation)||!Array.isArray(b.nodes))throw Error('效果分支编号、方式或节点格式无效');ids.add(b.id);for(const n of b.nodes)if(!Array.isArray(n)||n.length!==2||typeof n[0]!=='string'||!object(n[1]))throw Error('请选择已登记效果并填写参数');}
   const empty=branches.findIndex(b=>!b.nodes.length);if(empty>=0)throw Error('第'+(empty+1)+'项附加能力尚未添加效果，请补充效果或移除这项能力');
   const graph=fx().makeBranchedGraph(branches),checked=fx().validateGraph(graph,{ageTier:'百万年',mechanismCap:'神话'});if(!checked.pass)throw Error(checked.errors.join('；'));
   if(graph.nodes.some(n=>fx().EFFECT_REGISTRY[n.effectId]?.authorable===false))throw Error('这项效果须通过对应的先天特性取得，不能制作成器具或药物');
@@ -97,7 +99,7 @@
   integer(valueGold,'真实估价');
   return {design:d,templateId,payload,valueGold,abilityPoints,contractHash:payloadIdentity(templateId,payload),quote:{free:true,valueGold,abilityPoints,quantity:d.quantity,totalValueGold:valueGold*d.quantity},summary:{name:d.name,category:d.category,description:d.description,appearance:d.appearance,active:!!payload.activeSkill,passive:!!payload.passiveEffectGraph,effectIds:[...(payload.activeSkill?.effectGraph?.nodes??[]),...(payload.passiveEffectGraph?.nodes??[])].map(n=>n.effectId),soulPowerCost:payload.activeSkill?.soulPowerCost??0,durabilityCost:payload.activeSkill?.durabilityCost??0}};
  }
- function inspectDesign(d){try{const c=compileDesign(d),timing=fx().designActionTimingErrors(c.payload.activeSkill);if(timing.length)throw Error(timing.join('；'));return {pass:true,errors:[],design:c.design,quote:c.quote,summary:c.summary,preview:{templateId:c.templateId,...Object.fromEntries(['artId','activeSkill','passiveEffectGraph','host','backgroundRestraint'].filter(k=>c.payload[k]!==undefined).map(k=>[k,clone(c.payload[k])]))}};}catch(e){return {pass:false,errors:[e.message],design:clone(d)};}}
+ function inspectDesign(d){try{const c=compileDesign(d),timing=[...fx().designActionTimingErrors(c.payload.activeSkill),...fx().designBalanceErrors(c.payload.activeSkill),...fx().designBalanceErrors(c.payload.passiveEffectGraph?{effectGraph:c.payload.passiveEffectGraph}:null)];if(timing.length)throw Error(timing.join('；'));return {pass:true,errors:[],design:c.design,quote:c.quote,summary:c.summary,preview:{templateId:c.templateId,...Object.fromEntries(['artId','activeSkill','passiveEffectGraph','host','backgroundRestraint'].filter(k=>c.payload[k]!==undefined).map(k=>[k,clone(c.payload[k])]))}};}catch(e){return {pass:false,errors:[e.message],design:clone(d)};}}
  function recipients(config){
   const b=config?.background??{id:'custom'},backgrounds=globalThis.SoulBackgroundCore,slots=b.id==='sealed-titled'?backgrounds.resolveSlots(config):null;
   const rows=[{id:'player',name:'当前主控人物',entityId:backgrounds.playerId(b,'opening-main')},...(['prince-cat','sealed-titled'].includes(b.id)?[{id:'buyer',name:'买主',entityId:slots?.buyer.id??'resident-xue-beng'},{id:'captive',name:'被囚者',entityId:slots?.captive.id??'captive-cat-liu'}]:[])];
@@ -220,5 +222,5 @@
   const templates=[...presets,...restraints.map(r=>'restraint:'+r.id),...tools.map(t=>'tool:'+t.id),...globalThis.SoulPersonTools.definitions().map(t=>'person-tool:'+t.key),...intimateDevices.map(device=>'intimate:'+device.id)].flatMap(id=>{try{const design=fromTemplate(id),check=inspectDesign(design);return check.pass?[{...design,id,label:design.name,design}]:[];}catch{return [];}});
   return {version:1,categories:CATEGORIES,templates,effects:clone(fx().EFFECT_REGISTRY),attributeKeys:clone(globalThis.SoulCombatFoundation.ATTRIBUTE_KEYS),forms:clone(globalThis.SoulCombatFoundation.EQUIPMENT_AFFIXES.FORMS),tools,restraints,intimateDevices,recipients:recipients(config),placements:PLACEMENTS};
  }
- return Object.freeze({CATEGORIES,normalize,compileDesign,inspectDesign,quote,recipients,catalog,fromTemplate,install,isItemAuthorized,isAbilitySource,abilityOperators,initialAttachment,validateState});
+ return Object.freeze({CATEGORIES,designGrammar,normalize,compileDesign,inspectDesign,quote,recipients,catalog,fromTemplate,install,isItemAuthorized,isAbilitySource,abilityOperators,initialAttachment,validateState});
 });

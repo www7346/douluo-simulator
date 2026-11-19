@@ -61,7 +61,7 @@
       if (!copied && sourceSoulId && sourceSoulId !== soul?.id) continue;
       if (!copied && skill.sourceItemId && !validItem(state.物品?.实例?.[skill.sourceItemId])) continue;
       if (skill.sourceKind === 'copied' && !Object.values(state.状态实例?.列表 ?? {}).some(status => status.状态 === '生效' && status.扩展?.复制技能ID列表?.includes(skillId))) continue;
-      if (skill.sourceKind === 'summoned-copy' && !(unit.扩展?.召唤?.constructId?unit.扩展.召唤.expiresAt>(globalThis.SoulPersonCore?.now(state)??0):Number(unit.扩展?.召唤?.剩余回合)>0)) continue;
+      if (skill.sourceKind === 'summoned-copy' && !(unit.扩展?.召唤?.constructId?(globalThis.SoulManifestation?.forUnit(state,unit.id)?.status==='active'||unit.扩展.召唤.expiresAt>(globalThis.SoulPersonCore?.now(state)??0)):Number(unit.扩展?.召唤?.剩余回合)>0)) continue;
       let released;try{released=globalThis.SoulEffectCompiler?.currentSoulRingCastSkill(state,unit,skill)??skill;}catch{continue;}
       if(globalThis.SoulEffectCompiler?.soulRingCastRelease(released).reason)continue;
       const graph = released.effectGraph;
@@ -224,7 +224,7 @@
     return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
   }
 
-  function grantTemporaryHealth(unit, offeredAmount, sourceId = '', domainId = '') {
+  function grantTemporaryHealth(unit, offeredAmount, sourceId = '', domainId = '', turns = 0) {
     if (!unit?.资源?.生命) throw new Error('临时生命目标缺少生命资源');
     const before = Math.max(0, round(unit.资源.生命.临时 ?? 0));
     const offered = Math.max(0, round(offeredAmount));
@@ -232,7 +232,7 @@
     const gained = after - before;
     unit.资源.生命.临时 = after;
     if(offered>0&&offered>=before){unit.扩展??={};if(sourceId)unit.扩展.temporaryHealthSource=String(sourceId);else delete unit.扩展.temporaryHealthSource;}
-    if(offered>0&&offered>=before){if(domainId)unit.扩展.temporaryHealthDomainId=String(domainId);else delete unit.扩展.temporaryHealthDomainId;}
+    if(offered>0&&offered>=before){if(turns)unit.扩展.temporaryHealthTurns=turns;else delete unit.扩展.temporaryHealthTurns;if(domainId)unit.扩展.temporaryHealthDomainId=String(domainId);else delete unit.扩展.temporaryHealthDomainId;}
     return {before, offered, gained, after, unused: Math.max(0, offered - gained)};
   }
 
@@ -241,7 +241,7 @@
     const before = Math.max(0, round(unit.资源.生命.临时 ?? 0));
     unit.资源.生命.临时 = 0;
     if(unit.扩展)delete unit.扩展.temporaryHealthSource;
-    if(unit.扩展)delete unit.扩展.temporaryHealthDomainId;
+    if(unit.扩展){delete unit.扩展.temporaryHealthDomainId;delete unit.扩展.temporaryHealthTurns;}
     return before;
   }
 
@@ -933,6 +933,7 @@
   }
 
   function activeMartialSoulId(state, unitId) {
+    const manifest=globalThis.SoulManifestation?.forUnit(state,unitId);if(manifest&&manifest.status==='active')return manifest.soulId;
     const growth = state?.成长?.列表?.[unitId];
     const owned = ownedMartialSoulIds(state, unitId);
     return owned.includes(growth?.激活武魂ID) ? growth.激活武魂ID : '';

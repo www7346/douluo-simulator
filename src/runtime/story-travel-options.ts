@@ -7,7 +7,7 @@ export function storyTravelOptions(state:any,input:string){
  if(!destinations.length)return null;
  let preview:((intent:Record<string,string>)=>any)|undefined;
  return {
-  meaning:'这是输入中具名地点的旅行预览，不是已执行结果。travel抵达地图地点，只结算路线时间和旅费，不开始远征。找人可先旅行，到达后再用同一人物ID相遇；人物是否在场由该步执行时检查。预览未覆盖别名或未具名目的地，缺项不表示不可到达。',
+  meaning:'这是输入中具名地点的旅行预览，不是已执行结果。travel抵达地图地点，结算实际路程时间和途中事件，不开始远征。找人可先旅行，到达后再用同一人物ID相遇；人物是否在场由该步执行时检查。预览未覆盖别名或未具名目的地，缺项不表示不可到达。',
   destinations:destinations.map(p=>{
    try{
     preview??=rules.world.intentPreviewer(state);

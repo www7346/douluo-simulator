@@ -43,6 +43,13 @@
  // the fixed foundation collection. Its initial body never includes later rings.
  function taiyinDraft(){return {name:'薜荔',concept:'以湖月秋为根基，阴为主、水为辅。月华凝剑，澄澈善变，随魂环领悟新的剑术与月法。',form:'青白月璃凝成长剑，剑脊如一泓秋水，薄月纹沿刃舒展；挥动时只留清冷的水光。',role:'剑术与太阴月法',attributeVersion:3,categories:['category.sword','category.moon'],attributes:[{id:'attribute.yin',investment:8},{id:'attribute.water',investment:4}],channels:['channel.melee','channel.projectile','channel.beam','channel.shield','channel.cleanse','channel.sensory','channel.sustain'],traits:[{templateId:'trait.attribute-mastery',parameter:'attribute.yin',level:1},{templateId:'trait.attribute-mastery',parameter:'attribute.water',level:1}],weaknesses:[],exchangeContracts:[],baseAction:{mode:'melee',powerTier:2,attributeId:'attribute.yin'},playerConfirmed:true};}
  const women=globalThis.SoulCanonicalWomenContent??require('../../shared/canonical-women-content-core.js');
- for(const p of women.PROFILES){const s=p.SOUL,entry=h.entry('武魂',s.id.slice(7),s.name,s.description,s.appearance,{draft:h.clone(s.draft)},{canonName:s.name,sourceNote:'原著武魂与本游戏精修路线；未详述的技能、环位和数值为游戏设计。'}),index=ENTRIES.findIndex(v=>v.id===s.id);if(index>=0)ENTRIES[index]=entry;else ENTRIES.push(entry);}
+ for(const p of women.PROFILES){
+  const s=p.SOUL,id=s.id.slice(7),index=ENTRIES.findIndex(v=>v.id===s.id);
+  const rarity=p.npcFamily?'稀有':s.id==='preset:silver-shuttle-silk'?'角色传承':ENTRIES[index]?.gates.rarity;
+  const options={rarity,sourceNote:p.sourceNote??'原著武魂与本游戏精修路线；未详述的技能、环位和数值为游戏设计。'};
+  if(!p.npcFamily&&s.id!=='preset:silver-shuttle-silk')options.canonName=s.name;
+  const entry=h.entry('武魂',id,s.name,s.description,s.appearance,{draft:h.clone(s.draft)},options);
+  if(index>=0)ENTRIES[index]=entry;else ENTRIES.push(entry);
+ }
  return Object.freeze({ENTRIES,taiyinDraft});
 });

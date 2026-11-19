@@ -16,7 +16,9 @@ export function personalChangeContext(state:any,ownerId:string){
  const byPerson=[...counterparts].map(([personId,name])=>({personId,name,
   spokenIds:spoken.filter((r:any)=>r.listenerId===personId).map((r:any)=>r.id),
   heardIds:heard.filter((r:any)=>r.speakerId===personId).map((r:any)=>r.id)}));
+ const appearanceDescriptionReference=rules.playerAppearance.wording(state,ownerId);
  return {ownerId,currentBody:{gender:person.gender??null,appearance:person.appearance??null},
+  ...(appearanceDescriptionReference?{appearanceDescriptionReference}:{}),
   selfIdentity:person.扩展?.cognitivePersona?.selfIdentity??null,
   visiblePeople,
   rememberedSpeech:{ownerId,scope:'正式发言账本中本人仍可记起的原话；byPerson按当前可见者及这些原话的往来人物索引。私聊与群聊归档另列，空索引不覆盖其他来源。',byPerson,spoken,heard},

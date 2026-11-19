@@ -299,15 +299,17 @@ export function settleStoryPromise(state:any,input:Record<string,any>,sourceId:s
   const delivered=rules.world.transferItem(state,gift.itemId,gift.destinationId,gift.quantity);
   if(!delivered.legalOwnerEntityId||delivered.legalOwnerEntityId===record.playerId)delivered.legalOwnerEntityId=record.personId;
   delivered.stolen=!!delivered.legalOwnerEntityId&&delivered.legalOwnerEntityId!==record.personId;
-  event(state,record,'completed',sourceId,{quantity:gift.quantity,deliveredItemId:delivered.id});recordGoodwill(state,record.personId,sourceId,'promise');
-  return {state,receipt:{type:'commitment-completed',commitment:structuredClone(record),quantity:gift.quantity,deliveredItemId:delivered.id,summary:`已向${state.人物.列表[record.personId].name}交付${gift.quantity}件${record.itemName}；赠物承诺完成，不自动改变关系或获得回报。`}};
+  event(state,record,'completed',sourceId,{quantity:gift.quantity,deliveredItemId:delivered.id});
+  const goodwill=recordGoodwill(state,record.personId,sourceId,'promise');
+  return {state,receipt:{type:'commitment-completed',commitment:structuredClone(record),quantity:gift.quantity,deliveredItemId:delivered.id,summary:`已向${state.人物.列表[record.personId].name}交付${gift.quantity}件${record.itemName}，兑现了赠物承诺。${goodwill>0?`对方的好感提高了${goodwill}点。`:''}`}};
  }
  const player=state.人物.列表[record.playerId],person=state.人物.列表[record.personId];
  const from=state.钱包.列表[player.walletId],to=state.钱包.列表[person.walletId];
  if(!from||!to||from===to||!Number.isSafeInteger(record.amount)||record.amount<1||from.gold<record.amount||!Number.isSafeInteger(to.gold+record.amount))throw Error('余额不足或收款钱包无法完成这次转账');
  from.gold-=record.amount;to.gold+=record.amount;
- event(state,record,'completed',sourceId,{paid:record.amount});recordGoodwill(state,record.personId,sourceId,'promise');
- return {state,receipt:{type:'commitment-completed',commitment:structuredClone(record),paid:record.amount,summary:`已向${person.name}交付${record.amount}金魂币，赠款承诺完成；不自动改变关系或获得回报。`}};
+ event(state,record,'completed',sourceId,{paid:record.amount});
+ const goodwill=recordGoodwill(state,record.personId,sourceId,'promise');
+ return {state,receipt:{type:'commitment-completed',commitment:structuredClone(record),paid:record.amount,summary:`已向${person.name}交付${record.amount}金魂币，兑现了赠款承诺。${goodwill>0?`对方的好感提高了${goodwill}点。`:''}`}};
 }
 
 export function attendInvitation(state:any,input:Record<string,any>,sourceId:string){

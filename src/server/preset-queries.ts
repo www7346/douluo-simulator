@@ -15,7 +15,7 @@ export function presetQuery(state:any,name:string,input:Record<string,any>){
  if(name==='preset.list'){
   if(Object.keys(input).some(key=>!['category','catalogKind','era','sourceKind','query'].includes(key)))throw new CloudError('invalid-query','精品目录查询包含未开放的条件');
   if(input.category!==undefined&&!rules.presets.CATEGORIES.includes(input.category))throw new CloudError('invalid-query','请选择目录中的一种类别。');
-  return {categories:rules.presets.CATEGORIES,entries:rules.presets.list(input).map(presetPresentation)};
+  return {categories:rules.presets.CATEGORIES,entries:rules.presets.list(input).map((entry:any)=>({...presetPresentation(entry),...(RESEARCH_CATEGORIES.includes(entry.category)?{blueprintAccess:rules.expedition.presetBlueprintAccess(state,entry.id)}:{})}))};
  }
  if(name==='preset.preview'){
   if(Object.keys(input).some(key=>!['presetId','category','concept','materials','budget','martialSoulId','beastProfileId'].includes(key)))throw new CloudError('invalid-query','精品预览包含未开放的条件');
@@ -23,6 +23,7 @@ export function presetQuery(state:any,name:string,input:Record<string,any>){
   if(!entry)throw new CloudError('invalid-query','精品预设不存在');
   if(input.category!==undefined&&input.category!==entry.category)throw new CloudError('invalid-query','精品预设与所选类别不一致');
   if(RESEARCH_CATEGORIES.includes(entry.category)){
+   const blueprintAccess=rules.expedition.presetBlueprintAccess(state,entry.id);if(!blueprintAccess.known)return {entry:presetPresentation(entry),pass:false,reason:blueprintAccess.reason,blueprintAccess};
    const access=rules.expedition.previewWorkshopAccess(state);
    try{return {entry:presetPresentation(entry),...rules.expedition.previewResearch(state,{category:entry.category,concept:input.concept??entry.description,materials:input.materials??[],presetId:entry.id}),serviceReason:access.reason};}
    catch(error){return {entry:presetPresentation(entry),pass:false,reason:String((error as Error).message),serviceReason:access.reason};}

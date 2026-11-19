@@ -23,7 +23,7 @@
   function normalizeScope(skill,options={}){
     const branches=abilities.selectFieldBranches(skill,options.branchIds);
     const result={branchIds:branches.map(b=>b.id),modeId:options.modeId??skill.defaultCastMode??''};
-    for(const key of ['targetItemId','blueprintId','recipeId','deviceNodeId','lockId','knowledgeId'])if(options[key]!==undefined){if(typeof options[key]!=='string'||!options[key])throw Error('请选择实际物品、配方或器具凭据');result[key]=options[key];}
+    for(const key of ['targetItemId','blueprintId','recipeId','reconLocationId','deviceNodeId','lockId','knowledgeId'])if(options[key]!==undefined){if(typeof options[key]!=='string'||!options[key])throw Error('请选择实际物品、配方或器具凭据');result[key]=options[key];}
     if(options.quantity!==undefined){if(!Number.isSafeInteger(options.quantity)||options.quantity<1||options.quantity>10)throw Error('造物数量须为1至10');result.quantity=options.quantity;}
     if(options.materials!==undefined){
       if(!Array.isArray(options.materials)||options.materials.length>256)throw Error('材料选择无效');
@@ -167,6 +167,7 @@
     state.容器.列表[item.containerId].itemIds=state.容器.列表[item.containerId].itemIds.filter(id=>id!==item.id);delete state.物品.实例[item.id];constructEvent(state,row,'materials-collected',{itemId:item.id,actorId,sourceId,deliveries});return deliveries;
   }
   function endConstruct(state,record,reason='manual'){
+    if(record.lifetime==='soul'){record.status=reason==='destroyed'?'destroyed':'recalled';if(reason==='destroyed')record.destroyedAt=people.now(state);constructEvent(state,record,record.status,{reason});return;}
     if(record.status!=='active')return;
     if(record.unitId)leavePossessions(state,record);
     record.status=reason;record.endedAt=people.now(state);if(record.zone)record.zone.状态='已结束';
@@ -174,17 +175,18 @@
     constructEvent(state,record,'ended',{reason});
   }
   function advanceAt(state,at=people.now(state)){
-    for(const row of constructs(state).filter(r=>r.status==='active')){
+    globalThis.SoulManifestation?.reconcile(state);
+    for(const row of constructs(state).filter(r=>r.status==='active'&&r.lifetime!=='soul')){
       const unit=row.unitId?state.战斗单位.列表[row.unitId]:null;
       if(row.expiresAt<=at)endConstruct(state,row,'expired');
       else if(row.unitId&&(!unit||unit.存活状态!=='存活'||unit.资源.生命.当前<=0))endConstruct(state,row,'destroyed');
       else if(!state.战斗单位.列表[row.actorId]||state.战斗单位.列表[row.actorId].存活状态==='死亡')endConstruct(state,row,'source-dead');
     }
   }
-  function nextAt(state,through=Number.MAX_SAFE_INTEGER){const times=constructs(state).filter(r=>r.status==='active'&&r.expiresAt<=through).map(r=>r.expiresAt);return times.length?Math.min(...times):null;}
+  function nextAt(state,through=Number.MAX_SAFE_INTEGER){const times=constructs(state).filter(r=>r.status==='active'&&r.lifetime!=='soul'&&r.expiresAt<=through).map(r=>r.expiresAt);return times.length?Math.min(...times):null;}
   function activeWalls(state){return constructs(state).filter(r=>r.status==='active'&&r.kind==='wall'&&r.battleId===state.战斗?.id&&r.expiresAt>people.now(state)&&r.zone.耐久>0).map(r=>r.zone);}
   function summonParticipants(state,ids){
-    const result=[];for(const row of constructs(state).filter(r=>r.status==='active'&&r.kind==='summon'&&ids.includes(r.actorId)&&r.expiresAt>people.now(state))){
+    const result=[];for(const row of constructs(state).filter(r=>r.status==='active'&&r.kind==='summon'&&ids.includes(r.actorId)&&(r.lifetime==='soul'||r.expiresAt>people.now(state)))){
       const unit=state.战斗单位.列表[row.unitId];if(unit?.存活状态==='存活'&&globalThis.SoulScenePosition.positionOf(state,row.actorId).kind==='location'&&globalThis.SoulScenePosition.positionOf(state,row.actorId).locationId===row.scope.locationId&&globalThis.SoulScenePosition.positionOf(state,row.actorId).sceneId===row.scope.sceneId)result.push({unitId:row.unitId,actorId:row.actorId});
     }return result;
   }
@@ -209,6 +211,7 @@
     const errors=[],ids=new Set(),eventIds=new Set();let previousHash=null;
     for(const e of db.events){const {hash,...body}=e;if(hash!==abilities.hash(body)||previousHash!==e.previousHash||eventIds.has(e.id)||!db.records.some(r=>r.id===e.constructId)||e.at>people.now(state))errors.push('世界构造事件链无效');eventIds.add(e.id);previousHash=hash;}
     for(const row of db.records)try{
+      if(row.lifetime==='soul'){if(ids.has(row.id))throw Error('重复实体');globalThis.SoulManifestation.validateRecord(state,row);ids.add(row.id);continue;}
       const immutable=Object.fromEntries(['id','kind','actorId','targetId','sourceId','nodeId','skillId','scope','createdAt','expiresAt','contract','payment','initial'].map(k=>[k,row[k]])),node=row.contract.effectGraph.nodes.find(n=>n.id===row.nodeId);
       if(ids.has(row.id)||row.originHash!==abilities.hash(immutable)||!abilities.verify(row.contract).pass||!sourceOwned(state,row.contract,row.actorId)||node?.params.持续方式!=='世界分钟'||row.expiresAt!==row.createdAt+node.params.持续分钟||row.createdAt>people.now(state)||!['wall','summon'].includes(row.kind)||row.kind==='wall'&&node.effectId!=='zone.wall'||row.kind==='summon'&&node.effectId!=='summon.entity')throw Error('来源或期限');
       if(row.status==='active'&&row.expiresAt<=people.now(state))throw Error('已过期构造仍活动');

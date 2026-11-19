@@ -5,7 +5,8 @@ const pick=(v:any,keys:string[])=>Object.fromEntries(keys.filter(k=>v&&Object.ha
 function known(v:any,fields:string[],label:string){const unknown=Object.keys(v).filter(k=>!['type','id','summary','meaning',...fields].includes(k));if(unknown.length)throw Error(`通讯资料缺少字段编译：${label}/${unknown.join(',')}`);}
 export function compileCommunicationChannel(c:any){
  if(!c)return {mode:'当面'};
- if(c.kind==='realm'){known(c,['kind','realmId','captureEventId'],'画境渠道');return {mode:'画境联系',realmId:c.realmId,captureEventId:c.captureEventId};}
+ if(c.kind==='realm-visit'){known(c,['kind','realmId','entryEventId'],'住客渠道');return {mode:'画境联系',realmId:c.realmId,entryEventId:c.entryEventId};}
+ if(c.kind==='realm'){known(c,['kind','realmId','captureEventId','deploymentId'],'画境渠道');return {mode:c.deploymentId?'投影当面交谈':'画境联系',...pick(c,['realmId','captureEventId','deploymentId'])};}
  known(c,['kind','contactId'],'渠道');if(c.kind!=='soul-device')throw Error(`通讯渠道缺少编译：${c.kind}`);
  return {mode:'远程魂导通讯',contactId:c.contactId};
 }
@@ -24,7 +25,7 @@ export function compileAddress(r:any){
   interactionIntent:r.intent,speakerLocationId:r.locationId,channel:compileCommunicationChannel(r.channel)};
 }
 const membershipLabels:Record<PartyRecipient['membershipKind'],string>={
- party:'自愿同伴', contract:'合同同伴', projection:'投影同行，由本人回应',
+ party:'自愿同伴', contract:'合同同伴', projection:'投影在场，由本人回应',
 };
 function recipient(r:PartyRecipient){
  known(r,['personId','name','membershipId','membershipKind','delivered','reason','channel'],'群消息接收者');
@@ -51,8 +52,8 @@ export function compilePartyHistory(rows:any[]){return rows.map(r=>{
 });}
 export function compileCommunicationContext(after:any){
  const result:Record<string,any>={};
- if(after.communication){const c=after.communication;known(c,['available','mode','reason','contactId','label','channel'],'当前接通状态');if(!['in-person','soul-device'].includes(c.mode))throw Error('当前通讯模式缺少编译');
-  result.communication={mode:c.channel?.kind==='realm'?'画境联系':c.mode==='in-person'?'当面':'远程魂导通讯',available:c.available,...pick(c,['reason','contactId']),...(c.channel?{channel:compileCommunicationChannel(c.channel)}:{})};}
+ if(after.communication){const c=after.communication;known(c,['available','mode','reason','contactId','label','channel','canSeePlayer'],'当前接通状态');if(!['in-person','soul-device','realm','projection'].includes(c.mode))throw Error('当前通讯模式缺少编译');
+  result.communication={mode:c.label==='隔器传声'?'隔器传声':c.mode==='projection'?'投影当面交谈':c.mode==='realm'||c.channel?.kind==='realm'?'画境联系':c.mode==='in-person'?'当面':'远程魂导通讯',available:c.available,...pick(c,['reason','contactId','canSeePlayer']),...(c.channel?{channel:compileCommunicationChannel(c.channel)}:{})};}
  if(after.personalKnowledge){const k=after.personalKnowledge;known(k,['kind','total','selected'],'听闻检索');result.personalKnowledge={totalRetained:k.total,selected:k.selected.map(compileStatement)};}
  if(after.personalContacts){const a=after.personalContacts;known(a,['total','selected'],'交谈检索');result.personalContacts={totalRetained:a.total,selected:a.selected.map(compileAddress)};}
  if(after.partyConversation)result.partyConversation=compilePartyHistory(after.partyConversation);

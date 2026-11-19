@@ -1,11 +1,13 @@
 import {storyTargetChars} from '../shared/story-length';
 import type {StoryPromptConfig} from '../runtime/story-prompts';
 import type {StoryWritingPackage} from './story-writing-package';
+import {bundledWriterLength} from '../runtime/story-writer-prompts';
 
 /** A writing preference, never a truncation or a change to the frozen facts. */
 export function storyLengthPreference(config:StoryPromptConfig,kind:'story-writer'|'story-rewrite',source:StoryWritingPackage){
- const totalTargetCharacters=storyTargetChars(config)??(kind==='story-writer'&&source.origin.audience.kind==='public'&&!source.origin.battleId?600:undefined);
- if(totalTargetCharacters===undefined)return undefined;
+ const preset=bundledWriterLength(config);
+ const totalTargetCharacters=storyTargetChars(config)??(preset===undefined&&kind==='story-writer'&&source.origin.audience.kind==='public'&&!source.origin.battleId?600:preset);
+ if(totalTargetCharacters==null)return undefined;
  const section=source.origin.writingSection;
  if(!section)return {targetCharacters:totalTargetCharacters,scope:'本次完整正文'};
  const event=source.facts.events.find(event=>event.facts.battle?.id===section.battleId);

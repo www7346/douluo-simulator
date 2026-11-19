@@ -10,6 +10,7 @@
   const mechanics=root?.SoulBattleMechanics??(typeof require==='function'?require('./battle-mechanics-core.js'):null);
   if(!root?.SoulDeviceLocks&&typeof require==='function')require('./device-lock-core.js');
   if(!root?.SoulDeviceOperations&&typeof require==='function')require('./device-operation-core.js');
+  if(!root?.SoulSummonOrders&&typeof require==='function')require('./summon-orders-core.js');
   if(!root?.SoulCreationCore&&typeof require==='function')require('./creation-core.js');
   if(!root?.SoulAbilityExchange && typeof require==='function')require('./ability-exchange-core.js');
   const expeditions=root?.SoulExpeditionContext??(typeof require==='function'?require('../../shared/expedition-context-core.js'):null);
@@ -440,7 +441,7 @@
     }
     return errors;
   }
-  function releaseDeploymentParticipant(state,unitId){if(!globalThis.SoulCombatDeployments.sourceContext(state,unitId)?.deploymentId)throw Error('没有正式出战来源');const battle=[state.战斗,...Object.values(state.世界?.backgroundBattles??{})].find(b=>b.状态==='进行中'&&b.扩展?.成员?.[unitId]?.status==='active');if(!battle)return;const front=state.战斗;state.战斗=battle;try{battle.扩展.成员[unitId].status='removed';releaseParticipant(state,unitId);}finally{state.战斗=front;}}
+  function releaseDeploymentParticipant(state,unitId){if(!globalThis.SoulCombatDeployments.sourceContext(state,unitId)?.deploymentId&&!globalThis.SoulManifestation?.forUnit(state,unitId))throw Error('没有正式出战来源');const battle=[state.战斗,...Object.values(state.世界?.backgroundBattles??{})].find(b=>b.状态==='进行中'&&b.扩展?.成员?.[unitId]?.status==='active');if(!battle)return;const front=state.战斗;state.战斗=battle;try{battle.扩展.成员[unitId].status='removed';releaseParticipant(state,unitId);}finally{state.战斗=front;}}
   function releaseParticipant(state,unitId) {
     globalThis.SoulCombatDeployments.finishParticipant(state,unitId,'离开本场战斗');
     for(const status of Object.values(state.状态实例.列表))if(status.来源?.战斗ID===state.战斗.id&&status.清理规则?.战斗结束&&(status.目标单位ID===unitId||status.来源?.单位ID===unitId&&status.清理规则?.来源失能))removeStatus(state,status,'battle-left');
@@ -786,11 +787,11 @@
   }
 
   function skillMartialSoulId(skill) {
-    return String(skill?.sourceMartialSoulId ?? skill?.来源武魂ID ?? '');
+    return String(skill?.扩展?.copyOrigin?.spec?.carrierSoulId || skill?.sourceMartialSoulId || skill?.来源武魂ID || '');
   }
 
   function skillRingId(skill) {
-    return String(skill?.sourceRingId ?? skill?.来源魂环ID ?? '');
+    return String(skill?.扩展?.copyOrigin?.spec?.carrierSoulId?skill.扩展.copyOrigin.source.sourceRingId:(skill?.sourceRingId ?? skill?.来源魂环ID ?? ''));
   }
 
   function skillSourcePresentation(state, skill) {
@@ -1089,6 +1090,8 @@
     return aiReadSession?aiMemo(state,`quote:${actor.id}:${skill.id}:${skill.castOrigin?.rank??''}:${skill._modeId??''}:${JSON.stringify(options)}`,()=>skillCastAvailabilityUncached(state,actor,skill,options)):skillCastAvailabilityUncached(state,actor,skill,options);
   }
   function skillCastAvailabilityUncached(state,actor,skill,options={}) {
+    const manifestation=globalThis.SoulManifestation?.forSoul(state,skill.sourceMartialSoulId??skill.来源武魂ID);
+    if(manifestation&&manifestation.actorId===actor.id&&globalThis.SoulManifestation.hasTrait(state.武魂.列表[manifestation.soulId]))return {available:false,reason:'这项魂技由外放武魂释放，请向它下达指令',payment:null,branchIds:[]};
     if(globalThis.SoulCombatDeployments.isDeploySkill(skill,options.branchIds))try{const mode=options.modeId??skill._modeId??skill.defaultCastMode,request=globalThis.SoulCombatDeployments.fromRingSkill(state,actor.id,skill.id,mode),q=globalThis.SoulCombatDeployments.quote(state,request,options.fieldUse?{}:{battleId:state.战斗.id});return {available:true,payment:q.cost,branchIds:['branch-main']};}catch(error){return {available:false,reason:error.message,payment:null,branchIds:[]};}
     try{skill=effects.currentSoulRingCastSkill(state,actor,skill,options.castRank);}catch(error){return {available:false,reason:error.message,payment:null,branchIds:[]};}
     try{validateSkillSpecialRequirements(state,actor,skill);}catch(error){return {available:false,reason:error.message,payment:null,branchIds:[]};}
@@ -1104,6 +1107,7 @@
     return first??{available:false,reason:'这项能力没有主动效果分支',payment:null,branchIds:[]};
   }
   function paySkillUse(state,actor,skill,receipt,options={}) {
+    const manifest=globalThis.SoulManifestation?.forSoul(state,skill.sourceMartialSoulId??skill.来源武魂ID);if(manifest&&manifest.actorId===actor.id)throw Error('这项魂技由外放武魂释放，请向它下达指令');
     skill=effects.currentSoulRingCastSkill(state,actor,skill,options.castRank);
     const release=effects.soulRingCastRelease(skill);if(release.reason)throw Error(release.reason);
     const paymentOptions=skillPaymentOptions(state,actor,skill,options),source=externalSourceItem(state,actor,skill);
@@ -1247,7 +1251,7 @@
     const native=foundation.nativeOriginDefinition(actor);
     const nativeForm=Boolean(native&&skill?.sourceKind==='native-origin'&&skill.sourceNativeOriginId===native.id&&skill.持有者单位ID===actor.id&&actor.能力?.技能ID?.includes(skill.id));
     if (Number(actor?.派生?.有效等级 ?? 0) < 70) reasons.push('武魂真身需要有效等级达到70');
-    if (!soul || soul.持有者单位ID !== actor.id) reasons.push('武魂真身缺少属于行动者的来源武魂');
+    if (!soul || soul.持有者单位ID !== (globalThis.SoulManifestation?.forUnit(state,actor.id)?.actorId??actor.id)) reasons.push('武魂真身缺少属于行动者的来源武魂');
     if (!nativeForm){
       if ((soul?.魂环ID列表?.length ?? 0) < 7) reasons.push('来源武魂尚未开放并装载七个魂环位');
       if (!sourceRing || sourceRing.武魂ID !== soulId || Number(sourceRing.序号 ?? 0) < 7) reasons.push('武魂真身必须来自该武魂的第七或更高魂环位');
@@ -1455,6 +1459,7 @@
     const center = domainCenter(state, domain);
     if (!center || !unit) return false;
     const radius = Number(domain.参数?.半径区 ?? 0);
+    if(domain.参数?.定点守卫)return pointDistance(unitPoint({位置:center}),unitPoint(unit))<=10+radius*BATTLEFIELD.zoneLength;
     if (combatDistance({位置:center}, unit) > radius) return false;
     return radius > 0 || !center.站位簇 || center.站位簇 === unit.位置.站位簇;
   }
@@ -1551,7 +1556,7 @@
   function targetingMode(targetNode) {
     if (!targetNode || ['target.self', 'target.aura'].includes(targetNode.effectId)) return 'automatic';
     if (['target.single', 'target.cluster', 'target.chain'].includes(targetNode.effectId)) return 'unit';
-    if (targetNode.effectId === 'target.burst') return 'point';
+    if (targetNode.effectId === 'target.burst') return targetNode.params.以友方为中心?'unit':'point';
     if (['target.line', 'target.cone'].includes(targetNode.effectId)) return 'direction';
     return 'automatic';
   }
@@ -1604,7 +1609,9 @@
     const allowsDead = graph.nodes.some(node => node.effectId === 'payload.revive');
     const factionRule = targetNode?.params?.阵营规则 ?? '自动';
     const selectionMode = targetNode?.params?.选择模式 ?? '主目标';
+    const interpose=graph.nodes.find(n=>n.effectId==='reaction.interpose');
     const factionEligible = unit => {
+      if(interpose&&unit.id===actor.id)return false;
       if (targetNode?.effectId === 'target.self') return unit.id === actor.id;
       if (factionRule === '敌方') return !sameSide(state, unit, actor);
       if (factionRule === '友方') return sameSide(state, unit, actor);
@@ -1612,7 +1619,7 @@
       return beneficial ? sameSide(state, unit, actor) : !sameSide(state, unit, actor);
     };
     const baseEligible = unit => Boolean(unit) && isPresentParticipant(state, unit.id) &&
-      (allowsDead ? unit.存活状态 === '死亡' : isActiveParticipant(state, unit.id)) && factionEligible(unit);
+      (allowsDead ? ['死亡','昏迷'].includes(unit.存活状态)||unit.资源.生命.当前<=0 : isActiveParticipant(state, unit.id)) && factionEligible(unit);
     const eligible = unit => baseEligible(unit) && !globalThis.SoulTargetConditions?.skillReason(state,actor.id,unit.id,skill);
     // Single-target casts with a selected unit do not need to rank the entire battlefield.
     let ranked;
@@ -1631,8 +1638,14 @@
     const primaryId = requested[0] ?? (selectionMode === '主目标' ? '' : orderedLegal()[0]?.id);
     const actorPoint = unitPoint(actor);
     const primaryPoint = units[primaryId] ? unitPoint(units[primaryId]) : null;
-    const aimPoint = targetNode?.params?.落点==='自身'?actorPoint:battlePoint(intent.aimPoint, primaryPoint ?? actorPoint);
+    const anchored=targetNode?.params?.以友方为中心;
+    if(anchored&&(!primaryPoint||!eligible(units[primaryId])||!sameSide(state,actor,units[primaryId])||combatDistance(actor,units[primaryId])>geometry.rangeZones))throw Error('请选择射程内的一名同伴作为中心');
+    const aimPoint = anchored?primaryPoint:targetNode?.params?.落点==='自身'?actorPoint:battlePoint(intent.aimPoint, primaryPoint ?? actorPoint);
     const mode = targetingMode(targetNode);
+    if(graph.nodes.some(n=>n.effectId==='domain.field'&&n.params.定点守卫)&&mode==='point'){
+      if(pointDistance(actorPoint,aimPoint)>geometry.aimRange)throw Error('守卫落点超出施放距离');
+      return [actor.id];
+    }
     if (requested.some(id => !baseEligible(units[id]))) throw new Error(`显式目标不符合阵营或存活规则：${requested.find(id => !baseEligible(units[id]))}`);
     if(targetNode?.effectId==='target.single'&&primaryId){const reason=globalThis.SoulTargetConditions?.skillReason(state,actor.id,primaryId,skill);if(reason)throw Error(reason);}
     if (targetNode?.effectId === 'target.self') {const conditionReason=globalThis.SoulTargetConditions?.skillReason(state,actor.id,actor.id,skill);if(conditionReason)throw Error(conditionReason);targetIds = [actor.id];}
@@ -1665,7 +1678,7 @@
       const coordinateRadius = targetGeometry(releaseNode,targetNode).radius+avatarAreaBonus(state,actor,skill)*BATTLEFIELD.zoneLength;
       targetIds = orderedLegal()
         .filter(unit => pointDistance(unitPoint(unit), aimPoint) <= coordinateRadius)
-        .sort((left,right)=>targetNode.params.本人优先?(Number(right.id===actor.id)-Number(left.id===actor.id)||pointDistance(unitPoint(left),aimPoint)-pointDistance(unitPoint(right),aimPoint)||left.id.localeCompare(right.id)):0)
+        .sort((left,right)=>anchored?(Number(right.id===primaryId)-Number(left.id===primaryId)||pointDistance(unitPoint(left),aimPoint)-pointDistance(unitPoint(right),aimPoint)||left.id.localeCompare(right.id)):targetNode.params.本人优先?(Number(right.id===actor.id)-Number(left.id===actor.id)||pointDistance(unitPoint(left),aimPoint)-pointDistance(unitPoint(right),aimPoint)||left.id.localeCompare(right.id)):0)
         .slice(0, targetNode.params.覆盖全部?undefined:targetNode.params.最大目标 ?? 2).map(unit => unit.id);
     } else if (targetNode?.effectId === 'target.chain') {
       const maximum = targetNode.params.最大目标 ?? 2;
@@ -1687,12 +1700,14 @@
         .map(unit => unit.id);
     } else if (!targetNode && graph.nodes.some(node => node.family === 'reaction')) targetIds = [actor.id];
     if (!targetIds.length) throw new Error('没有合法目标');
-    const geometric = ['point', 'direction'].includes(mode);
+    const geometric = anchored || ['point', 'direction'].includes(mode);
     const maximumAimDistance = geometry.aimRange;
     if (geometric && pointDistance(actorPoint, aimPoint) > maximumAimDistance) throw new Error('技能选点超出施放距离');
     for (const id of targetIds) {
       const target = units[id];
-      if (!target || (!allowsDead && target.存活状态 !== '存活') || (allowsDead && target.存活状态 !== '死亡')) throw new Error(`目标不存在或状态不合法：${id}`);
+      if (!target || (!allowsDead && target.存活状态 !== '存活') || (allowsDead && !baseEligible(target))) throw new Error(`目标不存在或状态不合法：${id}`);
+      if(allowsDead&&state.人物?.列表?.[id]?.life?.death){const reason=people.revivalReason(state,id);if(reason)throw Error(reason);}
+      if(allowsDead&&!state.人物?.列表?.[id]&&(target.扩展?.remainsId||target.扩展?.projection||target.扩展?.召唤))throw Error('已消散的召唤、投影或已结算遗骸不能复活');
       const ageReason=controls.adultReason(state,id,skill);if(ageReason&&(targetNode?.effectId==='target.single'||targetNode?.effectId==='target.self'||requested.includes(id)))throw Error(ageReason);
       const distance = combatDistance(actor,target);
       const maximum = releaseNode ? releaseRangeZones(releaseNode,targetNode)+(releaseNode.effectId==='release.melee'?0:avatarRangeBonus(state,actor,skill)) : Number.POSITIVE_INFINITY;
@@ -2212,7 +2227,7 @@
     if(context.exchangeSource){const source=context.exchangeAbility??state.技能.列表[context.exchangeSource.技能ID];if(source)rawAmount=Math.round(rawAmount*globalThis.SoulAbilityExchange.sourceScale(state,context.exchangeSource.单位ID,source));}
     const outputOwner=context.actor?.id??context.sourceUnitId;
     if(outputOwner)rawAmount=controls.limitedDamage(state,outputOwner,rawAmount,context.outputPermission??context.skill?._outputPermission,context.skill?._damageRemainders,`${outputOwner}:${target.id}:${type}`);
-    rawAmount=Math.max(0,Math.floor(rawAmount*(1-support.percent(state,target.id,'reduction')/100)));
+    rawAmount=Math.max(0,Math.ceil(rawAmount*(1-support.percent(state,target.id,'reduction')/100)));
     const defenseEvidence = foundation.defenseSources(state,target).filter(source => source.effectId === 'status.resistance_shift' && foundation.resistanceMatches([source.params.类型],type));
     if(rawAmount===0&&outputOwner&&Math.min(controls.outputSnapshot(state,outputOwner).percent,(context.outputPermission??context.skill?._outputPermission)?.percent??100)<100)return {type,sources:defenseEvidence,rawAmount:0,finalAmount:0,mode:'正常',penetration,multiplier:1,absorbed:0};
     const modes = defenseEvidence.map(source => source.params.模式);
@@ -2394,6 +2409,11 @@
     return activeStatuses(state,target.id,effect).filter(status=>{const origin=status.扩展?.持续来源合同?.扩展?.copyOrigin?.spec;return status.来源?.单位ID===actor.id||params.状态来源==='自身与所属召唤'&&(state.战斗单位.列表[status.来源?.单位ID]?.扩展?.召唤?.来源单位ID===actor.id||origin?.kind==='summoned-copy'&&origin.sourceUnitId===actor.id&&origin.ownerId===status.来源?.单位ID);}).sort((a,b)=>statusDamageValue(state,b)-statusDamageValue(state,a)||a.id.localeCompare(b.id));
   }
   function statusDamageValue(state,status){const p=status.快照?.参数??{},base=Number(p.骰数??1)*(Number(p.骰面??4)+1)/2+Number(p.加值??0);return foundation.amplifyElementDamage(periodicOutputAmount(state,status,base),status.快照?.属性增伤).amount;}
+  function bonusDiceActive(state,target,params){
+    if(params.加骰条件==='生命比例')return target.资源.生命.当前*100<=target.资源.生命.最大*params.生命阈值;
+    if(params.加骰条件==='减速或束缚')return activeStatuses(state,target.id,'status.slow').length>0||activeStatuses(state,target.id,'status.bind').length>0;
+    return false;
+  }
   function applyDamage(state, actor, target, node, rng, critical, targetReceipt, skill = null) {
     const params = node.params;
     let detonation=null;
@@ -2405,9 +2425,11 @@
       ? {label: `${damageType}微弱残响`, count: 0, sides: 0, rolls: [], total: Number(params.数值 ?? 1), fixed: true}
       : rollDice(rng, diceCount, params.骰面 ?? 4, `${damageType}伤害`);
     const upcastBonus = consumeUpcastBonus(skill, node);
+    const extra=bonusDiceActive(state,target,params)?rollDice(rng,params.追加骰数*(critical?2:1),params.追加骰面,'条件追加伤害'):null;
+    const extraAmount=extra?extra.total+(params.追加加值??0):0;
     const saveMultiplier = targetReceipt.check?.saved && targetReceipt.check?.successEffect === '伤害减半' ? 0.5 : 1;
     const supportPercent=support.percent(state,actor.id,'damage',damageType,skill),elementProfile=foundation.elementDamageProfile(state,actor.id,damageType);
-    const elementAmplification=foundation.amplifyElementDamage(Math.max(0, Math.floor((dice.total + (params.加值 ?? 0) + scaling + avatarOutputBonus + upcastBonus + damageBuff) * saveMultiplier * outputScale * deliveryScale * (skill?._hitGrazeScale??1))),{...elementProfile,supportPercent});
+    const elementAmplification=foundation.amplifyElementDamage(Math.max(0, Math.floor((dice.total + extraAmount + (params.加值 ?? 0) + scaling + avatarOutputBonus + upcastBonus + damageBuff) * saveMultiplier * outputScale * deliveryScale * (skill?._hitGrazeScale??1))),{...elementProfile,supportPercent});
     const rawAmount = elementAmplification.amount;
     if (targetReceipt.check?.type === 'attack') targetReceipt.check.resistancePenetration = clamp(params.穿透档 ?? 0, 0, 1);
     const release=skill?.effectGraph?.nodes?.find(n=>n.family==='release'),wall=wallOnPath(state,actor.位置,target.位置,release?.effectId==='release.projectile'?'投射':'移动');
@@ -2418,6 +2440,7 @@
       effectId: node.effectId, damageType, dice,...(skill?._hitGrazeScale?{grazeMultiplier:skill._hitGrazeScale}:{}), baseBonus:Number(params.加值??0), saveMultiplier, scaling, avatarOutputBonus, upcastBonus, damageBuff, outputScale, deliveryScale, rawAmount, ...(elementAmplification.percent?{elementAmplification}:{}), amount: resolution.finalAmount,
       resistance: resolution, ...applied, remainingHp: target.资源.生命.当前
     };
+    if(extra)result.conditionalDamage={condition:params.加骰条件,dice:extra,amount:extraAmount};
     if(detonation)result.detonation=detonation;
     targetReceipt.effects.push(result);
     const reflected = activeStatuses(state, target.id, 'reaction.reflect').find(status => {
@@ -2540,7 +2563,7 @@
       强度: params.数值 ?? params.属性加值 ?? params.属性增幅档 ?? layers,
       快照: {施加者DC: skill?._releasedMedicineDC??(skill?.sourceKind==='restraint'?custody.resolveDevice(state.物品.实例[skill.sourceItemId]).breakDifficulty:skillCheckDC(state,actor,skill)), 参数: clone(params)},
       清理规则: {
-        来源失能: ['status.bind', 'status.buff', 'status.fear', 'status.charm', 'status.invisibility', 'status.regeneration', 'status.resistance_shift', 'status.status_guard', 'status.mark', 'copy.skillset', 'modifier.next_skill', 'move.flight', 'transform.form', 'transform.martial_avatar', 'reaction.counter', 'reaction.reflect',...effects.HIT_RULE_IDS.filter(id=>id.startsWith('status.'))].includes(node.effectId),
+        来源失能: ['reaction.interpose','status.bind', 'status.buff', 'status.fear', 'status.charm', 'status.invisibility', 'status.regeneration', 'status.resistance_shift', 'status.status_guard', 'status.mark', 'copy.skillset', 'modifier.next_skill', 'move.flight', 'transform.form', 'transform.martial_avatar', 'reaction.counter', 'reaction.reflect',...effects.HIT_RULE_IDS.filter(id=>id.startsWith('status.'))].includes(node.effectId),
         战斗结束: node.effectId !== 'status.eternal_wound' || !params.战斗后保留
       },
       状态: '生效',
@@ -2553,7 +2576,7 @@
         ...(node.effectId==='status.power_seal'&&params.封印对象==='精细'?{封印限制:controls.bindLimits(state,target.id,params.限制)}:{}),
         ...(node.effectId==='status.power_seal'&&params.范围==='当前武魂'?{封印武魂ID:foundation.activeMartialSoulId(state,target.id)}:{}),
         已触发: false,
-        剩余次数: node.effectId==='status.limited_followup'?layers:['status.next_check_penalty','status.invulnerable', 'reaction.counter', 'reaction.reflect', 'modifier.next_skill',...effects.HIT_RULE_IDS.filter(id=>id.startsWith('status.'))].includes(node.effectId) ? (params.次数 ?? 1) : 0,
+        剩余次数: node.effectId==='status.limited_followup'?layers:['reaction.interpose','status.next_check_penalty','status.invulnerable', 'reaction.counter', 'reaction.reflect', 'modifier.next_skill',...effects.HIT_RULE_IDS.filter(id=>id.startsWith('status.'))].includes(node.effectId) ? (params.次数 ?? 1) : 0,
         ...(node.effectId==='status.limited_followup'?{作用来源:mechanics.scope(skill),追击来源合同:cleanSkillContract(skill?._sourceContract??skill),追击回合:0,回合触发次数:0}:{}),
         攻击后解除: node.effectId === 'status.invisibility' ? Boolean(params.攻击后解除) : false,
         负面: foundation.negativeStatus(node.effectId, params),
@@ -2655,17 +2678,18 @@
     targetReceipt.effects.push({effectId: node.effectId, removedStatusIds,removedLayers, removedZoneIds: zoneIds});
   }
 
-  function reviveTarget(state, target, node, targetReceipt) {
-    if (target.存活状态 !== '死亡') {
-      targetReceipt.effects.push({effectId: node.effectId, prevented: '目标未死亡'});
+  function reviveTarget(state, target, node, targetReceipt, sourceId) {
+    if (!['死亡','昏迷'].includes(target.存活状态)&&target.资源.生命.当前>0) {
+      targetReceipt.effects.push({effectId: node.effectId, prevented: '目标无需复苏'});
       return;
     }
     const amount = Math.max(1, Math.floor(target.资源.生命.最大 * (node.params.生命百分比 ?? 1) / 100));
-    if(state.人物?.列表?.[target.id]?.life?.death)throw Error('真实死亡不能由战斗恢复效果撤销');
+    const revival=state.人物?.列表?.[target.id]?.life?.death?people.revive(state,target.id,amount,sourceId):null;
     target.存活状态 = '存活';
     target.资源.生命.当前 = amount;
+    const member=state.战斗?.扩展?.成员?.[target.id];if(member?.status==='defeated')member.status='active';
     for (const status of activeStatuses(state, target.id).filter(status=>!controls.persistent(status))) removeStatus(state,status,'revived');
-    targetReceipt.effects.push({effectId: node.effectId, revived: true, amount, remainingHp: amount});
+    targetReceipt.effects.push({effectId: node.effectId, revived: true, amount, remainingHp: amount,...(revival?{deathId:revival.deathId}:{})});
   }
 
   function drainLife(state, actor, target, node, rng, critical, targetReceipt, skill = null) {
@@ -2706,6 +2730,15 @@
       target.位置.距离区 = ZONES[Math.min(ZONES.length - 1, index + amount)];
       target.位置.战场坐标=awayPoint();
     } else if (node.effectId === 'move.pull') {
+      if(node.params.援护牵引){
+        const next=towardPoint(targetPoint,origin,amount*BATTLEFIELD.zoneLength);
+        const foes=activeParticipants(state).filter(u=>!sameSide(state,actor,u));
+        const nearest=p=>Math.min(...foes.map(u=>pointDistance(p,unitPoint(u))));
+        if(!sameSide(state,actor,target)||combatDistance(actor,target)===0||controls.restrictions(state,target.id).blocked?.movement?.length||
+          (intent?.aiDecision&&nearest(next)<=nearest(targetPoint))){
+          targetReceipt.effects.push({effectId:node.effectId,prevented:'保持原位',targetId:target.id});return;
+        }
+      }
       const targetIndex = Math.max(0, ZONES.indexOf(target.位置.距离区));
       const actorIndex = Math.max(0, ZONES.indexOf(actor.位置.距离区));
       const direction = actorIndex === targetIndex ? 0 : actorIndex > targetIndex ? 1 : -1;
@@ -2819,7 +2852,7 @@
         const right = domains[rightIndex];
         const leftSource = state.战斗单位.列表[left.来源?.单位ID];
         const rightSource = state.战斗单位.列表[right.来源?.单位ID];
-        if (!leftSource || !rightSource || sameSide(state, leftSource, rightSource) || !domainsOverlap(state, left, right)) continue;
+        if (left.参数?.定点守卫||right.参数?.定点守卫||!leftSource || !rightSource || sameSide(state, leftSource, rightSource) || !domainsOverlap(state, left, right)) continue;
         const leftTotal = Number(left.支配总值 ?? 0);
         const rightTotal = Number(right.支配总值 ?? 0);
         const winner = leftTotal > rightTotal || (leftTotal === rightTotal && left.id.localeCompare(right.id) < 0) ? left : right;
@@ -2861,7 +2894,7 @@
   function createDomain(state, actor, target, node, receiptId, targetReceipt, rng, skill, selectedTargetIds=null) {
     state.战斗.扩展.领域实例 ??= {};
     const id = `domain-${receiptId}-${node.id}`;
-    const replacedIds = Object.values(state.战斗.扩展.领域实例).filter(domain => domain.来源?.单位ID === actor.id).map(domain => domain.id);
+    const replacedIds = Object.values(state.战斗.扩展.领域实例).filter(domain => domain.来源?.单位ID === actor.id && (node.params.定点守卫 ? domain.参数?.定点守卫&&domain.来源.技能ID===skill.id : !domain.参数?.定点守卫)).map(domain => domain.id);
     for (const replacedId of replacedIds) removeDomain(state, replacedId, null, 'source-domain-replaced');
     const sustainNode = skill.effectGraph.nodes.find(item => item.effectId === 'sustain.maintain');
     const childNodes = clone(skill.effectGraph.nodes.filter(item => ['payload', 'status', 'movement'].includes(item.family)));
@@ -2899,6 +2932,7 @@
       当前冲突记录: [],
       对抗记录: [],
       触发账本: {},
+      ...(node.params.触发次数?{剩余触发:node.params.触发次数}:{}),
       扩展: Array.isArray(selectedTargetIds)?{选择目标ID列表:clone(selectedTargetIds)}:{}
     };
     state.战斗.扩展.领域实例[id] = domain;
@@ -2909,15 +2943,18 @@
   }
 
   function processDomainEffect(state, domain, unit, rng, receipt, trigger) {
-    if (domain.状态 !== '生效') return;
+    if (domain.状态 !== '生效'||domain.剩余触发===0||!state.战斗.扩展.领域实例?.[domain.id]) return;
     if(Array.isArray(domain.扩展?.选择目标ID列表)&&!domain.扩展.选择目标ID列表.includes(unit.id))return;
     const source = state.战斗单位.列表[domain.来源?.单位ID];
     if (!source || source.存活状态 !== '存活') return;
     const eligibleNodes = domain.子效果节点.filter(node => domainFactionEligible(state, domain, source, unit, node)&&(!node.params?.领域触发||node.params.领域触发===trigger));
     if (!eligibleNodes.length) return;
-    const ledgerKey = `${state.战斗.回合}:${trigger}:${unit.id}`;
+    const limited=domain.剩余触发!==undefined;
+    const ledgerKey = `${state.战斗.回合}:${limited?'触发':trigger}:${unit.id}`;
+    if(limited&&domain.触发账本?.[ledgerKey])return;
     if (trigger!=='范围内'&&domain.触发账本?.[ledgerKey]) return;
     domain.触发账本 ??= {};
+    if(limited)domain.剩余触发--;
     domain.触发账本[ledgerKey] = {round: state.战斗.回合, trigger, targetId: unit.id};
     if (Object.keys(domain.触发账本).length > 160) {
       const kept = Object.entries(domain.触发账本).slice(-120);
@@ -2949,6 +2986,7 @@
       effects: clone(targetReceipt.effects), creditedKillerId: kill?.killerId ?? ''
     });
     if (Array.isArray(receipt.targets)) receipt.targets.push(targetReceipt);
+    if(domain.剩余触发===0)removeDomain(state,domain.id,receipt,'triggers-spent');
   }
 
   function refreshDomainMembershipForUnit(state, unit, rng, receipt, event = 'movement') {
@@ -2997,7 +3035,7 @@
     }).sort((a,b)=>params.固定继承?skillRingOrdinal(state,a)-skillRingOrdinal(state,b)||a.id.localeCompare(b.id):0);
   }
   function validateFixedSummonSelection(state,actor,params,skill,selected){if(!params.固定继承||selected===undefined)return;const allowed=summonCandidates(state,actor,params,skill).slice(0,params.技能继承数量).map(s=>s.id);if(!Array.isArray(selected)||selected.length!==allowed.length||new Set(selected).size!==allowed.length||selected.some(id=>!allowed.includes(id)))throw Error('此召唤固定继承已掌握的指定环序技能');}
-  function summonLimitReason(state,actor,skill){const node=skill?.effectGraph?.nodes?.find(n=>n.effectId==='summon.entity'&&n.params.最大同时存在);if(!node)return '';const count=Object.values(state.战斗单位.列表).filter(u=>u.扩展?.召唤?.来源单位ID===actor.id&&u.扩展?.召唤?.来源技能ID===skill.id&&isPresentParticipant(state,u.id)&&u.资源.生命.当前>0).length;return count>=node.params.最大同时存在?'该来源的召唤体已达到同时存在上限':'';}
+  function summonLimitReason(state,actor,skill){const node=skill?.effectGraph?.nodes?.find(n=>n.effectId==='summon.entity'&&n.params.最大同时存在);if(!node)return '';const count=Object.values(state.战斗单位.列表).filter(u=>u.扩展?.召唤?.来源单位ID===actor.id&&u.扩展?.召唤?.来源技能ID===skill.id&&(isPresentParticipant(state,u.id)||u.扩展.召唤.constructId&&globalThis.SoulCreationCore.constructs(state).some(r=>r.id===u.扩展.召唤.constructId&&r.status==='active'))&&u.资源.生命.当前>0).length;return count+node.params.数量>node.params.最大同时存在?'该来源的召唤体已达到同时存在上限':'';}
   function summonSoulPowerAllocation(params,requested,available){
     const count=params.数量??1,cap=Number(params.魂力分配??0);
     const maximum=Math.min(cap,Math.floor(Math.max(0,available)/count));
@@ -3042,7 +3080,10 @@
   }
 
   function removeSummonedSkills(state, unit, receipt = null, reason = 'summon-ended') {
-    const inheritedIds = cleanList(unit?.扩展?.召唤?.继承技能ID列表);
+    const summon=unit?.扩展?.召唤;
+    if(summon?.manifestationSoulId)return [];
+    const inheritedIds=cleanList([...(summon?.继承技能ID列表??[]),...(summon?.天生技能ID??[])]);
+    if(summon){delete summon.指令;delete summon.天生技能ID;delete summon.接受指令;delete summon.招式来源;}
     if (!unit || !inheritedIds.length) return [];
     unit.能力.技能ID = cleanList(unit.能力?.技能ID).filter(id => !inheritedIds.includes(id));
     for (const id of inheritedIds) delete state.技能.列表[id];
@@ -3055,6 +3096,7 @@
     const created = [];
     const inherit = Boolean(node.params.继承能力);
     const count = node.params.数量 ?? 1;
+    if(actor.扩展?.召唤&&node.params.天生招式)throw Error('召唤物无法繁衍携带天生招式的新召唤物');
     if(actor.扩展?.召唤&&node.params.继承能力)throw Error('继承化身不能再次制造继承化身');
     const transfers=Object.hasOwn(node.params,'魂力分配');
     const allocated=summonSoulPowerAllocation(node.params,sourceSkill?._summonSoulPower,controls.availableSoulPower(state,actor.id));
@@ -3067,7 +3109,7 @@
         : Math.max(1,(actor.六维.有效[key] ?? 10)-2)]));
       const unit = foundation.normalizeCombatant({
         id,
-        名称: `${actor.名称}的${node.params.模板 ?? '灵体'}${index + 1}`,
+        名称: node.params.显形名 ? node.params.显形名+(count>1?String(index+1):'') : `${actor.名称}的${node.params.模板 ?? '灵体'}${index + 1}`,
         阵营: actor.阵营,
         单位种类: '魂师NPC',
         标签: ['召唤物', node.params.模板 ?? '灵体'],
@@ -3095,6 +3137,15 @@
       unit.扩展.召唤.基础资源上限={生命:unit.资源.生命.最大,魂力:unit.资源.魂力.最大};
       const inheritedSkillIds = inheritSummonedSkills(state,actor,unit,node.params,sourceSkill,receiptId,index);
       unit.扩展.召唤.继承技能ID列表 = inheritedSkillIds;
+      if(node.params.接受指令||node.params.天生招式)unit.扩展.召唤.招式来源=cleanSkillContract(sourceSkill?._sourceContract??sourceSkill);
+      if(node.params.接受指令)unit.扩展.召唤.接受指令=true;
+      if(node.params.天生招式){
+        unit.扩展.召唤.天生技能ID=node.params.天生招式.map((art,i)=>{
+          const key=`${id}-innate-${i+1}`;
+          const ability=abilities.seal({id:key,name:art.名称,持有者单位ID:id,sourceKind:'summon-innate',ageTier:'千年',mechanismCap:'进阶',soulPowerCost:art.魂力,cooldownTurns:art.冷却,requirements:[],effectGraph:effects.makeLinearGraph(art.节点)});
+          state.技能.列表[key]=ability;unit.能力.技能ID.push(key);return key;
+        });
+      }
       state.战斗单位.列表[id] = unit;
       if(node.params.持续方式==='世界分钟'){
         const row=globalThis.SoulCreationCore.registerConstruct(state,actor.id,actor.id,node,sourceSkill,receiptId,sourceSkill?._creationPayment,{unitId:id});
@@ -3125,6 +3176,7 @@
     targetReceipt.effects.push({
       effectId:node.effectId,nodeId:node.id,
       summonedUnitIds:created,
+      ...(node.params.天生招式?{innateSkillsByUnit:Object.fromEntries(created.map(id=>[id,state.战斗单位.列表[id].扩展.召唤.天生技能ID.slice()]))}:{}),
       ...(transfers?{soulPowerTransfer:{payerId:actor.id,total:allocated*count,perUnit:allocated}}:{}),
       inheritedSkillsByUnit:Object.fromEntries(created.map(id => [id,clone(state.战斗单位.列表[id]?.扩展?.召唤?.继承技能ID列表 ?? [])]))
     });
@@ -3267,6 +3319,11 @@
     }
     if(skill&&['payload.damage','payload.residual','payload.heal','payload.shield','payload.drain','payload.soul_damage','payload.soul_restore','payload.restore'].includes(node.effectId))skill=effectiveOutputSkill(state,actor.id,skill);
     node = effectOutputProfile(node,skill).node;
+    if(node.effectId==='payload.recon'){
+      if(!skill?._fieldUse)throw Error('请在场外发动侦察');
+      const report=globalThis.SoulSummonOrders.observe(state,actor.id,node,skill._fieldScope.reconLocationId);
+      targetReceipt.effects.push({effectId:node.effectId,report});return;
+    }
     if(['payload.repair_item','payload.fabricate'].includes(node.effectId)){const options=skill?._fieldScope??globalThis.SoulCreationCore.resolveItemOptions(state,actor.id,target.id,node,intent),result=globalThis.SoulCreationCore.applyItemEffect(state,actor.id,target.id,node,skill,options,receiptId,skill?._creationPayment);targetReceipt.effects.push(result);return result;}
     if(!contractPenaltyExecutions.has(skill)&&effects.effectPolarity(node.effectId,node.params)==='harmful'&&!['payload.damage','payload.residual'].includes(node.effectId)){const release=skill?.effectGraph?.nodes?.find(n=>n.family==='release'),wall=wallOnPath(state,actor.位置,target.位置,release?.effectId==='release.projectile'?'投射':'移动');if(wall){targetReceipt.effects.push({effectId:node.effectId,prevented:'墙体阻隔',sources:[wall.id]});return;}}
     if(node.effectId==='payload.death'){
@@ -3285,7 +3342,7 @@
       const upcastBonus = consumeUpcastBonus(skill, node);
       const amount = Math.max(0, Math.floor((dice.total + (node.params.加值 ?? 0) + Math.max(0, attributeModifier(state, actor, '意志')) + avatarOutputBonus + upcastBonus) * baseRuntimeOutputScale(skill)*(1+support.percent(state,actor.id,'shield','',skill)/100)));
       const shieldSource=node.领域实例ID?state.战斗.扩展.领域实例[node.领域实例ID]?.来源?.结算单ID:receiptId;
-      const shield = foundation.grantTemporaryHealth(target, amount, shieldSource, node.领域实例ID);
+      const shield = foundation.grantTemporaryHealth(target, amount, shieldSource, node.领域实例ID,(node.params.护盾回合??0)+(node.params.护盾回合&&state.战斗.当前行动单位ID===target.id?1:0));
       targetReceipt.effects.push({
         effectId: node.effectId, dice, avatarOutputBonus, upcastBonus,
         rolledAmount: amount, offeredAmount: shield.offered, amount: shield.gained,
@@ -3295,7 +3352,8 @@
       const dice = rollDice(rng, node.params.骰数 ?? 1, node.params.骰面 ?? 4, '治疗');
       const avatarOutputBonus = martialAvatarBonus(state, actor, skill, '同源魂技增幅') * 2;
       const upcastBonus = consumeUpcastBonus(skill, node);
-      const amount = Math.max(0, Math.floor((dice.total + (node.params.加值 ?? 0) + Math.max(0, attributeModifier(state, actor, '悟性')) + avatarOutputBonus + upcastBonus) * healingMultiplier(state, target) * baseRuntimeOutputScale(skill)*(1+support.percent(state,actor.id,'heal','',skill)/100)));
+      const attributeBonus=node.params.附加悟性===false?0:Math.max(0,attributeModifier(state,actor,'悟性'));
+      const amount = Math.max(0, Math.floor((dice.total + (node.params.加值 ?? 0) + attributeBonus + avatarOutputBonus + upcastBonus) * healingMultiplier(state, target) * baseRuntimeOutputScale(skill)*(1+support.percent(state,actor.id,'heal','',skill)/100)));
       const actual = Math.min(amount, target.资源.生命.最大 - target.资源.生命.当前);
       target.资源.生命.当前 += actual;
       recoverConsciousness(state, target);
@@ -3311,7 +3369,7 @@
       targetReceipt.effects.push({effectId: node.effectId, upcastBonus, amount: (globalThis.SoulCombatDeployments.soulPowerResource(state,target.id)).当前 - before, remainingSoulPower: (globalThis.SoulCombatDeployments.soulPowerResource(state,target.id)).当前});
     } else if (node.effectId === 'payload.cleanse') cleanseStatuses(state, target, node, targetReceipt,{actorId:actor.id,sourceId:receiptId,skill,node,payment:skill?._creationPayment,releasedMedicine:skill?._releasedMedicine,legacyDeviceRemoval:skill?._deviceContextVersion===0});
     else if (node.effectId === 'payload.dispel') dispelEffects(state, target, node, targetReceipt,{actorId:actor.id,sourceId:receiptId,skill,node,payment:skill?._creationPayment,releasedMedicine:skill?._releasedMedicine,legacyDeviceRemoval:skill?._deviceContextVersion===0});
-    else if (node.effectId === 'payload.revive') reviveTarget(state, target, node, targetReceipt);
+    else if (node.effectId === 'payload.revive') reviveTarget(state, target, node, targetReceipt,receiptId);
     else if (node.effectId === 'copy.skillset') copySkills(state, actor, target, node, intent, receiptId, targetReceipt, skill);
     else if (node.effectId === 'intimate.stimulate' || node.effectId === 'intimate.climax') {
       const core=globalThis.SoulIntimateCore;
@@ -3329,6 +3387,7 @@
         targetReceipt.effects.push(...derived.effects);
       }
     }
+    else if (node.effectId==='reaction.interpose'){if(actor.id!==target.id&&sameSide(state,actor,target))applyStatus(state,actor,target,node,receiptId,targetReceipt,skill);}
     else if (node.family === 'status') applyStatus(state, actor, target, node, receiptId, targetReceipt, skill);
     else if (node.family === 'movement') moveByEffect(state, actor, target, node, intent, receiptId, targetReceipt, skill);
     else if (node.family === 'zone') createZone(state, actor, target, node, receiptId, targetReceipt, skill);
@@ -3638,9 +3697,18 @@
     actions.resolve(state,{actorId,battleId:null,...(!care?{targetIds:[targetId]}:{}),fieldAbility:true});
     const actor=state.战斗单位.列表[actorId],target=state.战斗单位.列表[targetId];
     if(activeStatuses(state,actorId).some(s=>['status.sleep','status.stun'].includes(s.模板ID)))throw Error('施用者须清醒才能使用场外能力');
-    if(!actor||!target||target.存活状态==='死亡'||state.人物?.列表?.[targetId]?.status==='dead')throw Error('场外能力需要真实存活目标');
+    if(!actor||!target)throw Error('场外能力需要真实目标');
     if(!actor.能力.技能ID.includes(skillId)&&!(skillId==='martial.base'&&actor.扩展?.武魂基础动作?.mode==='disguise'))throw Error('能力不属于行动者');
     const skill=getSkill(state,actor,skillId,applicationOptions.castRank),scope=globalThis.SoulCreationCore.normalizeScope(skill,{...applicationOptions,modeId}),branches=abilities.selectFieldBranches(skill,scope.branchIds),nodes=branches.flatMap(b=>b.nodes);
+    const revival=nodes.some(n=>n.effectId==='payload.revive'),dead=target.存活状态==='死亡'||state.人物?.列表?.[targetId]?.status==='dead';
+    if(dead&&!revival)throw Error('场外能力需要真实存活目标');
+    if(revival){
+      if(!state.人物?.列表?.[targetId])throw Error('复活需要完整人物，已消散的投影或召唤不能恢复');
+      if(dead){const reason=people.revivalReason(state,targetId);if(reason)throw Error(reason);}
+      else if(target.存活状态!=='昏迷'&&target.资源.生命.当前>0)throw Error('目标无需复苏');
+    }
+    for(const node of nodes.filter(n=>n.effectId==='payload.recon'))globalThis.SoulSummonOrders.destination(state,actorId,node,scope.reconLocationId);
+    const limitReason=summonLimitReason(state,actor,{...skill,effectGraph:{nodes}});if(limitReason)throw Error(limitReason);
     if(skill.medicine&&skill.medicine.route!=='oral')throw Error('这项药剂须使用实际接触、喷洒或毒雾释放命令');
     if(!abilities.verify(skill).pass)throw Error('能力合同无效');
     const checked=effects.validateGraph(skill.effectGraph,{ageTier:skill.ageTier??'十万年',mechanismCap:skill.mechanismCap??'规则'});
@@ -3678,14 +3746,14 @@
   }
   function custodyDeviceAbility(item,actorId,sourceId){
     return abilities.seal({id:`restraint:${item.id}:${sourceId}`,name:item.name,持有者单位ID:actorId,sourceKind:'restraint',sourceItemId:item.id,soulPowerCost:0,
-      effectGraph:effects.makeLinearGraph([['release.touch',{}],['target.single',{阵营规则:'任意'}],...custody.effectSpecs(item)])});
+      effectGraph:effects.makeLinearGraph([['release.touch',{}],['target.single',{阵营规则:'任意'}],...custody.effectSourceSpecs(item)])});
   }
   function applyCustodyDevice(state,actorId,targetId,itemId,sourceId){
     const item=state.物品.实例[itemId],a=item?.attachment;
     if(!a||a.wearerId!==targetId||a.sourceId!==sourceId||!a.controllers.includes(actorId))throw Error('拘束效果缺少本次真实装配来源');
     const skill=custodyDeviceAbility(item,actorId,sourceId),receipt={targetId,skillId:skill.id,effects:[]};
     const runtime={...skill,_fieldUse:true,_sourceContract:skill};
-    for(const node of skill.effectGraph.nodes.filter(n=>controls.canPersist(n.effectId,n.params)))applyStatus(state,state.战斗单位.列表[actorId],state.战斗单位.列表[targetId],node,`${sourceId}:device:${itemId}`,receipt,runtime);
+    for(const node of skill.effectGraph.nodes.filter(n=>controls.canPersist(n.effectId,n.params)&&custody.effectEnabled(item,n.effectId)))applyStatus(state,state.战斗单位.列表[actorId],state.战斗单位.列表[targetId],node,`${sourceId}:device:${itemId}`,receipt,runtime);
     return receipt.effects;
   }
   function previewFieldAbility(state,actorId,skillId,targetId=actorId,modeId,applicationOptions={}){
@@ -3722,7 +3790,7 @@
       }
       if(ingestion&&itemProof?.type==='辅助食品')completeFoodIngestion(state,itemProof,targetId,paid.payment,receipt);
       globalThis.SoulAbilityExchange.complete(state,receiptId,receipt);registerMaintenance(state,actor,skill,receipt,true);receipt.sacrificeDeath=abilities.finish(state,paid.payment);globalThis.SoulPersonContracts?.completeRelease(state,receipt);pruneMaintenance(state,receipt);
-      const changes=receipt.targets.flatMap(t=>t.effects).flatMap(e=>e.prevented?[e.prevented]:e.effectId==='payload.repair_item'?[`${e.itemName}耐久 ${e.durabilityBefore} → ${e.durabilityAfter}`]:e.effectId==='payload.fabricate'?[`制成${e.productName} × ${e.quantity}`]:e.effectId==='payload.heal'?[`恢复${e.amount}点生命`]:e.effectId==='zone.wall'?['构造了元素屏障']:e.effectId==='summon.entity'?['召唤了元素实体']:e.effectId==='status.regeneration'?['获得持续再生']:[]);
+      const changes=receipt.targets.flatMap(t=>t.effects).flatMap(e=>e.prevented?[e.prevented]:e.effectId==='payload.repair_item'?[`${e.itemName}耐久 ${e.durabilityBefore} → ${e.durabilityAfter}`]:e.effectId==='payload.fabricate'?[`制成${e.productName} × ${e.quantity}`]:e.effectId==='payload.recon'?[e.report.place+' · '+e.report.observations.join('，')]:e.effectId==='payload.heal'?[`恢复${e.amount}点生命`]:e.effectId==='payload.revive'&&e.revived?[`${target.名称}已复苏，恢复${e.amount}点生命`]:e.effectId==='zone.wall'?['构造了元素屏障']:e.effectId==='summon.entity'?['召唤了元素实体']:e.effectId==='status.regeneration'?['获得持续再生']:[]);
       receipt.summary=`${actor.名称}施放${skill.name??skill.id}${changes.length?'：'+changes.join('；'):'。'}`;
     });
   }
@@ -3959,7 +4027,8 @@
     const branches=selectedSkillBranches(skill,intent),branchIds=branches.map(b=>b.id);
     assertContractFormationReady(state,actor,skill,{...intent,branchIds});
     if(branches.flatMap(b=>b.nodes).filter(n=>['payload.repair_item','payload.fabricate'].includes(n.effectId)).length>1)throw Error('每次行动只能选择一种物品构造用途');
-    const quote=quoteSkillUse(state,actor,skill,{castRank:intent.castRank,modeId:intent.modeId,branchIds,targetIds:support.chargesByTarget(skill)?resolveTargets(state,actor,skill,intent):intent.targetIds,supportElements:intent.supportElements});
+    const applicationOptions={force:intent.force,permissionId:intent.permissionId};
+    const quote=quoteSkillUse(state,actor,skill,{castRank:intent.castRank,modeId:intent.modeId,branchIds,targetIds:support.chargesByTarget(skill)?resolveTargets(state,actor,skill,intent):intent.targetIds,applicationOptions,supportElements:intent.supportElements});
     const cost=quote.totals.soulPower;
     const available = controls.availableSoulPower(state,actor.id);
     const soulPowerBefore = (globalThis.SoulCombatDeployments.soulPowerResource(state,actor.id)).当前;
@@ -4000,7 +4069,7 @@
       }
     };
     const deviceNodes=branches.flatMap(b=>b.nodes),deviceTargets=cleanList(branchExecutions.flatMap(e=>e.targetIds)),deviceContext=globalThis.SoulDeviceOperations.castContext(state,actor.id,skill,deviceNodes,deviceTargets.length===1?deviceTargets[0]:null,intent,state.战斗.id);
-    const actualTargetIds=cleanList(branchExecutions.flatMap(e=>e.targetIds)),applicationOptions={force:intent.force,permissionId:intent.permissionId};
+    const actualTargetIds=cleanList(branchExecutions.flatMap(e=>e.targetIds));
     if(branches.some(b=>b.nodes.some(n=>['payload.stack_confluence','payload.resource_damage'].includes(n.effectId)))&&actualTargetIds.length!==1)throw Error('消费累计载荷的攻击必须只作用于一名合法目标');
     for(const node of branches.flatMap(b=>b.nodes).filter(n=>n.effectId==='payload.resource_damage')){
       const row=mechanics.readPool(state,actor,skill,node.params.资源槽,(holder,source)=>poolSourceAllowed(state,holder,source));
@@ -4066,7 +4135,9 @@
         const selected=branchExecution.branch.nodes.some(n=>n.effectId==='target.allies')?branchExecution.targetIds:null;
         const target = selected?actor:state.战斗单位.列表[branchExecution.targetIds[0]];
         const targetReceipt = {targetId:target.id,skillId:skill.id,branchId:branchExecution.branch.id,branchLabel:branchExecution.branch.label,check:null,affected:true,effects:[]};
-        const domain = createDomain(state,actor,target,domainNode,receipt.id,targetReceipt,rng,scopedExecutionSkill,selected);
+        const aim=branchExecution.intent.aimPoint??(branchExecution.intent.targetIds?.[0]&&state.战斗单位.列表[branchExecution.intent.targetIds[0]]?.位置.战场坐标);
+        const anchor=domainNode.params.定点守卫&&aim?{位置:{...actor.位置,战场坐标:battlePoint(aim)}}:target;
+        const domain = createDomain(state,actor,anchor,domainNode,receipt.id,targetReceipt,rng,scopedExecutionSkill,selected);
         const lockedBefore = (globalThis.SoulCombatDeployments.soulPowerResource(state,actor.id)).锁定, upkeepBefore = (globalThis.SoulCombatDeployments.soulPowerResource(state,actor.id)).持续消耗;
         for (const node of executable.filter(item => item.family === 'sustain')) executeNode(state,actor,actor,node,rng,false,receipt.id,targetReceipt,branchExecution.intent,scopedExecutionSkill);
         for(const entry of Object.values(state.战斗.扩展.维持占用??{}))if(entry.sourceId===receipt.id&&executable.some(node=>node.id===entry.nodeId))entry.domainId=domain.id;
@@ -4078,8 +4149,24 @@
         continue;
       }
       for (const [targetIndex,targetId] of branchExecution.targetIds.entries()) {
-        const target = state.战斗单位.列表[targetId];
-        const targetReceipt = {targetId,skillId:skill.id,branchId:branchExecution.branch.id,branchLabel:branchExecution.branch.label,check:null,affected:false,effects:[]};
+        let target = state.战斗单位.列表[targetId];
+        const guardedId=target.id;
+        const single=branchExecution.branch.nodes.some(n=>n.effectId==='target.single');
+        if(single&&['check.physical_attack','check.soul_attack'].includes(checkNode?.effectId)&&!sameSide(state,actor,target)&&executable.some(n=>n.effectId==='payload.damage')){
+          // Resolve the original target's guards once. The replacement never offers a second interception.
+          const guard=activeStatuses(state,target.id,'reaction.interpose').find(s=>{
+            const u=state.战斗单位.列表[s.来源.单位ID];
+            return u&&u.id!==target.id&&sameSide(state,u,target)&&isActiveParticipant(state,u.id)&&
+              !['status.stun','status.sleep'].some(id=>activeStatuses(state,u.id,id).length)&&
+              s.扩展.剩余次数>0&&combatDistance(u,target)<=s.快照.参数.距离区;
+          });
+          if(guard){
+            target=state.战斗单位.列表[guard.来源.单位ID];
+            if(--guard.扩展.剩余次数===0)removeStatus(state,guard,'interposed',receipt);
+            receipt.statusEvents.push({event:'interpose',protectedId:guardedId,guardId:target.id,statusId:guard.id});
+          }
+        }
+        const targetReceipt = {targetId:target.id,...(guardedId!==target.id?{protectedId:guardedId}:{}),skillId:skill.id,branchId:branchExecution.branch.id,branchLabel:branchExecution.branch.label,check:null,affected:false,effects:[]};
         if(branchExecution.approach){
           targetReceipt.effects.push(clone(branchExecution.approach));
           if(combatDistance(actor,target)>.000001){targetReceipt.check={type:'range',reached:false,reason:'追击后未进入触及距离',distance:combatDistance(actor,target)};receipt.narrationFacts.push(`${actor.名称}完成了已付费追击，仍未触及${target.名称}`);receipt.targets.push(targetReceipt);continue;}
@@ -4111,9 +4198,9 @@
             executeNode(state,actor,target,node,rng,check.critical,maintenanceReceiptId,targetReceipt,branchExecution.intent,grazeSkill);
           }
         }
-        if(targetReceipt.check?.hit&&checkNode?.effectId==='check.physical_attack'){const weaponId=skill.sourceItemId;if(weaponId)globalThis.SoulPoisonCore?.touch(state,weaponId,targetId,receipt.id,receipt);}
+        if(targetReceipt.check?.hit&&checkNode?.effectId==='check.physical_attack'){const weaponId=skill.sourceItemId;if(weaponId)globalThis.SoulPoisonCore?.touch(state,weaponId,target.id,receipt.id,receipt);}
         if(targetReceipt.check?.hit&&!sameSide(state,actor,target)){
-          for(const node of executable)if(node.effectId==='payload.damage'&&node.params.事件槽)emitMechanicEvent(state,actor,skill,'action-hit',node.params.事件槽,1,receipt,targetId);
+          for(const node of executable)if(node.effectId==='payload.damage'&&node.params.事件槽)emitMechanicEvent(state,actor,skill,'action-hit',node.params.事件槽,1,receipt,target.id);
           triggerFollowup(state,actor,target,executionSkill,rng,receipt,targetReceipt);
         }
         receipt.targets.push(targetReceipt);
@@ -4275,6 +4362,10 @@
   }
 
   function tickEndOfTurn(state, unit, receipt) {
+    if(unit.扩展?.temporaryHealthTurns&&--unit.扩展.temporaryHealthTurns===0){
+      const amount=foundation.clearTemporaryHealth(unit);
+      if(amount)receipt.statusEvents.push({event:'shield-expired',targetId:unit.id,amount});
+    }
     for (const status of activeStatuses(state, unit.id)) {
       if(status.模板ID==='transform.martial_avatar')continue;
       if(status.快照?.参数?.领域触发==='范围内'&&state.战斗.扩展?.领域实例?.[status.来源?.领域ID]?.状态==='生效')continue;
@@ -4603,6 +4694,20 @@
   function assertHumanTeamCapacity(state,ids){if([...new Set(ids)].filter(id=>humanParticipant(state,id)).length>4)throw Error('同一队伍每场最多四名人物，倒下或离场不释放本场名额');}
   function validateBattles(state) {
     const errors=[],ids=new Set(),occupied=new Map(),now=battleNow(state);
+    for(const unit of Object.values(state.战斗单位.列表)){
+      const summ=unit.扩展?.召唤;
+      if(summ?.manifestationSoulId){try{globalThis.SoulManifestation.validateRecord(state,globalThis.SoulManifestation.forUnit(state,unit.id));}catch(e){errors.push(e.message);}continue;}
+      if(!summ||!(summ.接受指令||summ.天生技能ID||summ.招式来源))continue;
+      const contract=summ.招式来源,source=contract?.effectGraph?.nodes.find(n=>n.effectId==='summon.entity'&&n.id===summ.来源效果ID);
+      const kit=source?.params.天生招式??[],ids=summ.天生技能ID??[];
+      if(!source||!abilities.verify(contract).pass||contract.id!==summ.来源技能ID||!state.战斗单位.列表[summ.来源单位ID]||!!source.params.接受指令!==!!summ.接受指令||kit.length!==ids.length){
+        errors.push('召唤物指令或招式与召唤来源不符：'+unit.id);continue;
+      }
+      for(const [i,art] of kit.entries()){
+        const id=unit.id+'-innate-'+(i+1),k=state.技能.列表[id];
+        if(ids[i]!==id||!unit.能力.技能ID.includes(id)||k?.持有者单位ID!==unit.id||k.sourceKind!=='summon-innate'||k.name!==art.名称||k.soulPowerCost!==art.魂力||k.cooldownTurns!==art.冷却||!abilities.verify(k).pass||abilities.hash(k.effectGraph)!==abilities.hash(effects.makeLinearGraph(art.节点)))errors.push('召唤物天生招式与来源不符：'+id);
+      }
+    }
     const backgrounds=state.世界?.backgroundBattles;
     if(backgrounds!==undefined&&(!backgrounds||Array.isArray(backgrounds)||typeof backgrounds!=='object'))return ['后台战斗容器无效'];
     for(const [key,b] of Object.entries(backgrounds??{}))if(!b||b.id!==key)errors.push('后台战斗ID与索引不一致');
@@ -4610,6 +4715,11 @@
       errors.push(...mechanics.validate({...state,战斗:battle},actionEvidence.get(state)?.receipt));
       for(const zone of Object.values(battle.扩展?.区域效果??{}))if(!frozenDamageSourceValid(zone,'zone.'+zone.类型))errors.push(`区域伤害${zone.id}来源无效`);
       for(const domain of Object.values(battle.扩展?.领域实例??{})){
+        const node=domain.能力合同?.effectGraph?.nodes?.find(n=>n.effectId==='domain.field'&&n.id===domain.来源.效果ID);
+        if(node?.params.触发次数!==undefined||domain.剩余触发!==undefined){
+          const ledger=Object.entries(domain.触发账本??{}),max=node?.params.触发次数;
+          if(!Number.isSafeInteger(max)||!Number.isSafeInteger(domain.剩余触发)||domain.剩余触发<1||domain.剩余触发+ledger.length!==max||ledger.some(([key,v])=>key!==v.round+':触发:'+v.targetId||!battle.参与者ID列表.includes(v.targetId)))errors.push('领域触发次数与触发记录不符：'+domain.id);
+        }
         const selected=domain.扩展?.选择目标ID列表;if(selected===undefined)continue;
         const source=state.战斗单位.列表[domain.来源?.单位ID],contract=domain.能力合同;
         if(!Array.isArray(selected)||!selected.length||new Set(selected).size!==selected.length||!abilities.verify(contract).pass||!contract.effectGraph.nodes.some(n=>n.effectId==='target.allies')||selected.some(id=>!battle.参与者ID列表.includes(id)||!source||!sameSide({...state,战斗:battle},source,state.战斗单位.列表[id])))errors.push(`领域所选同伴与来源合同不符：${domain.id}`);
@@ -5060,6 +5170,7 @@
     }
     const recovery=participationRecovery(state,String(intent.actorId??''));
     if(recovery){const active=state.战斗?.状态==='进行中'&&state.战斗.当前行动单位ID===intent.actorId&&isActiveParticipant(state,intent.actorId)&&!state.战斗.扩展.clock.pendingRoundStart;return {ready:active&&recoveryMatches(recovery,intent),reason:active?recovery.reason:'当前不是本人的可行动回合',actorId:intent.actorId,actionType:recovery.intent.type,participation:recovery.permission,costsMainAction:true,targeting:{needsPrimaryTarget:false,needsAim:false,choices:[]}};}
+    if(intent.type==='武魂外放'){try{const id=String(intent.actorId??'');if(state.战斗.状态!=='进行中'||state.战斗.当前行动单位ID!==id||!isActiveParticipant(state,id)||state.战斗.扩展.clock.pendingRoundStart||actionImpairment(state,id).reason)throw Error('当前不是本人可以行动的回合');const q=globalThis.SoulManifestation.quote(state,intent);return {ready:true,...q,actionType:intent.type,targeting:{needsPrimaryTarget:false,needsAim:false,choices:[]}};}catch(error){return {ready:false,reason:error.message};}}
     if(intent.type==='召唤投影'){try{const id=String(intent.actorId??'');if(state.战斗.状态!=='进行中'||state.战斗.当前行动单位ID!==id||!isActiveParticipant(state,id)||state.战斗.扩展.clock.pendingRoundStart||actionImpairment(state,id).reason)throw Error('当前不是本人可以行动的回合');moveUnit(state,state.战斗单位.列表[id],intent.movement,{});const q=globalThis.SoulCombatDeployments.quote(state,{actorId:id,targetId:intent.residentId,mode:'projection'},{battleId:state.战斗.id});return {ready:true,actorId:id,actionType:intent.type,residentId:q.prototypeId,cost:q.cost.totals.soulPower,costsMainAction:true,targeting:{needsPrimaryTarget:false,needsAim:false,choices:[]}};}catch(error){return {ready:false,reason:error.message};}}
     if(intent.type==='药剂施用'){try{const s=clone(rawState),id=intent.actorId;if(s.战斗.状态!=='进行中'||s.战斗.当前行动单位ID!==id||!isActiveParticipant(s,id)||s.战斗.扩展.clock.pendingRoundStart||actionImpairment(s,id).reason)throw Error('当前不是本人可以行动的回合');const movementReceipt={};moveUnit(s,s.战斗单位.列表[id],intent.movement,movementReceipt);const movement=movementReceipt.movement??null;const q={...intent,type:intent.operation};for(const k of ['operation','movement','targetIds'])delete q[k];const quote=globalThis.SoulPoisonCore.quote(s,q);return {ready:true,actorId:id,actionType:intent.type,movement,quote,costsMainAction:true,targeting:{needsPrimaryTarget:false,needsAim:false,choices:[]}};}catch(e){return {ready:false,reason:e.message};}}
     if(intent.type==='控制命令'){
@@ -5105,6 +5216,7 @@
     const actorId = String(intent.actorId ?? '');
     if (actorId !== state.战斗.当前行动单位ID) throw new Error(`尚未轮到单位：${actorId}`);
     const actor = state.战斗单位.列表[actorId];
+    if(actor?.扩展?.召唤?.指令?.mode==='cast')delete actor.扩展.召唤.指令;
     if (!actor || !isActiveParticipant(state, actorId)) throw new Error('行动者不存在、已经失能或已经撤离');
     influence.reconcileOrders(state);
     const forced=controlledAction(state,actorId);
@@ -5142,6 +5254,9 @@
       if (intent.type === '控制命令') {
         receipt.issuedControlOrder=influence.issueBattleOrder(state,{id:receipt.id,issuerId:actorId,actorId:String(intent.controlTargetId??''),intent:intent.controlledIntent});
         receipt.narrationFacts.push(`${actor.名称}向${state.战斗单位.列表[receipt.issuedControlOrder.actorId].名称}下达控制命令，等待其自己的回合执行`);
+      }
+      else if(intent.type==='武魂外放'){
+        const result=globalThis.SoulManifestation.execute(state,{actorId:actor.id,soulId:intent.soulId,operation:intent.operation},receipt.id);if(result.operation!=='recall'){joinBattlePrepared(state,{unitId:result.unitId,sideId:battleMember(state,actor.id).sideId,canFlee:false,extension:{summonedBy:actor.id}},rng);globalThis.SoulCreationCore.bindBattle(state);}receipt.manifestation=result;receipt.narrationFacts.push(result.summary);
       }
       else if(intent.type==='召唤投影'){
         const deployed=globalThis.SoulCombatDeployments.execute(state,{type:'deploy-resident',actorId:actor.id,targetId:intent.residentId,mode:'projection'},receipt.id,{battleId:state.战斗.id}),sideId=battleMember(state,actor.id).sideId;
@@ -5313,7 +5428,8 @@
     const {damageType,scaling,avatarOutputBonus,outputScale,deliveryScale,damageBuff}=damageModifiers(state,actor,node,skill);
     const residual=node.effectId==='payload.residual';
     const average=residual?Number(node.params?.数值??1):Number(node.params?.骰数??1)*(Number(node.params?.骰面??4)+1)/2*(options.critical?2:1);
-    const raw=Math.max(0,(average+Number(node.params?.加值??0)+Number(options.bonus??0)+scaling+avatarOutputBonus+damageBuff)*outputScale*deliveryScale*(options.scale??1));
+    const extra=bonusDiceActive(state,target,node.params)?node.params.追加骰数*(node.params.追加骰面+1)/2*(options.critical?2:1)+(node.params.追加加值??0):0;
+    const raw=Math.max(0,(average+extra+Number(node.params?.加值??0)+Number(options.bonus??0)+scaling+avatarOutputBonus+damageBuff)*outputScale*deliveryScale*(options.scale??1));
     const amplified=foundation.amplifyElementDamage(Math.floor(raw),foundation.elementDamageProfile(state,actor.id,damageType));
     return Number(resolveResistance(state,target,damageType,amplified.amount,node.params?.穿透档??0,{actor,skill,consumeInvulnerability:false,invulnerabilityUses:options.defenses}).finalAmount??0);
   }
@@ -5572,11 +5688,18 @@
     const modifiers=damageModifiers(state,actor,node,source),p=node.params,threshold=target.资源.生命.当前+Number(target.资源.生命.临时??0)+Number(target.扩展?.装备战斗修正?.固定减伤??0),chance=aiCheckChance(state,actor,skill,target);
     const conditional=(critical,scale=1)=>{
       const count=Number(p.骰数??1)*(critical?2:1),sides=Number(p.骰面??6);
-      const amount=dice=>{const raw=Math.max(0,Math.floor((dice+Number(p.加值??0)+bonus+modifiers.scaling+modifiers.avatarOutputBonus+modifiers.damageBuff)*modifiers.outputScale*modifiers.deliveryScale*scale));
+      const extra=bonusDiceActive(state,target,p),extraCount=extra?p.追加骰数*(critical?2:1):0;
+      const amount=dice=>{const raw=Math.max(0,Math.floor((dice+Number(p.加值??0)+(extra?p.追加加值??0:0)+bonus+modifiers.scaling+modifiers.avatarOutputBonus+modifiers.damageBuff)*modifiers.outputScale*modifiers.deliveryScale*scale));
         const amplified=foundation.amplifyElementDamage(raw,foundation.elementDamageProfile(state,actor.id,modifiers.damageType));
         return resolveResistance(state,target,modifiers.damageType,amplified.amount,p.穿透档??0,{actor,skill:source,consumeInvulnerability:false}).finalAmount;};
-      if(amount(count*sides)<threshold)return 0;if(amount(count)>=threshold)return 1;
-      let result=0;for(const [dice,probability]of aiDiceDistribution(count,sides))if(amount(dice)>=threshold)result+=probability;
+      const cap=count*sides+extraCount*(p.追加骰面??0);
+      if(amount(cap)<threshold)return 0;if(amount(count+extraCount)>=threshold)return 1;
+      // Resolve the damage threshold once; probabilities share the cached dice distributions.
+      let low=count+extraCount,high=cap;
+      while(low<high){const mid=Math.floor((low+high)/2);if(amount(mid)>=threshold)high=mid;else low=mid+1;}
+      let result=0;
+      const extras=extra?aiDiceDistribution(extraCount,p.追加骰面):[[0,1]];
+      for(const [dice,probability]of aiDiceDistribution(count,sides))for(const [add,weight]of extras)if(dice+add>=low)result+=probability*weight;
       return result;
     };
     let probability=conditional(false)*(chance.affected-chance.critical)+conditional(true)*chance.critical;
@@ -5778,7 +5901,29 @@
     const recovery=participationRecovery(state,actorId);if(recovery)return {...recovery.intent,id:actionId,actorId,aiDecision:{policy:'self-preservation',...recovery.permission,reason:recovery.reason}};
     const member = battleMember(state, actorId);
     const commander=state.战斗单位.列表[state.角色?.主控单位ID];
-    const discussed=globalThis.SoulCombatDeployments.strategy(state,actorId),strategy=discussed?{focusTargetId:null,protectTargetId:null,reservePercent:discussed.reservePercent,retreatPercent:0}:commander&&sameSide(state,actor,commander)?state.战斗.扩展?.strategy:null;
+    const order=actor.扩展?.召唤?.指令;
+    const ordered=order?.battleId===state.战斗.id&&isActiveParticipant(state,order.targetId)?order:null;
+    if(ordered?.mode==='cast'){
+      const skill=state.技能.列表[ordered.skillId],target=state.战斗单位.列表[ordered.targetId];
+      if(skill&&actor.扩展.召唤.天生技能ID?.includes(skill.id)&&skillCastAvailability(state,actor,skill,{targetIds:[target.id]}).available){
+        try{resolveTargets(state,actor,skill,{targetIds:[target.id]});return {id:actionId,actorId,type:'技能',skillId:skill.id,targetIds:[target.id],aiDecision:{policy:'summon-order',mode:'cast'}};}catch{/* The target may have moved since the order. */}
+      }
+    }
+    if(ordered?.mode==='guard'){
+      const target=state.战斗单位.列表[ordered.targetId];
+      const guarded=activeStatuses(state,target.id,'reaction.interpose').some(s=>s.来源.单位ID===actorId&&s.扩展.剩余次数>0);
+      if(!guarded&&sameSide(state,actor,target))for(const id of actor.能力.技能ID){
+        const k=state.技能.列表[id];if(!k?.effectGraph?.nodes.some(n=>n.effectId==='reaction.interpose'))continue;
+        if(skillCastAvailability(state,actor,k,{targetIds:[target.id]}).available){
+          try{if(combatDistance(actor,target)>k.effectGraph.nodes.find(n=>n.effectId==='reaction.interpose').params.距离区)continue;resolveTargets(state,actor,k,{targetIds:[target.id]});return {id:actionId,actorId,type:'技能',skillId:id,targetIds:[target.id],aiDecision:{policy:'summon-order',mode:'guard',affectedTargetIds:[target.id]}};}catch{/* Reposition using the ordinary tactical planner. */}
+        }
+      }
+    }
+    if(ordered?.mode==='guard'){
+      const target=state.战斗单位.列表[ordered.targetId],movement=combatDistance(actor,target)>1?aiMovementToward(state,actor,target):null;
+      return {id:actionId,actorId,type:'防御',...(movement?{movement}:{}),aiDecision:{policy:'summon-order',mode:'guard'}};
+    }
+    const discussed=globalThis.SoulCombatDeployments.strategy(state,actorId),strategy=ordered?{focusTargetId:ordered.mode==='focus'?ordered.targetId:null,protectTargetId:ordered.mode==='guard'?ordered.targetId:null,reservePercent:0,retreatPercent:0}:discussed?{focusTargetId:null,protectTargetId:null,reservePercent:discussed.reservePercent,retreatPercent:0}:commander&&sameSide(state,actor,commander)?state.战斗.扩展?.strategy:null;
     const reserve=Math.ceil((globalThis.SoulCombatDeployments.soulPowerResource(state,actor.id)).最大*(strategy?.reservePercent??0)/100);
     if (controls.breakable(state,actorId).length && !aiCanDamageWithoutMoving(state,actor)) {
       return {id: actionId, actorId, type: '挣脱', aiDecision:{policy:'strategic-utility-v2',mode:'break-free',affectedTargetIds:[actorId]}};
@@ -5957,6 +6102,12 @@
         choices.push({id:actionId,actorId,type:'控制命令',controlTargetId:target.id,controlledIntent:order.intent,cost:0,aiDecision:{policy:'strategic-utility-v3',mode:'control-opponent',score,expectedDamage:0,affectedTargetIds:[target.id]}});
         break;
       }catch{}
+    }
+    if(ordered?.mode==='focus'){
+      const attack=choices.filter(c=>c.aiDecision.expectedDamage>0&&c.aiDecision.affectedTargetIds.includes(ordered.targetId)).sort((a,b)=>b.aiDecision.score-a.aiDecision.score)[0];
+      if(attack)return attack;
+      const movement=aiMovementToward(state,actor,state.战斗单位.列表[ordered.targetId]);
+      return {id:actionId,actorId,type:'防御',...(movement?{movement}:{}),aiDecision:{policy:'summon-order',mode:'focus'}};
     }
     const immediate=aiEffectChain(state,actor,choices),postponeSummons=['conceal-before-combination','combine-prepared-charges','finish-opportunity'].includes(immediate?.aiDecision.mode);
     const summonPlans=new Map();
@@ -6678,7 +6829,7 @@ function bestSummonLoadout(state,actor,sourceSkill,{maximumCandidates=6,horizon=
     skillUsageRules,
     skillUsageAvailability,
     martialBaseSkill,quoteSkillUse,
-    skillCastAvailability,
+    resolveTargets,skillCastAvailability,
     fieldCostContract,controlQualificationContext,
     quoteManufacturingModifier,activateManufacturingModifier,
     isSelfRestorativeGraph,

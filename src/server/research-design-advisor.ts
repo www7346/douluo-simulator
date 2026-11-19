@@ -4,7 +4,7 @@ import {rules} from '../rules';
 export function inspectPaidDesign(state:any,request:any,options:{actorId?:string}={}){
  const core=(globalThis as any).SoulPaidDesign,e=rules.expedition;
  const q=core.quote(request.category,request.confirmedDesign),confirmedDesign=q.design;
- const timing=rules.effects.designActionTimingErrors(q.payload.activeSkill);if(timing.length)throw Error(timing.join('；'));
+ const timing=[...rules.effects.designActionTimingErrors(q.payload.activeSkill),...rules.effects.designBalanceErrors(q.payload.activeSkill),...rules.effects.designBalanceErrors(q.payload.passiveEffectGraph?{effectGraph:q.payload.passiveEffectGraph}:null)];if(timing.length)throw Error(timing.join('；'));
  const base={category:request.category,concept:request.concept??confirmedDesign.description,confirmedDesign};
  let recommendation:any;try{recommendation=e.recommendResearchMaterials(state,base,options);}catch(error){recommendation={found:false,materials:[],message:(error as Error).message};}
  let materials=Array.isArray(request.materials)&&request.materials.length?request.materials:recommendation.found?recommendation.materials:[];

@@ -47,7 +47,8 @@
  const previousHolder=p=>p?.kind==='found'?p.previousCustodianId:p?.sellerId;
  const acquisitionOperator=p=>p?.kind==='found'?p.buyerId:previousHolder(p);
  const acquisitionLink=p=>p?.kind==='found'?{backgroundAcquisitionId:p.id}:{backgroundPurchaseId:p.id};
- const profileFrom=row=>Object.fromEntries(['biography','values','speech','shortTermGoal','longTermGoal'].map((key,i)=>[key,row[i]]));
+ const PROFILE_FIELDS=['biography','values','speech','shortTermGoal','longTermGoal'];
+ const profileFrom=row=>Object.fromEntries(PROFILE_FIELDS.map((key,i)=>[key,row[i]]));
  function personaData(s,key){
   if(!PERSONAS[key])return null;
   const data=profileFrom(PERSONAS[key]),r=record(s),b=r?.config?.background;
@@ -119,7 +120,21 @@
  }
  function effectiveProfile(s,id){
   const p=s.人物?.列表?.[id];if(!p)return null;
-  const original=p.扩展?.characterProfile,data=original?.data??{},replacement=registeredProfile(s,id),background=backgroundProfile(s,id),initial=initialBackgroundProfile(s,id),generic=original?.source==='preset'&&genericProfile(data);
+  const original=p.扩展?.characterProfile,data=original?.data??{};
+  const background=backgroundProfile(s,id);
+  if(!background&&original?.status==='complete'&&original.source!=='ability-rewrite'&&data.examples)return clone(original);
+  const loadouts=globalThis.SoulNpcLoadouts,arena=globalThis.SoulCanonArenaEngine;
+  const canonicalId=s.战斗单位?.列表?.[id]?.扩展?.角色库ID??p.扩展?.角色库ID;
+  const npc=id!==s.角色?.主控单位ID;
+  const fixed=npc&&canonicalId?loadouts?.fixedProfile(canonicalId,arena?.worldCharacterIdentityId(canonicalId)):null;
+  const registered=registeredProfile(s,id);
+  const locations=globalThis.SoulWorldEngine?.LOCATION_TEMPLATES??{};
+  const origin=String(p.扩展?.slotKey??'').split(':')[0]||String(p.seed??'').split(':').find(key=>Object.hasOwn(locations,key));
+  const replacement=fixed??registered??(npc?loadouts?.profile(p,locations[origin]?.name??locations[p.locationId]?.name):null);
+  const initial=initialBackgroundProfile(s,id);
+  const oldStockCard=typeof data.biography==='string'&&data.biography.includes('方面的经验。')&&/^言语.*(习惯结合日常经历|依照当下的话题)/.test(data.speech??'');
+  const oldDraft=original?.source==='rules-draft'&&typeof data.biography==='string'&&data.biography.endsWith('具体出身和经历待人物创建完成。')&&data.speech===`结合${p.personality}与${p.occupation}的生活经验表达`;
+  const generic=oldDraft||original?.source==='preset'&&(genericProfile(data)||oldStockCard);
   const fill={...(replacement??{})};
   // A specific current background replaces the old template or this background's
   // default authored role, but never a later custom/generated character profile.
@@ -130,7 +145,17 @@
    for(const [key,value] of Object.entries(background))if(!data[key]||generic||initial&&data[key]===initial[key]||!original||id===r?.subjectId&&data[key]===(key==='biography'?globalThis.SoulCommerceDesigns.PEOPLE.find(p=>p.id===id)?.biography:key==='shortTermGoal'?globalThis.SoulCommerceDesigns.PEOPLE.find(p=>p.id===id)?.goal:undefined))next[key]=value;
   }
   if(!Object.keys(next).length)return original?clone(original):null;
+  if(npc&&loadouts){
+   if(original?.source==='ability-rewrite')next.examples=loadouts.examplesForProfile(next);
+   else if(!data.examples){
+    const registered=original?.source==='llm'?undefined:loadouts.registeredExamples(id);
+    if(registered||!next.examples||next.speech!==replacement?.speech)next.examples=registered??loadouts.examplesForProfile(next);
+   }
+  }
   const result={...(original?clone(original):{version:1,status:'complete',source:'preset'}),data:next};
+  if(npc&&result.status==='draft'&&next.examples&&PROFILE_FIELDS.every(key=>typeof next[key]==='string'&&next[key].trim())){
+   result.status='complete';result.source='preset';
+  }
   if(background&&mayApply){
    const r=record(s),event=cp().table(s).events.find(e=>e.id===acquisition(r).custodyTransferEventId);
    result.backgroundSource={sourceId:acquisition(r).id,at:r.createdAt,order:event.order,remembered:social().remembers(s,id,r.createdAt,[],event.order)};
@@ -147,7 +172,7 @@
   cp().stamp(r);
   for(const person of Object.values(s.人物.列表)){
    const original=person.扩展?.characterProfile;
-   if(original?.source==='rules-draft'&&original.status==='draft'&&Object.values(original.data??{}).every(value=>typeof value==='string'&&value.trim())){original.status='complete';original.source='preset';original.data.biography=original.data.biography.replace(/具体出身和经历待人物创建完成。/g,'');}
+   if(original?.source==='rules-draft'&&original.status==='draft'&&PROFILE_FIELDS.every(key=>typeof original.data?.[key]==='string'&&original.data[key].trim())){original.status='complete';original.source='preset';original.data.biography=original.data.biography.replace(/具体出身和经历待人物创建完成。/g,'');}
    localNames(s,person.id,r.sourceId);
   }
   for(const id of ids){const p=s.人物.列表[id],profile=effectiveProfile(s,id);if(profile){delete profile.backgroundSource;delete profile.backgroundFields;delete profile.backgroundFallback;p.扩展??={};p.扩展.characterProfile=profile;}}
@@ -180,7 +205,7 @@
    if(bg().targetId(b))purchase(s,config,sourceId,w,record);else {w.commerceHooks().move(s,[mainId],p.definition.locationId);s.地图.扩展??={};if(b.id==='clear-sky')s.地图.扩展.flags=[...new Set([...(s.地图.扩展.flags??[]),'knows-clear-sky-route'])];}
    const relations=globalThis.SoulOpeningRelations.initialize(s,config,sourceId,w,{mainId,buyerId:record.buyerId,subjectId:record.subjectId,ensurePerson});record.relationshipIds.push(...relations.entries.flatMap(row=>[row.relationshipId,row.contactId].filter(Boolean)));
    if(b.id==='shrek-student')s.世界.opening.guidance={status:'pending',giftStatus:'available',giftId:'',itemId:'',tutorialSkipped:false};else delete s.世界.opening.guidance;s.远征??=globalThis.SoulExpeditionEngine.normalizeState(s).远征;s.远征.配置.firstHuntingEscort={characterId:'yu-xiaogang-notting',consumedExpeditionId:'',rescueUsed:false,status:'unused',enabled:b.id==='shrek-student',eligible:b.id==='shrek-student'};
-   const main=s.人物.列表[mainId];if(!main.扩展?.角色库ID)main.generatedBy='background-opening-v2';localNames(s,mainId,sourceId);if(b.id==='sealed-titled')record.historyEntityIds.push(...Object.values(bg().resolveSlots(config)).filter(a=>a.source!=='canon').map(a=>a.id));else if(b.id==='jiumeitu-heir'&&p.level>10)record.historyEntityIds.push(mainId);labelOwnedSkills(s,sourceId);record.intro=intro(s,b,record);s.世界.opening.background=record;installProfiles(s,record);cp().stamp(record);social().ingest(s);
+   const main=s.人物.列表[mainId];if(!main.扩展?.角色库ID)main.generatedBy='background-opening-v2';localNames(s,mainId,sourceId);if(b.id==='sealed-titled')record.historyEntityIds.push(...Object.values(bg().resolveSlots(config)).filter(a=>a.source!=='canon').map(a=>a.id));else if(['custom','jiumeitu-heir'].includes(b.id)&&p.level>10)record.historyEntityIds.push(mainId);labelOwnedSkills(s,sourceId);record.intro=intro(s,b,record);s.世界.opening.background=record;installProfiles(s,record);cp().stamp(record);social().ingest(s);
  }
  function pLocation(s){return s.场景.地点??'故事的起点';}
  function intro(s,b,r){
@@ -213,7 +238,7 @@
   return `${name}，你的旅程从圣魂村开始。武魂已经觉醒，随身的行囊与盘缠也已收好，家乡的晨光照着那条走过许多次的小路。过去的一切并不会在启程时消失：你的来历、习惯、那些难忘的日子，都将陪你走进更大的大陆。${familiar}第一枚魂环仍在前方，关于魂师的许多事，也等待你亲自去认识。你可以先看看自己的武魂与行囊，想好眼下最想做的一件事。也许是找人说说话，也许是迈出村口，去看看更远的风景。故事的第一页已经翻开，接下来，轮到你留下自己的脚印。`;
  }
  function record(s){return s.世界.opening?.background;}
- function validate(s){const r=record(s);if(!r)return Object.values(s.人物.列表).some(p=>p.generatedBy==='background-opening-v2')?['背景来源记录缺失']:[];const errors=[];if(!valid(r)||r.version!==2||!([undefined,CONTENT_REVISION].includes(r.contentRevision))||r.sourceId!==s.世界.opening.committedTransactionId||r.mainId!==s.角色.主控单位ID)errors.push('背景创建合同来源无效');errors.push(...validateBackgroundRelationships(s));errors.push(...globalThis.SoulBackgroundRestraints.validate(s));const p=acquisition(r);if(bg().targetId(r.config.background)&&!p)errors.push('背景取得来源记录缺失');if(p)errors.push(...validateAcquisitionEvidence(s));const expectedHistory=r.config.background.id==='sealed-titled'?Object.values(bg().resolveSlots(r.config)).filter(a=>a.source!=='canon').map(a=>a.id):r.config.background.id==='jiumeitu-heir'&&bg().policy(r.config.background,r.config.difficulty).level>10?[r.mainId]:[];if(bg().stable(r.historyEntityIds)!==bg().stable(expectedHistory))errors.push('背景历史能力承担者列表被更改');for(const id of expectedHistory)errors.push(...history().validate(s,id));return errors;}
+ function validate(s){const r=record(s);if(!r)return Object.values(s.人物.列表).some(p=>p.generatedBy==='background-opening-v2')?['背景来源记录缺失']:[];const errors=[];if(!valid(r)||r.version!==2||!([undefined,CONTENT_REVISION].includes(r.contentRevision))||r.sourceId!==s.世界.opening.committedTransactionId||r.mainId!==s.角色.主控单位ID)errors.push('背景创建合同来源无效');errors.push(...validateBackgroundRelationships(s));errors.push(...globalThis.SoulBackgroundRestraints.validate(s));const p=acquisition(r);if(bg().targetId(r.config.background)&&!p)errors.push('背景取得来源记录缺失');if(p)errors.push(...validateAcquisitionEvidence(s));const expectedHistory=r.config.background.id==='sealed-titled'?Object.values(bg().resolveSlots(r.config)).filter(a=>a.source!=='canon').map(a=>a.id):['custom','jiumeitu-heir'].includes(r.config.background.id)&&bg().policy(r.config.background,r.config.difficulty).level>10?[r.mainId]:[];if(bg().stable(r.historyEntityIds)!==bg().stable(expectedHistory))errors.push('背景历史能力承担者列表被更改');for(const id of expectedHistory)errors.push(...history().validate(s,id));return errors;}
 
 function backgroundPersonId(key){
   const arena=globalThis.SoulCanonArenaEngine;

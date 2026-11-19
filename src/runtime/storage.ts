@@ -1,5 +1,6 @@
 import {credentialRef,nativeModelCredentials,scopeCredentialWrite,type CredentialWrite,type CredentialValues,type CredentialOwner} from './desktop-model-credentials';
 import {requestResult,transactionDone} from './idb-read';
+import {STORY_UNDO,storyUndoTargets,storyUndoBefore,visitStoryUndo,type StoredStoryUndo} from './story-undo';
 import {serializeDatabaseWorld,type ExportSource} from './save-export';
 import {createObjectMark,isSealedValue,sealOwned} from '../shared/frozen-snapshot';
 import {PARTS,prepareStateParts,prepareReplayPart,materialize,retainParts,pruneParts,type StoredSlot,type SaveListing} from './save-parts';
@@ -8,7 +9,7 @@ import {scenePlace} from '../shared/scene-place';
 import {isCurrentSnapshot,assertCurrentSnapshot,SNAPSHOT_SCHEMA_VERSION} from '../shared/snapshot-version';
 import {saveCodec} from '../shared/save-codec';
 import type { GameCommand, GameEvent, GameSnapshot, JsonValue } from './contracts';
-import {assertSoulImageSlot,normalizeSoulImageRefs,type SoulImageRefs,type SoulImageInputs} from './soul-images';
+import {assertCharacterImageSlot,normalizeSoulImageRefs,type SoulImageRefs,type SoulImageInputs} from './soul-images';
 import type {PendingOperation} from '../cloud/protocol';
 import {checkedStoryEntry,checkedStoryHistory,type StoryArchiveEntry,type StoryArchiveRecord,type StoryArchivePage} from '../shared/story-archive';
 import {validateModelEvidence,type ModelEvidence} from '../shared/model-evidence';
@@ -17,7 +18,7 @@ import {jsonEqual} from '../shared/json-identity';
 import {diagnosticValue,diagnosticSave,diagnosticNode,diagnosticEvidence,diagnosticPending,inspectDiagnosticLinks} from '../shared/diagnostic-summary';
 
 export const DATABASE_NAME = 'douluo-independent-web';
-export const DATABASE_VERSION = 6;
+export const DATABASE_VERSION = 7;
 
 export interface SaveSlotRecord {
   slotId: string;
@@ -34,12 +35,13 @@ export interface SaveSlotRecord {
   workspace?: JsonValue | null;
   autosaveEmpty?: boolean;
   storyHeadId?:string|null;
+  storyUndoHeadId?:string|null;
   battleReplay?:BattleReplayRecord|null;
 }
 
 export type SaveSlotHead=Omit<SaveSlotRecord,'snapshot'|'workspace'|'battleReplay'>;
 
-export type BattleReplayRecord = Pick<SaveSlotRecord,'snapshot'|'avatarAssetId'|'figureAssetId'|'soulImages'|'workspace'|'storyHeadId'>;
+export type BattleReplayRecord = Pick<SaveSlotRecord,'snapshot'|'avatarAssetId'|'figureAssetId'|'soulImages'|'workspace'|'storyHeadId'|'storyUndoHeadId'>;
 
 export interface SaveOptions {
   label?: string;
@@ -62,6 +64,8 @@ export interface SaveOptions {
   resetCloudOperation?:boolean;
   storyHeadId?:string|null;
   storyHistory?:StoryArchiveEntry[];
+  storyUndoHeadId?:string|null;
+  storyOpening?:{branchId:string;turn:number};
 }
 
 export interface BackupRecord extends SaveSlotRecord {
@@ -295,6 +299,11 @@ export class GameDatabase {
           store.createIndex('createdAt', 'createdAt');
         }
         if(!database.objectStoreNames.contains(PARTS))database.createObjectStore(PARTS,{keyPath:'key'});
+        if(!database.objectStoreNames.contains(STORY_UNDO)){
+          const undo=database.createObjectStore(STORY_UNDO,{keyPath:'id'});
+          undo.createIndex('worldId','worldId');undo.createIndex('partKeys','partKeys',{multiEntry:true});
+          undo.createIndex('chain',['id','previousId','worldId','branchId','turn']);
+        }
         for(const name of ['saves','backups']){
           const store=request.transaction!.objectStore(name);
           if(!store.indexNames.contains('profileId'))store.createIndex('profileId','profileId');
@@ -357,7 +366,7 @@ export class GameDatabase {
     const replayAssets=await Promise.all((options.battleReplayImport?.assets??[]).map(asset=>preparePortrait(asset,'figure')));
     if(options.soulImages!==undefined){
       for(const [slot,entry] of Object.entries(options.soulImages)){
-        assertSoulImageSlot(slot);
+        assertCharacterImageSlot(slot);
         if(entry.kind==='upload'){
           const asset=await preparePortrait(entry.image,'figure');
           soulAssets.push(asset);soulImages[slot]={kind:'upload',assetId:asset.assetId};
@@ -368,7 +377,7 @@ export class GameDatabase {
     const database = await this.open();
     const detached=isSealedValue(snapshot)?snapshot:clone(snapshot),explicitReplay=options.battleReplayImport?.record??options.battleReplay;
     const [prepared,preparedReplay]=await Promise.all([prepareStateParts(detached),prepareReplayPart(options.battleOpening?detached:explicitReplay?.snapshot)]);
-    const transaction = database.transaction(['saves', 'backups', 'narratives','avatars','settings','storyTurns',PARTS], 'readwrite');
+    const transaction = database.transaction(['saves', 'backups', 'narratives','avatars','settings','storyTurns',STORY_UNDO,PARTS], 'readwrite');
     const finished = transactionDone(transaction);
     void finished.catch(() => undefined);
     try {
@@ -416,6 +425,7 @@ export class GameDatabase {
         soulImages:options.soulImages===undefined?normalizeSoulImageRefs(current?.soulImages):soulImages,
         workspace:options.workspace === undefined ? clone(current?.workspace ?? null) : clone(options.workspace),
         storyHeadId:options.storyHeadId===undefined?current?.storyHeadId??null:options.storyHeadId,
+        storyUndoHeadId:options.storyUndoHeadId===undefined?(options.storyHistory!==undefined?null:current?.storyUndoHeadId??null):options.storyUndoHeadId,
         battleReplay:options.battleReplay===undefined?current?.battleReplay??null:clone(options.battleReplay),
       };
       const archive=transaction.objectStore('storyTurns');
@@ -507,9 +517,15 @@ export class GameDatabase {
           putListed(backups,{...backup,id,recoveryLabel:options.checkpoint.label});
         }
       }
+      if(options.storyOpening){
+        const opening=options.storyOpening,ledger=(snapshot.state as any).扩展?.story;
+        if(!previousPhysical||owner!==slotId||ledger?.branchId!==opening.branchId||ledger.active?.number!==opening.turn)throw new StorageConflictError('发送前的进度尚未保存，请重试');
+        const id=crypto.randomUUID(),undo:StoredStoryUndo={...opening,id,worldId,previousId:previousPhysical.storyUndoHeadId??'',before:previousPhysical,partKeys:previousPhysical.partKeys??[]};
+        transaction.objectStore(STORY_UNDO).add(undo);record.storyUndoHeadId=id;
+      }
       if(options.battleOpening){
-        const {snapshot,avatarAssetId,figureAssetId,soulImages,workspace,storyHeadId}=record;
-        record.battleReplay=clone({snapshot,avatarAssetId,figureAssetId,soulImages,workspace,storyHeadId});
+        const {snapshot,avatarAssetId,figureAssetId,soulImages,workspace,storyHeadId,storyUndoHeadId}=record;
+        record.battleReplay=clone({snapshot,avatarAssetId,figureAssetId,soulImages,workspace,storyHeadId,storyUndoHeadId});
       }
       const replayPart=preparedReplay?.key??(keepReplay?previousPhysical?.replayPart:undefined);
       if(preparedReplay)prepared.parts.set(preparedReplay.key,preparedReplay.value);
@@ -645,6 +661,44 @@ export class GameDatabase {
     }catch(error){try{tx.abort();}catch{}await done.catch(()=>{});throw error;}
   }
 
+  async markRejectedWorkflow(worldId:string,command:GameCommand,code:NonNullable<PendingOperation['rejection']>):Promise<void>{
+    const id=assertSafeIdentifier(worldId,'世界编号'),database=await this.open(),tx=database.transaction('settings','readwrite');
+    const done=transactionDone(tx),settings=tx.objectStore('settings'),key=`cloud-pending:${id}`;
+    void done.catch(()=>{});
+    const prior=(await requestResult<{value:PendingOperation}|undefined>(settings.get(key)))?.value;
+    if(prior?.phase==='command'&&prior.command.type==='workflow.apply'&&jsonEqual(prior.command,command))settings.put({key,value:{...prior,rejection:code}});
+    await done;
+  }
+
+  /** The player explicitly keeps the saved world. Retain the complete refused
+   * result before releasing its intent, atomically and without sending an ACK. */
+  async archiveRejectedWorkflow(worldId:string,command:GameCommand):Promise<void>{
+    const id=assertSafeIdentifier(worldId,'世界编号'),database=await this.open(),tx=database.transaction(['settings','saves'],'readwrite');
+    const done=transactionDone(tx),settings=tx.objectStore('settings'),key=`cloud-pending:${id}`;
+    void done.catch(()=>{});
+    try{
+      const prior=(await requestResult<{value:PendingOperation}|undefined>(settings.get(key)))?.value;
+      const revision=await currentSlotRevision(tx.objectStore('saves'),id,command.expectedRevision);
+      const ack=await requestResult<{value:unknown}|undefined>(settings.get(`cloud-ack:${id}`));
+      if(!prior?.rejection||prior.phase!=='command'||command.type!=='workflow.apply'||!jsonEqual(prior.command,command)||revision!==command.expectedRevision||ack?.value)throw new StorageConflictError('原来的操作已经变化，请重新查看');
+      settings.put({key:`cloud-rejected:${id}:${command.id}`,value:{...prior,archivedAt:new Date().toISOString()}});
+      settings.delete(key);await done;
+    }catch(error){try{tx.abort();}catch{}await done.catch(()=>{});throw error;}
+  }
+
+  async rejectedWorkflowResults(worldId:string):Promise<PendingOperation[]>{
+    const id=assertSafeIdentifier(worldId,'世界编号'),database=await this.open();
+    const store=database.transaction('settings','readonly').objectStore('settings');
+    const keys=await requestResult<IDBValidKey[]>(store.getAllKeys());
+    const rows=await Promise.all(keys.filter(key=>typeof key==='string'&&key.startsWith(`cloud-rejected:${id}:`)).map(key=>requestResult<{value:PendingOperation}>(store.get(key))));
+    return rows.filter(row=>row.value.worldId===id).map(row=>clone(row.value));
+  }
+  async rejectedWorkflowCount(worldId:string):Promise<number>{
+    const id=assertSafeIdentifier(worldId,'世界编号'),database=await this.open();
+    const keys=await requestResult<IDBValidKey[]>(database.transaction('settings','readonly').objectStore('settings').getAllKeys());
+    return keys.filter(key=>typeof key==='string'&&key.startsWith(`cloud-rejected:${id}:`)).length;
+  }
+
   async clearRejectedCloudOperation(worldId:string,operationId:string):Promise<void>{
     const id=assertSafeIdentifier(worldId,'世界编号'),database=await this.open(),tx=database.transaction('settings','readwrite');
     const done=transactionDone(tx),settings=tx.objectStore('settings'),key=`cloud-pending:${id}`;
@@ -709,7 +763,7 @@ export class GameDatabase {
   async removeRecords(idInput: string, mode: 'slot' | 'world' | 'autosave', emptySnapshot?: GameSnapshot): Promise<void> {
     const id = assertSafeIdentifier(idInput, '存档编号');
     const db = await this.open();
-    const tx = db.transaction(['saves','backups','narratives','avatars','settings','storyTurns',PARTS], 'readwrite');
+    const tx = db.transaction(['saves','backups','narratives','avatars','settings','storyTurns',STORY_UNDO,PARTS], 'readwrite');
     const done = transactionDone(tx); void done.catch(() => undefined);
     try {
       const saves = tx.objectStore('saves');
@@ -733,16 +787,19 @@ export class GameDatabase {
         }
       }
       if (mode === 'world') {tx.objectStore('settings').put({key:`deleted-world:${id}`,value:true});tx.objectStore('settings').delete(`soul-advice-recovery:${id}`);}
-      if(mode==='world'){const settings=tx.objectStore('settings');for(const key of await requestResult<IDBValidKey[]>(settings.getAllKeys()))if(typeof key==='string'&&[`model-evidence:${id}:`,`failure-diagnostic:${id}:`].some(prefix=>key.startsWith(prefix)))settings.delete(key);this.#diagnosticMemory.delete(id);}
+      if(mode==='world'){const settings=tx.objectStore('settings');for(const key of await requestResult<IDBValidKey[]>(settings.getAllKeys()))if(typeof key==='string'&&[`model-evidence:${id}:`,`failure-diagnostic:${id}:`,`cloud-rejected:${id}:`].some(prefix=>key.startsWith(prefix)))settings.delete(key);this.#diagnosticMemory.delete(id);}
       if(mode==='world'){const archive=tx.objectStore('storyTurns');for(const key of await requestResult<IDBValidKey[]>(archive.index('worldId').getAllKeys(id)))archive.delete(key);}
+      if(mode==='world')await visitStoryUndo(tx,(row,cursor)=>{row.partKeys.forEach(key=>prune.add(key));cursor.delete();},id);
       if (mode === 'autosave') {
         if (!emptySnapshot) throw new Error('缺少空存档');
-        putListed(saves,{...target,stateParts:undefined,replayPart:undefined,partKeys:undefined,listing:undefined,saveDiagnostic:undefined,snapshot:clone(emptySnapshot),revision:emptySnapshot.revision,storageVersion:(target.storageVersion ?? 0)+1,updatedAt:new Date().toISOString(),avatarAssetId:null,figureAssetId:null,soulImages:{},workspace:null,storyHeadId:null,battleReplay:null,autosaveEmpty:true});
+        putListed(saves,{...target,stateParts:undefined,replayPart:undefined,partKeys:undefined,listing:undefined,saveDiagnostic:undefined,snapshot:clone(emptySnapshot),revision:emptySnapshot.revision,storageVersion:(target.storageVersion ?? 0)+1,updatedAt:new Date().toISOString(),avatarAssetId:null,figureAssetId:null,soulImages:{},workspace:null,storyHeadId:null,storyUndoHeadId:null,battleReplay:null,autosaveEmpty:true});
       }
       await pruneParts(tx,prune);
       const remaining = await requestResult<SaveSlotRecord[]>(saves.getAll());
       const backups = await requestResult<BackupRecord[]>(tx.objectStore('backups').getAll());
-      const used = new Set([...remaining,...backups].flatMap(record=>[record,...(record.battleReplay?[record.battleReplay]:[])]).flatMap(record => [record.avatarAssetId === undefined ? 'player-avatar' : record.avatarAssetId,record.figureAssetId,...Object.values(record.soulImages??{}).flatMap(image=>image.kind==='upload'?[image.assetId]:[])]));
+      const assets=(record:SaveSlotRecord)=>[record,...(record.battleReplay?[record.battleReplay]:[])].flatMap(record=>[record.avatarAssetId===undefined?'player-avatar':record.avatarAssetId,record.figureAssetId,...Object.values(record.soulImages??{}).flatMap(image=>image.kind==='upload'?[image.assetId]:[])]);
+      const used=new Set([...remaining,...backups].flatMap(assets));
+      await visitStoryUndo(tx,row=>assets(row.before).forEach(id=>used.add(id)));
       for (const asset of await requestResult<AvatarRecord[]>(tx.objectStore('avatars').getAll())) if (!used.has(asset.assetId)) tx.objectStore('avatars').delete(asset.assetId);
       await done;
     } catch(error) {try {tx.abort();} catch {} await done.catch(() => undefined); throw error;}
@@ -837,6 +894,16 @@ export class GameDatabase {
       };
     });
     await transactionDone(tx);return rows.sort(order).slice(-limit);
+  }
+
+  async storyWithdrawalTargets(record:Pick<SaveSlotRecord,'profileId'|'slotId'|'storyUndoHeadId'>){
+    const db=await this.open(),tx=db.transaction(STORY_UNDO,'readonly');
+    return storyUndoTargets(tx,record);
+  }
+
+  async storyWithdrawalBefore(record:SaveSlotRecord,id:string){
+    const db=await this.open(),tx=db.transaction([STORY_UNDO,PARTS],'readonly');
+    return storyUndoBefore(tx,record,id);
   }
 
   /** Newest first along immutable links. Keep the captured record when requesting later pages. */

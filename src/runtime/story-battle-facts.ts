@@ -23,7 +23,7 @@ export function compileStoryBattleFacts(report:any){
     const {effects:_rawProjection,...result}=target;
     const raw=receipt.targets[targetIndex];
     const check=raw.check?Object.fromEntries(['type','mode','attribute','hit','saved','success','critical','successEffect','interference'].filter(key=>Object.hasOwn(raw.check,key)).map(key=>[key,structuredClone(raw.check[key])])):null;
-    return {...result,check,...Object.fromEntries(['branchId','branchLabel','sourceUnitId','sourceSkillId','domainId','trigger'].filter(key=>Object.hasOwn(raw,key)).map(key=>[key,structuredClone(raw[key])])),effects:(raw.effects??[]).map((effect:any)=>compileCommittedEffect(effect,raw.sourceUnitId??receipt.actorId,target.targetId))};
+    return {...result,check,...Object.fromEntries(['branchId','branchLabel','sourceUnitId','sourceSkillId','domainId','trigger','protectedId'].filter(key=>Object.hasOwn(raw,key)).map(key=>[key,structuredClone(raw[key])])),effects:(raw.effects??[]).map((effect:any)=>compileCommittedEffect(effect,raw.sourceUnitId??receipt.actorId,target.targetId))};
    })}};
  })};
 }

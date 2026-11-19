@@ -52,7 +52,7 @@ export function applyModelPrompts(profile:PromptProfile,messages:ChatMessage[]):
 export function modelRequestParts(profile:PromptProfile,messages:ChatMessage[],task='',structure?:PromptStructureOptions){
  const before=globalPromptMessages(profile,'before',task,structure),middle=globalPromptMessages(profile,'before-context',task,structure),after=globalPromptMessages(profile,'after',task,structure);
  // Structured fact packets already carry field metadata. No text/content sniffing.
- const boundary=messages.findIndex(message=>message.promptTemplate?.fields!==undefined||message.role!=='system'),offset=boundary<0?messages.length:boundary;
+ const boundary=messages.findIndex(message=>message.promptTemplate?.fields!==undefined||message.role!=='system'&&!message.presetExample),offset=boundary<0?messages.length:boundary;
  const applied=applyModelPrompts(profile,messages),main=[...applied.slice(0,offset),...middle,...applied.slice(offset)];
  const sourceIndexes=messages.map((_,index)=>before.length+index+(index>=offset?middle.length:0));
  const globalIndexes=[...before.map((_,i)=>i),...middle.map((_,i)=>before.length+offset+i),...after.map((_,i)=>before.length+main.length+i)];

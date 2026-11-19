@@ -70,19 +70,30 @@ export function recentBattleReports(state:any){
   participants:r.opening.units.map((u:any)=>({id:u.id,name:u.name,sideId:u.sideId}))}));
 }
 
-/** Personal recollection from the frozen opening, without granting knowledge of later events. */
-export function sharedBattleEncounters(state:any,personId:string):Array<{battleId:string;time:number|null;participants:Array<{id:string;name:string;sideId:string}>;scope:string;observedActionCount?:number;ownActionCount?:number;actions?:any[]}>{
+interface SharedBattleEncounter {
+ battleId:string;time:number|null;participants:Array<{id:string;name:string;sideId:string}>;scope:string;
+ learnedOrder?:number;observedActionCount?:number;ownActionCount?:number;actions?:any[];
+ settledSpar?:{playerId:string;opponentId:string;winnerIds:string[];playerOutcome:'胜利'|'失败'|'平局';summary:string};
+}
+/** Opening witnesses retain opening knowledge; recovered sparring partners also know their settled result. */
+export function sharedBattleEncounters(state:any,personId:string):SharedBattleEncounter[]{
  const playerId=state.角色?.主控单位ID,person=state.人物?.列表?.[personId];
  if(!playerId||!person||personId===playerId)return [];
  const unitId=person.combatantId||personId;
- return Object.values(state.扩展?.battleReports??{}).flatMap((report:any)=>{
+ return Object.values(state.扩展?.battleReports??{}).flatMap<SharedBattleEncounter>((report:any)=>{
   if(isHistoricalProjection(report.context)||!report.completeFromStart||report.status!=='已结束')return [];
   const present=(report.opening?.units??[]).filter((u:any)=>u.hp>0&&u.memberStatus==='active');
   const projected=(report.actions??[]).filter((a:any)=>a.receipt?.id&&rules.combatDeployments.witnesses(state,a.receipt.id,a.receipt).some((w:any)=>w.personId===personId&&rules.personChangeKnowledge.remembers(state,personId,{learnedOrder:w.order,at:w.at})));
   if(projected.length){const names=new Map((report.opening?.units??[]).map((u:any)=>[u.id,u.name])),ownCarriers=new Set(rules.combatDeployments.table(state).records.filter((r:any)=>r.prototypeId===personId&&r.mode==='projection').map((r:any)=>r.unitId));return [{battleId:report.id,time:report.startedAt??null,learnedOrder:Math.max(...projected.flatMap((a:any)=>rules.combatDeployments.witnesses(state,a.receipt.id,a.receipt).filter((w:any)=>w.personId===personId).map((w:any)=>w.order))),participants:present.map((u:any)=>({id:u.id,name:u.name,sideId:u.sideId})),scope:'本人意识通过投影实际在场时亲历的片段；仅包含当时实际感知，不预设投影后来是否消散。',observedActionCount:projected.length,ownActionCount:projected.filter((a:any)=>ownCarriers.has(a.receipt.actorId)).length,actions:projected.slice(-16).map((a:any)=>({sequence:a.sequence,round:a.round,actorId:a.receipt.actorId,actorName:names.get(a.receipt.actorId)??a.receipt.actorId,action:a.receipt.skill?.name??a.receipt.actionType,targets:(a.receipt.targets??[]).map((t:any)=>({id:t.targetId,name:names.get(t.targetId)??t.targetId}))}))}];}
   if(!present.some((u:any)=>u.id===playerId)||!present.some((u:any)=>u.id===unitId))return [];
+  const player=present.find((u:any)=>u.id===playerId),opponent=present.find((u:any)=>u.id===unitId);
+  const recovered=report.aftermath?.type==='spar-resolved'&&report.context?.mode==='spar'&&report.context.opponentId===unitId&&[playerId,unitId].every(id=>report.aftermath.units?.some((u:any)=>u.id===id&&u.life==='存活'));
+  const winner=report.outcome?.winnerSideId;
+  const playerOutcome:'胜利'|'失败'|'平局'=winner===player.sideId?'胜利':winner===opponent.sideId?'失败':'平局';
+  const settledSpar=recovered?{playerId,opponentId:personId,winnerIds:present.filter((u:any)=>u.sideId===winner).map((u:any)=>u.id),playerOutcome,
+   summary:`${player.name}与${opponent.name}的切磋已结算，${playerOutcome==='胜利'?player.name+'获胜':playerOutcome==='失败'?opponent.name+'获胜':'双方战平'}。双方已恢复战前的生命与魂力。`}:undefined;
   return [{battleId:report.id,time:report.startedAt??null,participants:present.map((u:any)=>({id:u.id,name:u.name,sideId:u.sideId})),
-   scope:'战斗开场的共同在场者'}];
+   scope:settledSpar?'双方亲历并已完成结算的切磋':'战斗开场的共同在场者',...(settledSpar?{settledSpar}:{})}];
  }).slice(-8);
 }
 

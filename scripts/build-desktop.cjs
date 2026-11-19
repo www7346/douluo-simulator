@@ -13,6 +13,7 @@ async function fingerprint(dir,hash){
 }
 async function main(){
   if(process.platform!=='win32'||process.arch!=='x64'||process.versions.node!=='24.15.0')throw Error('桌面包需 Windows x64 和 Node 24.15.0 构建。');
+  execFileSync(process.execPath,['--import','tsx',path.join(root,'scripts/check-story-writing-coverage.ts')],{cwd:root,stdio:'inherit'});
   const hash=crypto.createHash('sha256');
   await fingerprint(path.join(root,'src'),hash);
   for(const file of ['vite.config.mts','index.html','build/web-art/asset-manifest.json','package-lock.json','scripts/build-desktop.cjs','desktop/main.cjs','desktop/preload.cjs','desktop/updater.cjs','desktop/update-install.cjs','desktop/service.ts','desktop/model-wire.ts','desktop/model-credentials.cjs','desktop/chatgpt-plan.cjs','desktop/package.json','desktop/package-lock.json','desktop/electron-builder.cjs'])hash.update(await fs.readFile(path.join(root,file)));

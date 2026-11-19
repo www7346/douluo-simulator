@@ -37,7 +37,7 @@ export function compileFieldOperation(turn:StoryTurn,result:StoryStepResult):any
   return {stage:'话已传达',...pick(r,['id','speakerId','listenerId','text','at','order'])};
  }
  if(['item-equipped','item-unequipped'].includes(c.type))return compileGrowthEquipmentReceipt(turn,result);
- if(c.type==='martial-soul-switched')return compileAdventureReceipt(c);
+ if(c.type==='martial-soul-switched'||c.type==='custody-logistics')return compileAdventureReceipt(c);
  if(c.type==='stop-maintenance'){
   known(c,['actorId','maintenance']);known(c.maintenance,['sourceId','actorId','skillId','battleId','at','event','reason']);
   return {stage:'本人已停止该来源的维持',actorId:c.actorId,maintenance:pick(c.maintenance,['sourceId','actorId','skillId','battleId','at','event','reason'])};
@@ -63,7 +63,7 @@ export function fieldOperationAccount(type:string,f:any,n:StoryEventNames,player
  if(['controlled-gift-proposed','controlled-gift-completed'].includes(type))return socialEventAccount(type,{...f,delivery:null},n);
  if(type==='person-spoke')return `${n.person(f.speakerId)}对${n.person(f.listenerId)}说：“${f.text}”`;
  if(['item-equipped','item-unequipped'].includes(type))return equipmentEventAccount(type,f,n.person(f.actorId),n.item(f.itemId));
- if(type==='martial-soul-switched')return adventureEventAccount(type,f,n.person(f.actorId),n.person,n.soul);
+ if(type==='martial-soul-switched'||type==='custody-logistics')return adventureEventAccount(type,f,n.person(f.actorId),n.person,n.soul);
  if(['dismiss-disguise','inspect-disguise','disclose-identity'].includes(type))return `${n.person(f.actorId)}：${f.stage}${type==='disclose-identity'?`（${f.name}）`:''}。`;
  if(type==='stop-maintenance')return `${n.person(f.actorId)}停止维持这次施放的能力。`;
  if(['ability-use-requested','ability-use-responded'].includes(type))return `${n.person(f.actorId)}对${n.person(f.targetId)}的本次能力施用请求：${f.stage}`;

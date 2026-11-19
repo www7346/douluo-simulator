@@ -1,4 +1,4 @@
-import {downloadPrepared} from '../file-transfer';
+import {downloadPrepared,downloadJson} from '../file-transfer';
 import {inspectSave,importSummary} from '../save-import';
 import type {FullSaveBundle} from '../../shared/save-bundle';
 import DiagnosticExportButton from '../components/DiagnosticExportButton';
@@ -18,6 +18,7 @@ export default function SavesPage({onNavigate}:{onNavigate:(page:PageId)=>void})
   const [profiles,setProfiles]=useState<SaveListing[]>([]),[slots,setSlots]=useState<SaveListing[]>([]),[backups,setBackups]=useState<SaveListing[]>([]);
   const [message,setMessage]=useState('每次行动完成后自动保存，也可随时保存到手动存档位。');
   const [pending,setPending]=useState(false);
+  const [rejectedResults,setRejectedResults]=useState(0);
   const [confirm,setConfirm]=useState<{title:string;body:string;action:()=>Promise<void>}|null>(null);
   const [importOpen,setImportOpen]=useState(false),[importText,setImportText]=useState(''),[importFile,setImportFile]=useState(''),[readingFile,setReadingFile]=useState(false);
   const [preview,setPreview]=useState<FullSaveBundle|null>(null);
@@ -25,7 +26,7 @@ export default function SavesPage({onNavigate}:{onNavigate:(page:PageId)=>void})
   useEffect(()=>()=>{importAttempt.current++;importRead.current?.abort();},[]);
   const closeImport=()=>{importRead.current?.abort();importAttempt.current++;setReadingFile(false);setImportText('');setImportFile('');setPreview(null);setImportOpen(false);};
   const inspect=async(input:File|string)=>{importRead.current?.abort();const abort=new AbortController();importRead.current=abort;const attempt=++importAttempt.current;setPreview(null);if(typeof input!=='string'){setImportText('');setImportFile(input.name);}setReadingFile(true);setMessage('正在读取存档…');try{const bundle=await inspectSave(input,abort.signal);if(attempt!==importAttempt.current)return;setPreview(bundle);setMessage('已核对文件，可以导入为新世界。');}catch(error){if(attempt===importAttempt.current)setMessage(describeError(error));}finally{if(attempt===importAttempt.current)setReadingFile(false);}};
-  const refresh=useCallback(async()=>{const data=await controller.saveMenu();setProfiles(data.profiles);setSlots(data.slots);setBackups(data.backups);},[controller]);
+  const refresh=useCallback(async()=>{const data=await controller.saveMenu();setProfiles(data.profiles);setSlots(data.slots);setBackups(data.backups);setRejectedResults(data.rejectedResults);},[controller]);
   useEffect(()=>{void refresh().catch(e=>setMessage(describeError(e)));},[refresh,view.profileId,view.sessionId,view.snapshot.revision]);
   const run=async(action:()=>Promise<void>,success='操作完成')=>{setPending(true);try{await action();await refresh();setConfirm(null);setMessage(success);}catch(e){setMessage(describeError(e));}finally{setPending(false);}};
   const resume=()=>onNavigate(journeyAction(controller.getView().snapshot.state).page);
@@ -46,7 +47,7 @@ export default function SavesPage({onNavigate}:{onNavigate:(page:PageId)=>void})
   const remove=(record:SaveListing)=>setConfirm({title:record.slotId===view.profileId?'删除自动存档':'删除存档',body:`将删除“${record.slotId===view.profileId?'自动存档':record.label}”及其恢复备份。其他存档位置会保留，此操作无法撤销。`,action:()=>controller.deleteSave(record.slotId)});
   return <div className="menu-page saves-page"><div className="menu-page__top"><Button variant="ghost" onClick={()=>onNavigate('home')}>← 返回首页</Button>{state?.角色?.主控单位ID&&<Button variant="ghost" onClick={()=>{location.hash=playReturnRoute(state,location.hash);}}>返回旅程</Button>}<Button variant="ghost" onClick={()=>onNavigate('system')}>设置</Button></div><section className="page-heading"><span className="eyebrow">保存你的冒险故事</span><h1>读取存档</h1></section>
     {view.loadError&&<p className="diagnostic-message" role="alert">{view.loadError}</p>}
-    <p className="diagnostic-message" role="status">{message}</p><div className="save-browser">
+    <p className="diagnostic-message" role="status">{message}</p>{rejectedResults>0&&<p className="diagnostic-message"><Button variant="ghost" disabled={localBusy} onClick={()=>void run(async()=>{await downloadJson(await controller.exportRejectedResults(),'斗罗大陆-未采用的结果.json');},'未采用的结果已导出')}>导出未采用的结果（{rejectedResults}）</Button></p>}<div className="save-browser">
     <aside className="world-list" aria-label="世界列表"><h2>世界</h2>{profiles.map(profile=><div key={profile.slotId}><button className={view.profileId===profile.slotId?'world-choice is-active':'world-choice'} disabled={busy||!profile.current} onClick={()=>void run(()=>controller.switchProfile(profile.slotId),'已选择世界，可读取下方存档')}><img src={assetUrl(saveImage(profile))} alt=""/><strong>{profile.label}</strong><span>{profile.summary}</span>{!profile.current&&<small>旧版 · 仅可查看和导出备份</small>}<small>{view.profileId===profile.slotId?'当前世界':new Date(profile.updatedAt).toLocaleString()}</small></button><Button variant="ghost" disabled={localBusy||profile.autosaveEmpty&&profile.current} onClick={()=>void run(()=>download(profile.slotId),'该世界本地存档已导出')}>导出这个世界</Button><DiagnosticExportButton worldId={profile.slotId}/><Button variant="danger" aria-label={`删除世界：${profile.label}`} disabled={busy} onClick={()=>removeWorld(profile)}>删除这个世界</Button></div>)}{!profiles.length&&<p>还没有故事。回到首页开启你的第一段旅程。</p>}<Button variant="secondary" onClick={()=>onNavigate('home')}>开启新的故事</Button></aside>
     <div><Panel title={world?.label ?? '选择一个世界'} eyebrow="世界内的存档" actions={world&&<Button variant="danger" disabled={busy} onClick={()=>removeWorld(world)}>删除世界</Button>}>
       {world?<div className="save-position-grid" role="group" aria-label="所选世界的存档">

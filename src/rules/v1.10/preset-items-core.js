@@ -48,6 +48,22 @@
  hidden('tang-yindu','引毒梅针','毒蚀直伤后附毒蚀易伤，为后续毒系攻击创造有限窗口。','梅花形尾片托着一根黑针，针身有短短一段暗绿纹。',[D('毒蚀',1,4),R('毒蚀','易伤',2)]);
  hidden('tang-chuanlin','穿林双梭','沿直线攻击最多两人，一份双梭一次耗尽，目标独立判定命中。','两枚棱形银梭叠在长盒内，梭尾都系着短青丝。',[D('物理',1,6)],{target:'target.line',targetParams:{最大目标:2}});
  hidden('tang-sanxing','散星针囊','近距锥形攻击最多三人，一份针囊整体结算。','半圆小囊分出三排星状针槽，外皮带着旧黑布纹。',[D('物理',1,4)],{range:1,target:'target.cone',targetParams:{距离区:1,最大目标:3}});
+
+ // Canon names and visible forms; battle values use this game's finite-use item contract.
+ function canonHidden(id,name,appearance,nodes,options={}){
+  const specs=[['release.projectile',{距离区:options.range??3}],[options.target??'target.single',{阵营规则:'敌方',...(options.targetParams??{})}],['check.physical_attack',{命中加值:options.hit??0}],...nodes];
+  ENTRIES.push(h.entry('暗器','tang-canon-'+id,name,options.description,appearance,{templateId:'tang-canon-'+id,effectSpecs:specs,requirements:['gesture'],soulPowerCost:0,cooldownTurns:0,subtype:'原著暗器击发份'},
+   {canonName:name,reference:'https://www.37.com/dldl/xinwen/20160629-37/',sourceNote:'名称与外观参照斗罗大陆原著暗器及授权资料；游戏按一次完整投射或击发用量制作和消耗一份，数值、命中、范围与伤害均以本项目合同结算。',tags:['原著暗器','一次击发用量']}));
+ }
+ canonHidden('sleeve-arrow','无声袖箭','深色袖筒以铜饰收边，短箭收在腕侧，外壳有细密云纹。',[D('物理',1,6,2)],{hit:1,description:'藏于袖侧的机括箭具，近中距离投射。一次消耗一份完整击发用量，命中后造成1d6+2物理伤害。'});
+ canonHidden('boot-blade','靴间飞刃','两枚银灰短刃贴着靴侧收拢，尾部配有深蓝革质固定片。',[D('物理',1,4,2)],{range:1,hit:1,description:'藏在靴侧的短刃，适合近距离突袭。一次消耗一份，命中后造成1d4+2物理伤害。'});
+ canonHidden('dragon-whisker','龙须针','金色细丝凝成纤细长针，针身微卷，旁侧留着发晶般的金光。',[D('物理',1,4,2),['status.bind',{持续回合:2,挣脱属性:'力量'}]],{hit:2,description:'金色细针命中后卷曲牵制目标，造成1d4+2物理伤害并施加2回合可挣脱束缚。一次消耗一份，不追加未结算的永久伤残。'});
+ canonHidden('sand-shadow','含沙射影','扁圆铜盒边缘展开细密针孔，深色金属表面有流沙般的细纹。',[D('物理',1,6),['status.poison',{骰数:1,骰面:4,持续回合:2}]],{range:1,target:'target.cone',targetParams:{距离区:1,最大目标:3},description:'近距离扇形散射细针，最多作用3名敌人，各自判定命中，造成1d6物理伤害并附2回合毒素。一次消耗一份击发用量。'});
+ canonHidden('zhuge-crossbow','诸葛神弩','黑色长匣前端横着短弩臂，铜饰贴合匣身，箭槽有序排列。',[['payload.damage',{类型:'物理',骰数:3,骰面:6,加值:4,穿透档:1}]],{range:4,hit:2,target:'target.line',targetParams:{最大目标:3},description:'匣式机括沿直线齐射，最多攻击3名敌人，命中后造成3d6+4物理伤害并带1档穿透。每次消耗一份已装填的齐射用量。'});
+ canonHidden('twin-soul-balls','子母追魂夺命胆','一大一小两枚乌金圆胆互相映照，表面环纹收拢，隐现幽绿光泽。',[D('物理',3,6,4),['status.poison',{骰数:2,骰面:4,持续回合:3}]],{range:3,target:'target.burst',targetParams:{半径区:1,最大目标:5},description:'成对子母胆在落点散开，半径1区内最多作用5名敌人，造成3d6+4物理伤害并附3回合毒素，各目标独立判定。一次消耗一份。'});
+ canonHidden('peacock-plume','孔雀翎','青金机括筒外缘展开孔雀翎状饰片，筒口针阵在冷光中泛出五彩。',[['payload.damage',{类型:'物理',骰数:6,骰面:8,加值:12,穿透档:1}]],{range:2,hit:3,target:'target.cone',targetParams:{距离区:2,最大目标:6},description:'机括针阵以孔雀开屏之势覆盖扇形，最多攻击6名敌人，命中后造成6d8+12物理伤害并带1档穿透。一次消耗一份完整击发用量。'});
+ canonHidden('rain-pear-needles','暴雨梨花针','银白短筒环着细密梨花纹，针尖如一簇雨线聚拢，外壳泛着冷银光。',[['payload.damage',{类型:'物理',骰数:12,骰面:10,加值:20,穿透档:1}]],{range:4,hit:4,description:'密集银针聚向同一目标，命中后造成12d10+20物理伤害并带1档穿透。一次消耗一份完整击发用量，仍按实际命中、防护和抵抗结算。'});
+ canonHidden('buddha-lotus','佛怒唐莲','暗金金属莲花层层收拢，莲心透出赤金微光，花瓣边缘排列精密。',[['payload.damage',{类型:'物理',骰数:12,骰面:12,加值:40,穿透档:1}]],{range:3,hit:3,target:'target.burst',targetParams:{半径区:2,最大目标:10},description:'金属唐莲在落点绽放，半径2区内最多攻击10名敌人，命中后造成12d12+40物理伤害并带1档穿透，各目标分别结算。一次消耗整份唐莲。'});
  function pill(id,name,description,appearance,nodes,options={}){ENTRIES.push(h.entry('丹药',id,name,description,appearance,{templateId:id,effectSpecs:S(nodes),requirements:options.external?['gesture']:['gesture','ingest'],soulPowerCost:0,cooldownTurns:0,subtype:options.external?'外敷药剂':'口服丹药',productPurpose:'beneficial'},options));}
  pill('pill-qingzhi','青芝续络丸','一次恢复二骰六面加四生命，并获得两回合物防加一。','苦绿色芝粉薄壳包着浅褐丹芯，丸面有细小草脉。',[['payload.heal',{骰数:2,骰面:6,加值:4}],B('物理防御',1,2)]);
  pill('pill-mingyu','鸣玉清瘴丸','清除一项毒素并抵抗毒蚀两回合，不能补回已经失去的血。','白玉碎纹沉在淡青丸芯中，瓷瓶上有清瘴药记。',[['payload.cleanse',{类别:'毒素',最大数量:1}],R('毒蚀','抗性',2)]);

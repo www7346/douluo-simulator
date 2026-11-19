@@ -97,6 +97,7 @@ export function battleAdjudication(receipt:Record<string,any>,state:any):BattleJ
   for(const event of receipt.statusEvents??[]){
     // Domain triggers are also emitted as target receipts; show their adjudication once.
     if(event.event==='domain-trigger')continue;
+    if(event.event==='interpose'){add('代挡',[unit(event.guardId)+'挡在'+unit(event.protectedId)+'身前，承受本次攻击']);continue;}
     const titles:Record<string,string>={'burn':'烧伤','poison':'中毒','dot':'持续伤害','hazard-tick':'区域伤害','eternal-wound':'持续创伤','regeneration':'再生','domain-effect':'领域效果'};
     const lines=[...checkLines(event.check),...effectLines(event)];
     for(const effect of event.effects??[])lines.push(...effectLines(effect));

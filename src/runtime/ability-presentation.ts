@@ -54,7 +54,8 @@ export function abilityPresentation(skill:any,state:any) {
   const primary=effects.filter(effect=>effect.group==='主要效果');
   const context=['施放方式','作用目标','命中与抵抗','维持条件'].flatMap(label=>{const entries=effects.filter(effect=>effect.group===label);return entries.length?[{label,entries}]:[]});
   const court=(globalThis as any).SoulNineCourts?.ofSkill(original);
-  const description=court?.description??playerDescription(globalThis.SoulSkillProse.description(original,state));
+  const description=typeof original?.displayDescription==='string'?original.displayDescription:
+    court?.description??playerDescription(globalThis.SoulSkillProse.description(original,state));
   const soulId=skill.sourceMartialSoulId??skill.来源武魂ID;
   const soulName=state?.武魂?.列表?.[soulId]?.名称;
   const passiveCondition=skill.sourceItemId||['魂导器','魂骨'].includes(skill.category)?(skill.category==='魂骨'?'融合后生效':'装备时生效'):(soulName?'启用'+soulName+'时生效':'启用对应武魂时生效');
@@ -68,7 +69,7 @@ export function abilityPresentation(skill:any,state:any) {
   if(projectionPolicy)for(const mode of modes)if(mode.id==='projection')mode.costLines=[`魂力 ${projectionPolicy.resummon?projectionPolicy.resummonCost:projectionPolicy.cost}`];
   const value=skill.abilityValue?{active:skill.abilityValue.rawActiveValue,passive:skill.abilityValue.rawPassiveValue,reduction:skill.abilityValue.reduction,net:skill.abilityValue.netValue,mode:modes.find(mode=>mode.id===skill.abilityValue.pricedModeId)?.name??'',ringBaseCost:skill.valueBasis?.baseSoulPowerCost}:null;
   const costLabel=nodes.some(n=>n.effectId==='target.allies'&&Number(n.params.每目标魂力)>0)||nodes.some(n=>n.effectId==='sustain.maintain'&&n.params.计费方式==='逐目标')?'每人魂力':activation==='hybrid'?'主动消耗':'魂力';
-  return {host,castRelease,costLabel,medicine:rules.abilities.consumableDisposition({...skill,sourceKind:skill.sourceKind??(skill.category==='丹药'?'consumable':undefined)}),restraint,effects,primary,context,description:projectionPolicy?`${description} 投影保留完整生命与命中，伤害、治疗、护盾为原人物${projectionPolicy.percent}%。施法共用画主魂力，每画主回合维持${projectionPolicy.upkeep}魂力。击散后可在下一次行动重召，不刷新技能冷却或次数。`:description,passiveCondition,usage,availability,activation,activationLabel,passiveState,value,cost:activation==='passive'?0:projectionPolicy?(projectionPolicy.resummon?projectionPolicy.resummonCost:projectionPolicy.cost):payment?.totals.soulPower??declared.costs.filter((fee:any)=>fee.kind==='soulPower').reduce((sum:number,fee:any)=>sum+fee.amount,0),cooldown:activation==='passive'?0:skill?.cooldownTurns??0,costLines,exchangeLines:exchangeDescriptions,requirementLines,modes,maintenanceLines:declared.maintenance.map(costLine)};
+  return {host,castRelease,costLabel,medicine:rules.abilities.consumableDisposition({...skill,sourceKind:skill.sourceKind??(skill.category==='丹药'?'consumable':undefined)}),restraint,effects,primary,context,description:projectionPolicy?`${description} 投影生命和魂力上限、伤害、治疗与护盾均为原人物的${projectionPolicy.percent}%，命中沿用原人物。投影用自己的魂力施法。画主每回合支付${projectionPolicy.upkeep}魂力维持。击散后可于画主下一次行动重召，同场沿用剩余魂力、冷却和次数。`:description,passiveCondition,usage,availability,activation,activationLabel,passiveState,value,cost:activation==='passive'?0:projectionPolicy?(projectionPolicy.resummon?projectionPolicy.resummonCost:projectionPolicy.cost):payment?.totals.soulPower??declared.costs.filter((fee:any)=>fee.kind==='soulPower').reduce((sum:number,fee:any)=>sum+fee.amount,0),cooldown:activation==='passive'?0:skill?.cooldownTurns??0,costLines,exchangeLines:exchangeDescriptions,requirementLines,modes,maintenanceLines:declared.maintenance.map(costLine)};
 }
 
 export function defensePresentation(state:any,unitId:string):Array<{key:string;label:string;source:string;temporary:boolean}> {

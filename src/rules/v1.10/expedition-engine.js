@@ -159,6 +159,8 @@
   const LOCATION_DUNGEON_INDEX = Object.freeze(Object.fromEntries(Object.values(DUNGEON_PROFILES).map(profile => [profile.locationId, Object.freeze([profile.id])])));
   const SHOP_CATALOG = Object.freeze({
     ...Object.fromEntries([...new Set(Object.keys(globalThis.SoulCommerceDesigns.REGIONS).flatMap(loc=>globalThis.SoulCommerceDesigns.stockAt(loc).map(v=>v[0])))].map(templateId=>[templateId,Object.freeze({templateId,name:world.ITEM_TEMPLATES[templateId].name,value:world.calculateItemValue(templateId)})])),
+    // The expedition API is attached after this factory returns, so stockAt cannot add its books yet.
+    ...Object.fromEntries(Object.entries(world.ITEM_TEMPLATES).filter(([,template])=>template.payload?.blueprintBook).map(([templateId,template])=>[templateId,Object.freeze({templateId,name:template.name,value:world.calculateItemValue(templateId)})])),
     bandage: Object.freeze({templateId: 'bandage', name: '止血绷带', value: 45}),
     'basic-soul-tonic': Object.freeze({templateId: 'basic-soul-tonic', name: '基础回魂露', value: 80}),
     rope: Object.freeze({templateId: 'rope', name: '麻绳', value: 90}),
@@ -2811,12 +2813,17 @@
     const state = normalizeState(rawState),actorId=researchRequest(state,options,{request}).actorId;
     const category = clean(request.category);
     if (!PRODUCT_CATEGORIES.includes(category)) throw new Error('请选择魂导器、丹药、毒药、暗器或拘束器');
+    if(request.presetId){
+      if(request.hostDesign||request.confirmedDesign)throw Error('宿主组合与精品预设不能同时指定');
+      const access=presetBlueprintAccess(state,request.presetId,actorId);
+      if(access.category!==category)throw Error('精品预设与所选制作类别不一致');
+      if(!access.known)return {found:false,materials:[],message:access.reason};
+    }
     const records = Object.values(personMaterials(state,actorId)).filter(stack => stack.quantity > 0).map(stack => {
       const evidence = materialBridgeEvidence(stack);
       return {stack,evidence,effectIds:new Set(evidence.channels.flatMap(channel => materialChannelRecord(channel)?.effectIds ?? []))};
     }).sort((a,b)=>a.stack.fingerprint.localeCompare(b.stack.fingerprint));
     if(request.hostDesign||request.confirmedDesign){
-      if(request.presetId)throw Error('宿主组合与精品预设不能同时指定');
       const quote=request.confirmedDesign?globalThis.SoulPaidDesign.quote(category,request.confirmedDesign):globalThis.SoulHostPricing.quoteDesign(category,request.hostDesign),hostQuote=request.hostDesign?hostQuoteSummary(quote):null,designQuote=request.confirmedDesign?designQuoteSummary(quote):null;
       const skeleton=(request.confirmedDesign?confirmedResearchCandidate:hostResearchCandidate)(category,{totalValue:quote.materialValue,attributes:attributeNames,channels:channelNames,registeredTraits:[],appearanceMaterials:[]},'fixed-recommendation',request.confirmedDesign??request.hostDesign);
       const clauses=bridgeClausesForMechanics(skeleton),plans=[];
@@ -3074,7 +3081,83 @@
       requiredValue:blueprint.requiredValue,productValue:blueprint.productValue,bridgeClauses:blueprint.bridgeClauses,mechanics:productMechanics(blueprint.mechanics)});
   }
 
-  function validAuthoredBlueprint(state,blueprint){const p=state.人物.列表[blueprint.ownerId],proof=p?.扩展?.authoredBlueprints?.find(v=>v.id===blueprint.id),origin=blueprint.knowledgeOrigin;return !!(origin?.kind==='authored-opening-knowledge'&&proof&&origin.personSeed===p.seed&&origin.sourceId===p.扩展.commerceUnique?.sourceId&&proof.hash===abilities.hash({id:blueprint.id,immutableHash:blueprint.immutableHash,origin})&&blueprint.ownerId==='captive-smith-cheng');}
+  const PRESET_BLUEPRINT_CATEGORIES=Object.freeze(['丹药','毒药','暗器','魂导器','拘束器']);
+  const presetBlueprintRecipeCache=new Map();
+  const presetBlueprintId=(actorId,presetId)=>`preset-blueprint:${encodeURIComponent(actorId)}:${presetId}`;
+  const studyKey=(actorId,presetId)=>`${actorId}|${presetId}`;
+  function presetBlueprintEntry(presetId){const entry=presets.get(presetId);if(!entry||!PRESET_BLUEPRINT_CATEGORIES.includes(entry.category))throw Error('这不是已登记的制作配方');return entry;}
+  function presetBlueprintPolicy(presetId){
+    const entry=presetBlueprintEntry(presetId),productValue=world.calculateItemValue(entry.recipe.templateId),grade=world.itemGradeFromValue(productValue);
+    const free=grade.value<=2&&entry.gates.rarity!=='跨时代稀有';
+    return {presetId:entry.id,category:entry.category,name:entry.name,productValue,grade,free,bookTemplateId:`blueprint-book:${entry.id}`,price:Math.max(100,Math.ceil(productValue*.4))};
+  }
+  function validPresetStudy(state,actorId,presetId){
+    const row=state.研发?.图纸学习?.[studyKey(actorId,presetId)];if(!row)return null;
+    const {hash,...body}=row,entry=presets.get(presetId),receipt=state.远征?.processedTransactions?.[row.id],source=state.远征?.commandRequests?.[row.id];
+    const expected={actorId,request:{itemId:row.itemId}},book=world.ITEM_TEMPLATES[`blueprint-book:${presetId}`];
+    if(!entry||!book||hash!==abilities.hash(body)||row.actorId!==actorId||row.presetId!==presetId||row.templateId!==`blueprint-book:${presetId}`||row.bookContractHash!==abilities.hash(book.payload.blueprintBook)||row.recipeHash!==abilities.hash({category:entry.category,recipe:entry.recipe})||row.at>people.now(state)||source?.type!=='学习预设图纸'||source.requestHash!==abilities.hash(expected)||abilities.hash(source.request)!==abilities.hash(expected)||receipt?.type!=='preset-blueprint-learned'||receipt.actorId!==actorId||receipt.presetId!==presetId||receipt.itemId!==row.itemId||receipt.studyHash!==hash||receipt.blueprintId!==presetBlueprintId(actorId,presetId))return null;
+    return row;
+  }
+  function presetBlueprintAccess(state,presetId,actorId=state.角色?.主控单位ID){
+    const policy=presetBlueprintPolicy(presetId);
+    if(!state.人物?.列表?.[actorId])return {...policy,known:false,source:'unavailable',blueprintId:null};
+    const researched=Object.values(state.研发?.蓝图??{}).find(b=>b.ownerId===actorId&&b.mechanics?.presetId===presetId&&!b.knowledgeOrigin&&b.createdFromResearchId);
+    const studied=validPresetStudy(state,actorId,presetId),known=!!(policy.free||researched||studied);
+    return {...policy,known,source:researched?'research':policy.free?'public':studied?'learned':'purchase',blueprintId:researched?.id??(known?presetBlueprintId(actorId,presetId):null),reason:known?'':'请先购买并学习这份设计图，可在城市商店或拍卖行寻找。'};
+  }
+  function presetBlueprintRecipe(presetId){
+    const entry=presetBlueprintEntry(presetId),key=abilities.hash({category:entry.category,recipe:entry.recipe,artId:entry.artId});
+    if(presetBlueprintRecipeCache.has(key))return clone(presetBlueprintRecipeCache.get(key));
+    const quote=presets.quote(presetId);if(!quote.pass)throw Error(quote.reason);
+    const evidence={attributes:[...attributeNames],channels:[...channelNames],registeredTraits:[],categories:[]},context={totalValue:quote.value,...evidence,appearanceMaterials:[]};
+    const candidate={...presetResearchCandidate(presetId,entry.category,context,`catalogue:${presetId}`),name:entry.name,description:entry.description,form:entry.appearance,narrativeSource:'preset'},checked=validateResearchCandidate({category:entry.category,mechanicBudget:quote.value,evidence},candidate,0);
+    if(!checked.pass)throw Error(checked.errors.join('；'));
+    const chosen={...checked.normalized,name:entry.name,description:entry.description,form:entry.appearance,narrativeSource:'preset'},requiredValue=chosen.spent,productValue=compileProductValue(entry.category,chosen);
+    const result={version:3,name:entry.name,category:entry.category,concept:entry.description,...productLifetime(entry.category,chosen),templateId:productTemplate(entry.category,chosen),requiredValue,productValue,bridgeClauses:bridgeClausesForMechanics(chosen),mechanics:chosen,description:entry.description,form:entry.appearance,createdFromResearchId:null,researchProvenance:{totalMaterialValue:quote.value,totalUnits:0,evidence,materials:[],sourceKind:'catalogue-recipe'},tradable:false,inventoryItem:false};
+    presetBlueprintRecipeCache.set(key,clone(result));return result;
+  }
+  function cataloguePresetBlueprint(state,presetId,actorId=state.角色?.主控单位ID){
+    const policy=presetBlueprintPolicy(presetId),study=validPresetStudy(state,actorId,presetId);
+    if(!state.人物?.列表?.[actorId]||!policy.free&&!study)throw Error('尚未掌握这份预设图纸，请先购买并学习');
+    const blueprint={...presetBlueprintRecipe(presetId),id:presetBlueprintId(actorId,presetId),ownerId:actorId,knowledgeOrigin:{kind:'preset-catalogue',presetId,access:policy.free?'public':'learned',...(policy.free?{}:{sourceId:study.id})}};
+    blueprint.researchProvenance.actorId=actorId;blueprint.immutableHash=blueprintFingerprint(blueprint);return blueprint;
+  }
+  function catalogueBlueprintById(state,id,actorId){
+    if(!String(id).startsWith(`preset-blueprint:${encodeURIComponent(actorId)}:`))return null;
+    const presetId=String(id).slice(`preset-blueprint:${encodeURIComponent(actorId)}:`.length);
+    return cataloguePresetBlueprint(state,presetId,actorId);
+  }
+  function presetBlueprints(state,actorId=state.角色?.主控单位ID){
+    const owned=new Set(Object.values(state.研发?.蓝图??{}).filter(b=>b.ownerId===actorId).map(b=>b.mechanics?.presetId));
+    return presets.list().filter(e=>PRESET_BLUEPRINT_CATEGORIES.includes(e.category)&&!owned.has(e.id)).flatMap(entry=>{const access=presetBlueprintAccess(state,entry.id,actorId);return access.known?[cataloguePresetBlueprint(state,entry.id,actorId)]:[];});
+  }
+  function presetBlueprintStock(locationId){
+    const cities=['loc-notting-city','loc-soto-city','loc-heaven-dou-city','loc-longxing-city','loc-gengxin-city','loc-sea-breeze-city','loc-sea-breeze-port','loc-star-luo-city','loc-spirit-city','loc-tang-heaven-dou'];
+    if(!cities.includes(locationId))return [];
+    return presets.list().filter(e=>PRESET_BLUEPRINT_CATEGORIES.includes(e.category)).map(e=>presetBlueprintPolicy(e.id)).filter(p=>!p.free&&(locationId!=='loc-tang-heaven-dou'||p.category==='暗器')&&(p.grade.value<4||['loc-heaven-dou-city','loc-gengxin-city','loc-spirit-city','loc-tang-heaven-dou'].includes(locationId))).map(p=>[p.bookTemplateId,1]);
+  }
+  function presetBlueprintAuctionSupply(){return presets.list().filter(e=>PRESET_BLUEPRINT_CATEGORIES.includes(e.category)).map(e=>presetBlueprintPolicy(e.id)).filter(p=>!p.free&&p.price>=1000).map(p=>({kind:'item',templateId:p.bookTemplateId,supply:{unique:false}}));}
+  function previewLearnPresetBlueprint(state,itemId,actorId=state.角色?.主控单位ID){
+    const item=state.物品?.实例?.[itemId],book=item?.payload?.blueprintBook,template=world.ITEM_TEMPLATES[item?.templateId];
+    if(!book||book.version!==1||item.type!=='图纸'||item.templateId!==`blueprint-book:${book.presetId}`||abilities.hash(book)!==abilities.hash(template?.payload?.blueprintBook))throw Error('请选择真实登记的设计图纸');
+    if(!world.isCarriedItem(state,item,actorId)||item.legalOwnerEntityId!==actorId)throw Error('须实际持有并拥有这张图纸');
+    globalThis.SoulActionContext.resolve(state,{actorId,battleId:null,requirements:['gesture','vision','focus']});
+    const access=presetBlueprintAccess(state,book.presetId,actorId);
+    return {available:!access.known,reason:access.known?'已经掌握这份图纸，无需重复学习。':'',presetId:book.presetId,blueprintId:presetBlueprintId(actorId,book.presetId),name:access.name};
+  }
+  function learnPresetBlueprint(rawState,request={},transactionId='learn-preset-blueprint',options={}){
+    if(Object.keys(request).some(k=>k!=='itemId'))throw Error('学习图纸只接受实际物品');
+    const source=researchRequest(rawState,options,{request}),actorId=source.actorId,guard=beginTransaction(rawState,transactionId,'学习预设图纸',source);
+    if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
+    const state=guard.state,q=previewLearnPresetBlueprint(state,request.itemId,actorId);if(!q.available)throw Error(q.reason);
+    const item=state.物品.实例[request.itemId],entry=presetBlueprintEntry(q.presetId),row={id:guard.id,actorId,presetId:entry.id,itemId:item.id,templateId:item.templateId,bookContractHash:abilities.hash(item.payload.blueprintBook),recipeHash:abilities.hash({category:entry.category,recipe:entry.recipe}),at:people.now(state)};row.hash=abilities.hash(row);
+    state.研发.图纸学习??={};state.研发.图纸学习[studyKey(actorId,entry.id)]=row;
+    return commit(state,guard.id,'学习预设图纸',{type:'preset-blueprint-learned',actorId,presetId:entry.id,name:entry.name,itemId:item.id,blueprintId:q.blueprintId,studyHash:row.hash,summary:`已掌握${entry.name}的制作图纸，可在工坊按图准备材料制作。`});
+  }
+  function validAuthoredBlueprint(state,blueprint){
+    if(blueprint.knowledgeOrigin?.kind==='preset-catalogue'){try{return abilities.hash(blueprint)===abilities.hash(cataloguePresetBlueprint(state,blueprint.knowledgeOrigin.presetId,blueprint.ownerId));}catch{return false;}}
+    const p=state.人物.列表[blueprint.ownerId],proof=p?.扩展?.authoredBlueprints?.find(v=>v.id===blueprint.id),origin=blueprint.knowledgeOrigin;return !!(origin?.kind==='authored-opening-knowledge'&&proof&&origin.personSeed===p.seed&&origin.sourceId===p.扩展.commerceUnique?.sourceId&&proof.hash===abilities.hash({id:blueprint.id,immutableHash:blueprint.immutableHash,origin})&&blueprint.ownerId==='captive-smith-cheng');
+  }
   function registerAuthoredCommerceBlueprints(state){
     const actorId='captive-smith-cheng',p=state.人物.列表[actorId];if(!p?.扩展.commerceUnique||p.扩展.authoredBlueprints)throw Error('人工初始知识只能登记一次');state.研发??={蓝图:{},待处理:{},历史:[]};p.扩展.authoredBlueprints=[];
     for(const [key,templateId,name,category] of [['heart','device-leaf-heart','叠叶护心衣修械图','魂导器'],['tether','restraint-tether','扣腕牵绳锻制图','拘束器']]){
@@ -3186,6 +3269,7 @@
   }
 
   function prepareResearchMechanics(state,category,context,concept='',actorId=state.角色.主控单位ID,options={},allocate) {
+    if(options.presetId){const access=presetBlueprintAccess(state,options.presetId,actorId);if(!access.known)throw Error(access.reason);}
     if(/储物/u.test(concept))throw new Error('目前无法制作储物魂导器，请调整成品构想');
     const choiceRule=researchChoiceCountInState(state,actorId,{category});
     const pendingId=`research-${String(integer(state.远征.counters.research,0)+1).padStart(5,'0')}`;
@@ -3561,7 +3645,7 @@
   }
 
   function ownedCraftBlueprint(state,id,actorId){
-    return assertBlueprintOwner(state,state.研发.蓝图[clean(id)]??globalThis.SoulDeviceLocks.keyBlueprint(state,actorId,clean(id)),actorId);
+    return assertBlueprintOwner(state,state.研发.蓝图[clean(id)]??catalogueBlueprintById(state,clean(id),actorId)??globalThis.SoulDeviceLocks.keyBlueprint(state,actorId,clean(id)),actorId);
   }
 
   function maximumBlueprintCraftQuantity(rawState,blueprintId,limit){
@@ -3678,7 +3762,8 @@
     let state = guard.state;
     requireResearchAction(state,actorId);ensureLocalService(state,'基础工坊',actorId);
     const store=personMaterials(state,actorId);
-    const blueprint = assertBlueprintOwner(state,state.研发.蓝图[clean(blueprintIdInput)]??globalThis.SoulDeviceLocks.keyBlueprint(state,actorId,clean(blueprintIdInput)),actorId);
+    const blueprint = ownedCraftBlueprint(state,blueprintIdInput,actorId);
+    if(blueprint.knowledgeOrigin?.kind==='preset-catalogue')state.研发.蓝图[blueprint.id]??=clone(blueprint);
     if (!blueprint) throw new Error('自研图纸不存在');
     const request = plain(requestInput) ? requestInput : {};
     const materials = previewBlueprintCraftPrepared(state,blueprint.id,request,{actorId});
@@ -3690,7 +3775,8 @@
   }
 
   function validateResearchOwnership(state){
-    const errors=[],transactions=state.远征?.processedTransactions??{},requests=state.远征?.commandRequests??{},projects=state.研发?.待处理??{},blueprints=state.研发?.蓝图??{};
+    const studyErrors=Object.values(state.物品?.实例??{}).filter(item=>item.type==='图纸'&&world.ITEM_TEMPLATES[item.templateId]?.payload?.blueprintBook).flatMap(item=>abilities.hash(item.payload?.blueprintBook)!==abilities.hash(world.ITEM_TEMPLATES[item.templateId].payload.blueprintBook)?['设计图纸与登记配方身份不一致']:[]).concat(Object.entries(state.研发?.图纸学习??{}).flatMap(([key,row])=>key!==studyKey(row.actorId,row.presetId)||!validPresetStudy(state,row.actorId,row.presetId)?['预设图纸知识缺少真实图纸及学习来源']:[]));
+    const errors=[...studyErrors],transactions=state.远征?.processedTransactions??{},requests=state.远征?.commandRequests??{},projects=state.研发?.待处理??{},blueprints=state.研发?.蓝图??{};
     const anchors=new Map();
     for(const person of Object.values(state.人物?.列表??{})){
       const rows=person.扩展?.研发事务;if(rows===undefined)continue;
@@ -4023,6 +4109,6 @@
     supplyOffers, buySupply, npcPurchaseOptions, currentItemValue, estimateMaterialSaleGold, quoteMaterialSale, sellMaterial, quoteItemSale, sellItem, previewEconomy,
     rerollResearchCandidate, researchCandidateFingerprint, researchRerollAvailability, explainResearchChoices,
     effectAttributeOptions, effectChannelOptions, assertResearchOwner, assertBlueprintOwner, selectedMaterialContext, researchMinimumBudget, resolveResearchChoiceCount, previewResearch, previewWorkshopAccess, recommendResearchMaterials, freezeResearchMechanics, researchNarrativeRequest, validateResearchNarrative, deterministicResearchNarrativeFixture, beginResearch, validateResearchCandidate, recordResearchNaming, resolveResearch, compileProductValue,
-    registerAuthoredCommerceBlueprints,materialFingerprint, materialBridgeEvidence, bridgeClausesForMechanics, researchPresetRequirements, materialSatisfiesBridge, bridgeCoverage, allocateBlueprintBatch, resolveBlueprintMaterials, previewBlueprintCraft, previewBlueprintCraftPrepared, maximumBlueprintCraftQuantity, maximumBlueprintCraftQuantityPrepared, productItemSpec,validateBlueprintProductItem,settleBlueprintProduct, selectedCraftMaterialStacks,personMaterials,productPlacement, chooseResearchCandidate, craftBlueprint, validateState,validateCurrentRuntimeState
+    presetBlueprintPolicy,presetBlueprintAccess,presetBlueprints,presetBlueprintStock,presetBlueprintAuctionSupply,cataloguePresetBlueprint,ownedCraftBlueprint,previewLearnPresetBlueprint,learnPresetBlueprint,registerAuthoredCommerceBlueprints,materialFingerprint, materialBridgeEvidence, bridgeClausesForMechanics, researchPresetRequirements, materialSatisfiesBridge, bridgeCoverage, allocateBlueprintBatch, resolveBlueprintMaterials, previewBlueprintCraft, previewBlueprintCraftPrepared, maximumBlueprintCraftQuantity, maximumBlueprintCraftQuantityPrepared, productItemSpec,validateBlueprintProductItem,settleBlueprintProduct, selectedCraftMaterialStacks,personMaterials,productPlacement, chooseResearchCandidate, craftBlueprint, validateState,validateCurrentRuntimeState
   });
 });

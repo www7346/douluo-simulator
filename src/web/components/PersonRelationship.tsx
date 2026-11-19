@@ -7,9 +7,10 @@ import PersonAgreements from './PersonAgreements';
 import PersonContracts from './PersonContracts';
 
 export function PersonRelationshipSummary({data}:{data:any}){
- const identity=data.context?.relationship?.label,ordinary=data.current?.label,history=data.context?.history??[];
- return <>{data.party&&<p className="person-membership">{data.party.membership==='long-term'?'长期队友':'临时队友'} · {data.party.present?'当前在场':'暂不在场'}</p>}<p><strong>{identity||ordinary||(data.party?'已建立同行约定':'尚无交往记录')}</strong></p>{identity&&ordinary&&identity!==ordinary&&<p>交往关系：{ordinary}</p>}
+ const identity=data.context?.relationship?.label,ordinary=data.current?.label,history=data.context?.history??[],sparring=data.sparring??[];
+ return <>{typeof data.score==='number'&&<p>对你的态度 <strong>{data.score}</strong></p>}{data.attitudeChanges?.length>0&&<details><summary>最近的态度变化</summary><ul>{data.attitudeChanges.map((e:any)=><li key={e.sourceId}>第 {e.day} 日 · {e.label} {e.delta>0?'+':''}{e.delta}</li>)}</ul></details>}{data.party&&<p className="person-membership">{data.party.membership==='long-term'?'长期队友':'临时队友'} · {data.party.present?'当前在场':'暂不在场'}</p>}<p><strong>{identity||ordinary||(data.party?'已建立同行约定':sparring.length?'已有切磋往来':'尚无交往记录')}</strong></p>{identity&&ordinary&&identity!==ordinary&&<p>交往关系：{ordinary}</p>}
   {history.length>0&&<details><summary>共同经历 · {history.length}</summary><ul>{history.map((event:any,index:number)=><li key={event.sourceId+':'+event.kind+':'+index}>{playerCopy(event.text)}</li>)}</ul></details>}
+  {sparring.length>0&&<details open><summary>最近切磋 · {sparring.length}</summary><ul>{[...sparring].reverse().map((record:any)=><li key={record.battleId}>你的结果：{record.settledSpar.playerOutcome}。{playerCopy(record.settledSpar.summary)}</li>)}</ul></details>}
  </>;
 }
 

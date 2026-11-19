@@ -53,6 +53,14 @@ export function abilityPage<T>(items:T[],page:number,size:number) {
   return {items:items.slice(index*size,(index+1)*size),index,count,total:items.length};
 }
 
+export const MAX_RING_SKILL_DESCRIPTION=2048;
+export function playerEditableRingSkill(state:any,id:string){
+  const owner=state.角色?.主控单位ID,skill=state.技能?.列表?.[id];
+  if(!state.角色?.已建立||!owner||!skill||skill.id!==id||(skill.ownerId??skill.持有者单位ID)!==owner)return null;
+  const source=abilitySourceResolver(state,owner)(skill);
+  return source.group==='ring'&&!source.issue?skill:null;
+}
+
 export function soulYearsLabel(years:number):string {
   return years===1000000?'百万年':years>=10000&&years%10000===0?`${years/10000}万年`:`${years.toLocaleString()}年`;
 }

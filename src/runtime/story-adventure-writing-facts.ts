@@ -23,7 +23,7 @@ export const ADVENTURE_RECEIPT_FIELDS:Record<string,string[]>={
  'person-cooperation':['action','actorId','targetId','cooperationId','status','basis','membership'],
  'person-rescue':['action','actorId','targetId','rescueId','status'],
  'world-social':['action','actorId','targetId','relationId','status','factId','subject','messageId','costGold','dueAt'],
- 'custody-logistics':['action','sourceId','actorId','at','facilityId','priceGold','targetId','permissionId','dutyId','escortId','minutes','before','after','interruption'],
+ 'custody-logistics':['action','sourceId','actorId','at','facilityId','cellId','locked','priceGold','targetId','permissionId','dutyId','escortId','minutes','before','after','interruption'],
  'person-duel-started':['battleId','actorId','targetId','battleKind'],
  'person-restraint-permission-decided':['decisionId','preparationId','actorId','targetId','itemId','accepted','permissionId'],
  'person-defeat-decided':['decisionId','actorId','targetId','defeatId','kind','result'],

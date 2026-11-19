@@ -3,13 +3,13 @@ import {validatePromptSource,type PromptSource} from '../shared/prompt-source';
 import {MODEL_TASKS} from './model-settings';
 import type {PromptStructureOptions} from './model-protocol';
 import {RETIRED_MODEL_TASK_IDS} from './retired-model-config';
-import {WRITING_PRESETS,WRITING_SET_KEYS,type WritingPresetSet} from './writing-preset-catalog';
+import {isPersonalWritingPresetId,WRITING_PRESETS,WRITING_SET_KEYS,type PersonalWritingPresetId,type WritingPresetSet} from './writing-preset-catalog';
 import {type ModelReplyTool} from './model-reply-tools';
 
 export interface ModelAnalysisBoundary {start:string;end:string}
 export const AUTHOR_PROMPT_TASKS=['story-writer','story-rewrite'];
 export interface GlobalPrompt {id:string;name:string;content:string;enabled?:boolean;position?:'before'|'before-context'|'after';role?:Exclude<ChatMessage['role'],'tool'>;models?:string[];channel?:'any'|'official'|'compatible';tasks?:string[];source?:PromptSource;analysis?:ModelAnalysisBoundary}
-export type GlobalPromptFamily='custom'|'deepseek'|'gemini'|WritingPresetSet;
+export type GlobalPromptFamily='custom'|'deepseek'|'gemini'|WritingPresetSet|PersonalWritingPresetId;
 export interface GlobalPromptPresetState {active:GlobalPromptFamily;saved:Partial<Record<GlobalPromptFamily,GlobalPrompt[]>>}
 export interface GlobalPromptConfiguration {globalPrompts?:GlobalPrompt[];globalPromptPreset?:GlobalPromptPresetState;replyTools?:ModelReplyTool[]}
 const DEEPSEEK_CHANNEL_PROMPTS=['preset-ds-chain-official','preset-ds-chain-compatible'];
@@ -22,10 +22,11 @@ export function toggleGlobalPrompt(parts:GlobalPrompt[],id:string,enabled:boolea
 export function validateGlobalPromptPreset(input:GlobalPromptPresetState|undefined):GlobalPromptPresetState|undefined{
  if(input===undefined)return undefined;
  const families:GlobalPromptFamily[]=['custom','deepseek','gemini',...WRITING_SET_KEYS];
- if(!input||!families.includes(input.active)||!input.saved||typeof input.saved!=='object'||Array.isArray(input.saved))throw Error('全局提示词套组无效');
+ const known=(family:string)=>families.includes(family as GlobalPromptFamily)||isPersonalWritingPresetId(family);
+ if(!input||!known(input.active)||!input.saved||typeof input.saved!=='object'||Array.isArray(input.saved))throw Error('全局提示词套组无效');
  const saved:GlobalPromptPresetState['saved']={};
  for(const [family,parts]of Object.entries(input.saved)){
-  if(!families.includes(family as GlobalPromptFamily)||family===input.active||!Array.isArray(parts))throw Error('全局提示词备用套组无效');
+  if(!known(family)||family===input.active||!Array.isArray(parts))throw Error('全局提示词备用套组无效');
   saved[family as GlobalPromptFamily]=validateGlobalPrompts(parts);
  }
  return {active:input.active,saved};

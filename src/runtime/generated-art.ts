@@ -1,5 +1,7 @@
+import '../shared/tangmen-item-art.js';
 import {artwork, type Artwork} from './art-catalog';
 import '../shared/opening-workshop-image-core.js';
+import '../shared/realm-equipment-visuals.js';
 
 /** These selectors read mechanical identity. Names, prose, RNG and budgets are deliberately absent. */
 const elements:Record<string,string> = {火:'fire',冰:'ice',雷:'lightning',thunder:'lightning',木:'wood',暗:'dark',水:'water',毒:'poison',毒蚀:'poison','toxic-corrosion':'poison',生命:'life',光:'light',风:'wind',土:'earth',金:'metal',灵魂:'soul',精神:'psychic',死亡:'death',毁灭:'destruction',空间:'space',时间:'time',物理:'physical'};
@@ -104,7 +106,8 @@ function skillFromNodes(nodes:any[]):Artwork {
   ['status.mind_control','charm'],['status.soul_control','silence'],['status.cognition_shift','charm'],['status.mute','silence'],['status.limb_bind','bind'],['status.power_seal','silence'],
   ['status.eternal_wound','bleed'],['status.burn','burn'],['status.poison','poison'],['status.haste','speed'],
   ['move.knockback','knockback'],['move.pull','pull'],['move.teleport','teleport'],['move.flight','flight'],
-  ['summon.entity','summon'],['status.buff','attribute-buff'],['modifier.next_skill','enhance'],['reaction.counter','multiattack'],
+  ['summon.entity','summon'],['status.buff','attribute-buff'],['status.amplify','attribute-buff'],['modifier.next_skill','enhance'],['reaction.counter','multiattack'],
+  ['status.damage_over_time','bleed'],['reaction.interpose','shield'],['payload.recon','accuracy'],
   ['status.limited_followup','multiattack'],['payload.stack_confluence','multiattack'],
   ['status.next_check_penalty','reduction'],['status.battle_resource','enhance'],
   ['payload.resource_damage','slash'],['payload.resource_endstate','soul-restore'],['payload.zone_dispel','dispel'],
@@ -172,8 +175,13 @@ const restraintArt:Record<string,string>={
  'restraint-seal-platform':'preset.restraint.seal-platform','restraint-slime-suit':'preset.restraint.slime-suit',
 };
 export function itemArtwork(item:any,kind=String(item?.type??item?.category??'')):Artwork {
+ if(kind==='图纸'){const productKind=String(item?.category??item?.mechanics?.category??'');if(['暗器','丹药','毒药','魂导器','拘束器'].includes(productKind))kind=productKind;}
  const custom=item?.customImage??item?.payload?.customImage??item?.mechanics?.customImage;
  if(globalThis.SoulOpeningWorkshopImage.valid(custom))return {key:'opening-workshop.custom',domain:'item',label:item?.name??'自定义作品',src:custom,cell:0,columns:1,rows:1};
+ const realm=globalThis.SoulRealmEquipmentVisuals.get(item);
+ if(realm)return artwork(realm.artId);
+ const tangmen=globalThis.SoulTangmenItemArt.get(item);
+ if(tangmen)return artwork(tangmen.artId);
  const explicit=item?.artId??item?.payload?.artId??item?.mechanics?.artId;
  if(explicit&&artwork(explicit).key!=='unknown')return artwork(explicit);
  if(typeof item?.templateId==='string'&&item.templateId.startsWith('intimate-')){const art=artwork('item.intimate.'+item.templateId.slice(9));if(art.key!=='unknown')return art;}
@@ -200,7 +208,9 @@ export function itemArtwork(item:any,kind=String(item?.type??item?.category??'')
   const nodes=[...artEffectNodes(mechanics),...artEffectNodes(payload.activeSkill),...(payload.skills??item?.skills??[]).flatMap(artEffectNodes)];
   const attr=element(nodes.find(n=>['payload.damage','passive.element_amplify'].includes(n.effectId))?.params?.类型);
   const decorated=artwork('item.'+attr+'-'+form);
-  return decorated.key!=='unknown'?decorated:artwork('item.'+form);
+  const plain=artwork('item.'+form);
+  if(decorated.key!=='unknown')return decorated;
+  if(plain.key!=='unknown')return plain;
  }
  if(['丹药','毒药'].includes(kind))return artwork('item.pill');
  if(kind==='暗器')return artwork('item.needles');
@@ -214,13 +224,15 @@ export function itemArtwork(item:any,kind=String(item?.type??item?.category??'')
 export function martialSoulArtwork(soul:any):Artwork {
  const definition=soul?.扩展?.结构化武魂?.definition??soul?.definition??soul;
  const presetId=definition?.presetId??soul?.presetId??soul?.扩展?.presetId;
+ const explicitArt=artwork(soul?.artId??soul?.扩展?.artId??definition?.artId??'unknown');
+ if(explicitArt.key!=='unknown')return explicitArt;
+ const canonical=globalThis.SoulCanonicalWomenContent?.forSoul(soul);
+ if(canonical&&artwork(canonical.SOUL.artId).key!=='unknown')return artwork(canonical.SOUL.artId);
  // The cloud frontend cannot import the private preset catalog. Resolve its
  // registered visual identity locally; never infer a preset from its name.
  const registeredKey=typeof presetId==='string'&&presetId.startsWith('preset:')?['preset.soul.','spirit.'].map(prefix=>prefix+presetId.slice(7)).find(key=>artwork(key).key!=='unknown')??'':'';
- const presetArt=soul?.artId??definition?.artId??(registeredKey&&artwork(registeredKey).key!=='unknown'?registeredKey:undefined)??(presetId?globalThis.SoulPresetCatalog?.get(presetId)?.artId:null);
+ const presetArt=registeredKey||(presetId?globalThis.SoulPresetCatalog?.get(presetId)?.artId:null);
  if(presetArt&&artwork(presetArt).key!=='unknown')return artwork(presetArt);
- const canonical=globalThis.SoulCanonicalWomenContent?.forSoul(soul);
- if(canonical&&artwork(canonical.SOUL.artId).key!=='unknown')return artwork(canonical.SOUL.artId);
  const categories=(definition?.categories??[]).map((c:string)=>c.replace(/^category\./,''));
  const spiritForms:Record<string,string>={blood:'blood',nervous:'nervous',organ:'organ',heart:'organ',limb:'limb',skin:'skin',hair:'hair',symbiote:'symbiote',firearm:'firearm',metal:'metal',stone:'stone',fluid:'fluid',gas:'gas',sun:'sun',moon:'moon',star:'star',energy:'energy',spear:'spear',bow:'bow',grimoire:'grimoire',cauldron:'cauldron',seal:'seal',formation:'formation',instrument:'instrument',mechanism:'mechanism',textile:'textile',hammer:'hammer',grass:'grass',humanoid:'humanoid'};
  for(const category of categories){if(spiritForms[category]){

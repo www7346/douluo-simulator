@@ -30,7 +30,7 @@ export default function PersonInteractions({characterId,onOpen,extraActions,hire
    {page==='abilities'&&<TargetFieldAbilities personId={data.personId} showEmpty inline/>}
    {page==='equipment'&&<PersonEquipment personId={data.personId}/>}
    {page==='growth'&&<PersonGrowth personId={data.personId} expanded/>}
-   {page==='cooperation'&&<PersonCooperation personId={data.personId} expanded/>}
+   {page==='cooperation'&&<>{typeof data.attitude==='number'&&<p>对你的态度 <strong>{data.attitude}</strong></p>}<PersonCooperation personId={data.personId} expanded/></>}
    {page==='custody'&&<><TargetFieldAbilities personId={data.personId} captureOnly inline/><PersonCustodyContext personId={data.personId} onClose={()=>onOpen?.()}/></>}
    {page==='combat'&&<PersonCombatActions characterId={characterId} personId={data.personId} name={data.name} combat={data.combat} onOpen={onOpen}/>}
   </>}

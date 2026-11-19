@@ -19,14 +19,14 @@ import {prepareGiftResponse} from './person-gift-workflow';
 
 import {promptMessage} from '../runtime/model-prompt-templates';
 import {preparePrivateReplyPrompt,runPrivateReplies} from './story-private-messages';
-import {ModelPromptCapacityError} from '../runtime/model-prompt-check';
-import {planStoryBattleWritingSections,previousWritingSectionReserve,storyWritingSectionCards,type PreviousWritingSection} from './story-battle-writing-sections';
+import {planStoryBattleWritingSections,previousWritingSectionReserve,type PreviousWritingSection} from './story-battle-writing-sections';
 import {writeBattleSections,preflightWritingSection,type SectionWritingRecovery} from './story-battle-section-writer';
 import {preflightStoryWritingCycle} from './story-writing-capacity';
 import {writeStoryNovel,storyNovelPresentation,type StoryNovelReview} from './story-novel';
-import {storyInlineCards,inlineCardProtocol,extractStoryInlineCards,inlineStoryWithMarkers,completeStoryInlinePresentation} from '../shared/story-inline-cards';
+import {storyInlineCards} from '../shared/story-inline-cards';
 import {storyHostActions} from './story-plan-tasks';
 import {createHostCatalog} from './story-host-catalog';
+import {realmVisitOptions} from './realm-visit-presentation';
 import {shortFeedbackPlan} from '../shared/story-short-feedback';
 import {STORY_TRADE_INTERFACES,validateStoryTradeInterfaces} from '../runtime/story-commerce';
 import {projectCommerceAuctionReadings} from '../runtime/story-commerce-reading';
@@ -48,6 +48,7 @@ import {ModelRecoveryBudget} from '../runtime/model-recovery-budget';
 import {MAX_STORY_PROSE_LENGTH} from '../shared/story-prose';
 import {pendingStoryRingNaming} from '../shared/story-ring-naming';
 import {preparePartyReplyPrompt,runPartyReplies} from './story-party-replies';
+import {partyConversationFacts} from '../runtime/story-party-chat';
 import type {StoryTurn} from '../runtime/story-turns';
 import {isPartyTurn,partyMessageForTurn} from '../shared/story-party-chat';
 import {resolvePrivateRoute} from '../runtime/story-private-route';
@@ -63,6 +64,7 @@ import {storyCreationProgress} from './story-creation-progress';
 import {stateFingerprint} from './workflow-ticket';
 import {storyHostChannelScope} from './story-host-channel';
 import {pendingStoryBeliefs,validateBeliefResponse} from '../shared/story-person-knowledge';
+import {personalDialogue,dialogueParticipants} from '../shared/story-dialogue-memory';
 import {selectStorySummaries,selectPersonStorySummaries,selectHostPrivateSummaries} from '../shared/story-summary';
 import {PREFILL_MODES} from '../runtime/model-protocol';
 import {rules} from '../rules';
@@ -91,14 +93,17 @@ const partyWriterInput=(turn:StoryTurn)=>turn.results.some(r=>r.action.kind==='t
 export function preflightStoryWriter(snapshot:GameSnapshot,input:Record<string,any>,gateway:ModelGateway,scope:Pick<StoryTurn,'partyChat'|'privatePersonId'|'battleId'>={}){
  const state=snapshot.state as any,ledger=storyLedger(state),turn={...ledger.active!,...scope};
  const copy={...snapshot,state:{...state,扩展:{...state.扩展,story:{...ledger,active:turn}}}};
- turn.status='resolved';turn.results=[];delete turn.hostProgress;delete turn.continuation;turn.before=storyTurnFacts(copy.state,turn.privatePersonId,turn.input);turn.after=structuredClone(turn.before);
+ turn.status='resolved';turn.results=[];delete turn.hostProgress;delete turn.continuation;
+ const authorTask=turn.privatePersonId?'private-chat':isPartyTurn(turn)?'party-chat':'story-writer';
  try{
-  const authorTask=turn.privatePersonId?'private-chat':isPartyTurn(turn)?'party-chat':'story-writer';
   gateway.checkTaskSettings(authorTask);
-  const writer=turn.privatePersonId?preparePrivateReplyPrompt(copy,input):isPartyTurn(turn)?preparePartyReplyPrompt(copy,input):prepareStoryPrompt(copy,'story-writer',input);
+  // No delivery receipt exists yet. Start with the same group scope as the settled reply.
+  turn.before=authorTask==='party-chat'?partyConversationFacts(copy.state):storyTurnFacts(copy.state,turn.privatePersonId,turn.input);
+  turn.after=structuredClone(turn.before);
+  const writer=authorTask==='private-chat'?preparePrivateReplyPrompt(copy,input):authorTask==='party-chat'?preparePartyReplyPrompt(copy,input):prepareStoryPrompt(copy,'story-writer',input);
   return preflightStoryWritingCycle(gateway,writer.writingPackage!,writer.compiled.messages,writer.promptStructure,{authorTask});
  }
- catch(error){throw new Error(`正文基础上下文预检未通过，尚未执行本轮行动：${(error as Error).message}`);}
+ catch(error){throw new CloudError('story-prompt-preflight',`正文基础上下文预检未通过，尚未执行本轮行动：${(error as Error).message}`,400,error);}
 }
 
 function checkedCurrentStoryTurn(snapshot:GameSnapshot,kind:'story-host'|'story-writer'|'story-rewrite',input:Record<string,any>){
@@ -130,7 +135,8 @@ export function prepareStoryPrompt(snapshot:GameSnapshot,kind:'story-host'|'stor
   const recall=checkedStoryRecall(input.recall,turn.number,undefined,history.map((entry:any)=>entry.number));
   if(sectionContext)assertStoryWritingPackageCurrent(sectionContext.writingPackage,snapshot,worldId!);
   const writingPackage=sectionContext?.writingPackage??createStoryWritingPackage(snapshot,worldId,turn,true);
-  return {...prepareStoryAuthorPrompt({turn,writingPackage,kind,config:input.prompts??emptyStoryPromptConfig(),input,history,recall,narrativeSummaries:[],...(sectionContext?.previousSection?{previousSection:sectionContext.previousSection}:{})}),turn,ledger,history,recall};
+  const addressed=dialogueParticipants(turn),participantDialogue=addressed.length===1?personalDialogue(snapshot.state,input.dialogue,addressed[0],turn.number):[];
+  return {...prepareStoryAuthorPrompt({participantDialogue,turn,writingPackage,kind,config:input.prompts??emptyStoryPromptConfig(),input,history,recall,narrativeSummaries:[],...(sectionContext?.previousSection?{previousSection:sectionContext.previousSection}:{})}),turn,ledger,history,recall};
  }
  const {ledger,turn}=checkedCurrentStoryTurn(snapshot,kind,input);
  if(kind!=='story-host'&&isPartyTurn(turn)){if(kind!=='story-writer')throw Error('已说出的群消息保留原话，请发新消息继续');return {...preparePartyReplyPrompt(snapshot,input,worldId),target:'writer' as const,turn,ledger,history:[],recall:[]};}
@@ -155,7 +161,9 @@ export function prepareStoryPrompt(snapshot:GameSnapshot,kind:'story-host'|'stor
  const hostPrivateRecall=target==='host'&&!turn.privatePersonId&&!group?checkedHostPrivateRecall(snapshot.state,input.hostPrivateRecall,turn.number):[];
  const hostPrivateMemories=target==='host'&&!turn.privatePersonId&&!group?selectHostPrivateSummaries(snapshot.state,turn.number,turn.input,hostPrivateRecall.map(r=>r.source.turn)):[];
  if(sectionContext){if(!sectionContext.writingPackage.origin.writingSection||sectionContext.writingPackage.origin.battleId!==turn.battleId)throw Error('写作阶段不属于当前战报');assertStoryWritingPackageCurrent(sectionContext.writingPackage,snapshot,worldId!);}
- if(kind!=='story-host')return {...prepareStoryAuthorPrompt({turn,writingPackage:sectionContext?.writingPackage??createStoryWritingPackage(snapshot,worldId,turn),kind,config,input,history,recall,narrativeSummaries,...(sectionContext?.previousSection?{previousSection:sectionContext.previousSection}:{})}),turn,ledger,history,recall};
+ const addressed=dialogueParticipants(turn);
+ const participantDialogue=kind!=='story-host'&&!turn.battleId&&addressed.length===1?personalDialogue(snapshot.state,input.dialogue,addressed[0],turn.number):[];
+ if(kind!=='story-host')return {...prepareStoryAuthorPrompt({participantDialogue,turn,writingPackage:sectionContext?.writingPackage??createStoryWritingPackage(snapshot,worldId,turn),kind,config,input,history,recall,narrativeSummaries,...(sectionContext?.previousSection?{previousSection:sectionContext.previousSection}:{})}),turn,ledger,history,recall};
  const facts=withLightActionState(snapshot.state as object,()=>storyTurnFacts(snapshot.state,turn.privatePersonId,turn.input,(snapshot.state as any).角色.主控单位ID));
  if(facts.player?.actionState)facts.player.actionState.abilityConditionsIndex='已有能力索引；不代表此刻已通过费用、目标或动作检查。点名后由正式预览决定。';
  if(facts.commerce){facts.commerce.interfaces={service:STORY_TRADE_INTERFACES.supply,shops:STORY_TRADE_INTERFACES.stock};facts.commerce.auctions=projectCommerceAuctionReadings(facts.commerce.auctions,turn.input);}
@@ -219,7 +227,7 @@ export function prepareStoryPrompt(snapshot:GameSnapshot,kind:'story-host'|'stor
  }
  const privateName=turn.privatePersonId?(snapshot.state as any).人物.列表[turn.privatePersonId]?.name:null;
  const conversation={channel:group?'party':turn.privatePersonId?'private':'public',personId:turn.privatePersonId??null,personName:privateName,communication:facts.communication??null,...(group?{delivery:{firstAction:'tell-party',followingActions:'可继续安排已登记的实际行动；由各行动原生检查地点、权限、费用和本人回应。'}}:{})};
- const remote=!!turn.privatePersonId&&communicationAvailability(snapshot.state,turn.privatePersonId).mode==='soul-device';
+ const remote=turn.privatePersonId?communicationAvailability(snapshot.state,turn.privatePersonId).mode:false;
  const actions=turn.privatePersonId?STORY_ACTION_SCHEMA.filter(a=>privateStoryActionAllowed(a.kind,remote)):(snapshot.state as any).战斗?.状态==='进行中'?STORY_ACTION_SCHEMA.filter(a=>['battle-action','battle-strategy','battle-report','describe','clarify'].includes(a.kind)):STORY_ACTION_SCHEMA;
  const hostActions=storyHostActions(actions,snapshot.state);
  const inBattle=!turn.privatePersonId&&(snapshot.state as any).战斗?.状态==='进行中';
@@ -260,8 +268,9 @@ export function prepareStoryPrompt(snapshot:GameSnapshot,kind:'story-host'|'stor
 
  }
  const supportManufacturing=actions.some(action=>action.kind==='create-support-consumable')?supportManufacturingResources(snapshot.state):null;
- const extras={conversation,...(supportManufacturing?{supportManufacturing}:{}),...(actions.some(action=>action.kind==='stop-maintenance')?{maintenanceOptions:personalMaintenanceOptions(snapshot.state)}:{}),actionOutcomes:STORY_BATTLE_OUTCOMES,...(presetOptions.entries.length?{presetOptions}:{}),...(recent.length?{recentNarrative:recent}:{}),...(hostPrivateRecall.length?{hostPrivateRecall}:{}),...(hostPrivateMemories.length?{hostPrivateMemories}:{}),...(narrativeSummaries.length?{narrativeSummaries}:{}),...(turn.privatePersonId?{privateActionResources:privateStoryActionResources(snapshot.state,turn.privatePersonId)}:{}),...(recall.length?{recalledNarrative:recall}:{}),...(travelOptions?{travelOptions}:{})};
- const hostCatalog=createHostCatalog(hostActions,facts,{...extras,disguiseSources:rules.disguise.options(snapshot.state),contractSources:actions.some(a=>a.kind==='propose-person-contract')?personContractSourceOptions(snapshot.state):[],fieldAbilitySources:actions.some(a=>a.kind==='use-field-ability')?personalFieldSkillOptions(snapshot.state):[]},Boolean(turn.partyChat||inBattle),turn.input);
+ const personalHistory=turn.privatePersonId?personalDialogue(snapshot.state,input.dialogue,turn.privatePersonId,turn.number):[];
+ const extras={conversation,...(personalHistory.length?{participantDialogue:personalHistory}:{}),...(supportManufacturing?{supportManufacturing}:{}),...(actions.some(action=>action.kind==='stop-maintenance')?{maintenanceOptions:personalMaintenanceOptions(snapshot.state)}:{}),actionOutcomes:STORY_BATTLE_OUTCOMES,...(presetOptions.entries.length?{presetOptions}:{}),...(recent.length?{recentNarrative:recent}:{}),...(hostPrivateRecall.length?{hostPrivateRecall}:{}),...(hostPrivateMemories.length?{hostPrivateMemories}:{}),...(narrativeSummaries.length?{narrativeSummaries}:{}),...(turn.privatePersonId?{privateActionResources:privateStoryActionResources(snapshot.state,turn.privatePersonId)}:{}),...(recall.length?{recalledNarrative:recall}:{}),...(travelOptions?{travelOptions}:{})};
+ const hostCatalog=createHostCatalog(hostActions,facts,{...extras,...(actions.some(a=>a.kind==='invite-realm-guest')?{realmVisitOptions:realmVisitOptions(snapshot.state,facts.people??[])}:{}),disguiseSources:rules.disguise.options(snapshot.state),contractSources:actions.some(a=>a.kind==='propose-person-contract')?personContractSourceOptions(snapshot.state):[],fieldAbilitySources:actions.some(a=>a.kind==='use-field-ability')?personalFieldSkillOptions(snapshot.state):[]},Boolean(turn.partyChat||inBattle),turn.input);
  const hostInstructionIds=['story-host','summary-guidance',...(hostPrivateMemories.length||hostPrivateRecall.length?['private-memory-guidance']:[]),...(recall.length?['recall-guidance']:[])];
  const compiled=compileStoryPrompt(config,{target,trigger:'normal',user:((snapshot.state as any).人物?.列表?.[(snapshot.state as any).角色?.主控单位ID]?.name??'玩家'),character:privateName??'主持人',slots:{
   main:[promptMessage(hostInstructionIds),{role:'system',content:JSON.stringify(compactStoryPacketReadings(hostCatalog.initial))}],
@@ -327,33 +336,24 @@ export async function runStoryWorkflow(snapshot:GameSnapshot,worldId:string,kind
    try{gateway.checkTaskSettings(task);}catch(error){throw new Error(`${task==='story-writer'?'故事正文':'行动主持'}参数预检未通过：${(error as Error).message}`);}
  }
  let sections:StoryWritingPackage[]|undefined;
- const reviewCards=writingPackage?storyInlineCards(turn,writingPackage.facts):[];
- const selectedMarkers=new Set(inlineCardProtocol(reviewCards).items.map(card=>card.marker));
- const selectedCards=reviewCards.filter(card=>selectedMarkers.has(`[[card:${card.id}]]`));
+ const cards=writingPackage?storyInlineCards(turn,writingPackage.facts):[];
  const prepareSection=(p:StoryWritingPackage,previousSection?:PreviousWritingSection)=>({
   ...prepareStoryPrompt(snapshot,kind,input,worldId,{writingPackage:p,previousSection}),authorTask,
-  // Reserve the whole novel's display slots once, then distribute its cards.
-  // Per-section selection could exhaust six slots before the actual ending.
-  cards:storyWritingSectionCards(p,selectedCards),
  });
  let budget:ReturnType<ModelGateway['checkPrompt']>,writerBaselineBudget:ReturnType<ModelGateway['checkPrompt']>|undefined;
  try{
-  if(target!=='host'&&writingPackage?.origin.battleId){
-    let capacityFailure:ModelPromptCapacityError|undefined;
-    let planned:StoryWritingPackage[];
-    try{planned=planStoryBattleWritingSections(writingPackage,p=>{
-     try{
-      if(!p.origin.writingSection)preflightStoryWritingCycle(gateway,p,compiled.messages,promptStructure,{cards:reviewCards,authorTask});
-      else preflightWritingSection(gateway,p,prepareSection,p.origin.writingSection.includesOpening?undefined:previousWritingSectionReserve());
-      return true;
-     }catch(failure){if(failure instanceof ModelPromptCapacityError){capacityFailure=failure;return false;}throw failure;}
-    });}catch(error){if(capacityFailure)throw new ModelPromptCapacityError(`${(error as Error).message}。${capacityFailure.message}`,capacityFailure.budget);throw error;}
-    if(planned[0].origin.writingSection){
-     sections=planned;budget=preflightWritingSection(gateway,sections[0],prepareSection);
-     compiled.notes.push('按作者容量分段写作，完成后合为同一篇战报。');
-    }else budget=preflightStoryWritingCycle(gateway,writingPackage,compiled.messages,promptStructure,{cards:reviewCards,authorTask});
-  }else budget=writingPackage?preflightStoryWritingCycle(gateway,writingPackage,compiled.messages,promptStructure,{cards:reviewCards,authorTask}):gateway.checkPrompt(compiled.messages,{task:'story-host',promptStructure,json:true});
-  writerBaselineBudget=undefined;
+  budget=writingPackage?preflightStoryWritingCycle(gateway,writingPackage,compiled.messages,promptStructure,{authorTask}):gateway.checkPrompt(compiled.messages,{task:'story-host',promptStructure,json:true});
+  if(writingPackage?.origin.battleId&&budget.exceeded){
+   const planned=planStoryBattleWritingSections(writingPackage,p=>{
+    const section=p.origin.writingSection;
+    return !!section&&!preflightWritingSection(gateway,p,prepareSection,section.includesOpening?undefined:previousWritingSectionReserve()).exceeded;
+   });
+   if(planned[0].origin.writingSection){
+    sections=planned;
+    budget=preflightWritingSection(gateway,sections[0],prepareSection);
+    compiled.notes.push('战报按阶段分段写作，完成后合为同一篇。');
+   }
+  }
  }catch(error){throw new CloudError('story-prompt-preflight',(error as Error).message,400,error);}
  let command:{type:string;payload:Record<string,any>},writingConsistency:Record<string,any>|undefined;
  if(target==='host'){
@@ -388,14 +388,14 @@ export async function runStoryWorkflow(snapshot:GameSnapshot,worldId:string,kind
   if(!writingPackage)throw Error('正文缺少绑定事实包');
   let prose:string,reviews:StoryNovelReview[]=[],writingRecovery:ReturnType<ModelRecoveryBudget['snapshot']>|undefined,sectionResults:Awaited<ReturnType<typeof writeBattleSections>>['parts']|undefined;
   if(sections){
-   const written=await writeBattleSections({source:writingPackage,cards:reviewCards,sections,turn,prepare:prepareSection,gateway,budget:gateway.recoveryBudget??new ModelRecoveryBudget(),signal,history,diagnostics,recovery:sectionRecovery});
+   const written=await writeBattleSections({source:writingPackage,cards,sections,turn,prepare:prepareSection,gateway,budget:gateway.recoveryBudget??new ModelRecoveryBudget(),signal,history,diagnostics,recovery:sectionRecovery});
    prose=written.prose;sectionResults=written.parts;writingRecovery=written.recovery;
   }else{
    const written=await writeStoryNovel({source:writingPackage,gateway,messages:compiled.messages,promptStructure,task:authorTask,signal,diagnostics,recovery:sectionRecovery});
    prose=written.prose;reviews=written.reviews;writingRecovery=written.recovery;
   }
   assertStoryWritingPackageCurrent(writingPackage,snapshot,worldId);
-  const presentation=storyNovelPresentation(prose,reviewCards);
+  const presentation=storyNovelPresentation(prose,cards);
   writingConsistency={packageId:writingPackage.id,factsHash:writingPackage.factsHash,policy:'author-only',reviews,recovery:writingRecovery,...(sectionResults?{sections:sectionResults}:{})};
   command=input.original!==undefined?{type:'story.rewrite-archived-prose',payload:{branchId:ledger.branchId,turn:ledger.active!.number,original:checkedArchivedProseOriginal(snapshot.state,input),prose,...(presentation?{inlinePresentation:presentation}:{})}}:{type:(kind==='story-rewrite')?'story.rewrite-prose':'story.finish',payload:{branchId:ledger.branchId,turn:turn.number,prose,...(presentation?{inlinePresentation:presentation}:{})}};
  }
@@ -425,7 +425,7 @@ export function prepareCommitmentPrompt(snapshot:GameSnapshot,input:Record<strin
  const participation=sourceAgreement?.membership.find((m:any)=>m.personId===commitment.personId)??null;
  const compiled=compileStoryPrompt(config,{target:'host',trigger:'normal',user:facts.player.name,character:facts.people[0].name,slots:{
   main:[promptMessage(['story-social','summary-guidance',...(recall.length?['recall-guidance']:[])]),
-   {role:'system',content:JSON.stringify({context,worldSpeech:rules.social.speechFacts(snapshot.state,commitment.personId).slice(-8),proposal,availability,allowedResponses,...(commitment.kind==='hire'?{responseShape:{accept:'是否愿意为本次目的地提供付费同行',fee:'接受时给出本人决定的正整数金币报价；拒绝时省略',reason:'本人理由，至多600字'},decisionMeaning:'本人可报价或拒绝。报价仅当日原地点有效，尚待玩家接受和实际支付；此回应不入队、不付款。'}:{}),audience,participation,...(narrativeSummaries.length?{narrativeSummaries}:{}),...(recall.length?{recalledNarrative:recall}:{})})}],chatHistory:[promptMessage('social-instruction','user')],
+   {role:'system',content:JSON.stringify({context,participantDialogue:personalDialogue(snapshot.state,input.dialogue,commitment.personId,number),worldSpeech:rules.social.speechFacts(snapshot.state,commitment.personId).slice(-8),proposal,availability,allowedResponses,...(commitment.kind==='party'?{attitudeTowardPlayer:(snapshot.state as any).人物.列表[commitment.personId].relationship?.player??0,decisionFactors:'短期同行看眼下是否合适；长期同行更看重对玩家的态度和实际共同经历。'}:{}),...(commitment.kind==='hire'?{responseShape:{accept:'是否愿意为本次目的地提供付费同行',fee:'接受时给出本人决定的正整数金币报价；拒绝时省略',reason:'本人理由，至多600字'},decisionMeaning:'本人可报价或拒绝。报价仅当日原地点有效，尚待玩家接受和实际支付；此回应不入队、不付款。'}:{}),audience,participation,...(narrativeSummaries.length?{narrativeSummaries}:{}),...(recall.length?{recalledNarrative:recall}:{})})}],chatHistory:[promptMessage('social-instruction','user')],
  }});
  if(recall.length)compiled.notes.push(`本次人物回应取回 ${recall.length} 段同范围私聊原文：输入按实际送达范围选取，正文按现有可感知分类选取，并剔除私密区间；片段保留原位置，可能不连续。`);
  if(narrativeSummaries.length)compiled.notes.push(`本次人物回应取回 ${narrativeSummaries.length} 份双方私聊摘要，保留原文引句；已排除内心条目及已有原文覆盖的回合。`);
@@ -447,7 +447,7 @@ export function prepareBeliefPrompt(snapshot:GameSnapshot,input:Record<string,an
  const narrativeSummaries=selectPersonStorySummaries(snapshot.state,turn.number,statement.listenerId,recall.map(r=>r.source.turn),statement.text);
  const compiled=compileStoryPrompt(input.prompts??emptyStoryPromptConfig(),{target:'host',trigger:'normal',user:facts.player.name,character:facts.people[0].name,slots:{
   main:[promptMessage(['npc-belief','summary-guidance',...(recall.length?['recall-guidance']:[])]),
-   {role:'system',content:JSON.stringify({context:compileStoryCurrentContext(facts,turn.number,statement.listenerId),worldSpeech:rules.social.speechFacts(snapshot.state,statement.listenerId).slice(-8),statement,audience:{channel:'player',personIds:[facts.player.id]},...(narrativeSummaries.length?{narrativeSummaries}:{}),...(recall.length?{recalledNarrative:recall}:{})})}],
+   {role:'system',content:JSON.stringify({context:compileStoryCurrentContext(facts,turn.number,statement.listenerId),participantDialogue:personalDialogue(snapshot.state,input.dialogue,statement.listenerId,turn.number),worldSpeech:rules.social.speechFacts(snapshot.state,statement.listenerId).slice(-8),statement,audience:{channel:'player',personIds:[facts.player.id]},...(narrativeSummaries.length?{narrativeSummaries}:{}),...(recall.length?{recalledNarrative:recall}:{})})}],
   chatHistory:[promptMessage('belief-instruction','user')],
  }});
  if(compiled.prefill)throw Error('人物听闻判断使用JSON协议，不能套用小说预填充');

@@ -4,7 +4,7 @@ import {personCognition} from '../shared/cognition-view';
 import {perceivedRelations} from '../shared/cognition-view';
 import {changeInteractionContext} from './person-change-context';
 import {partyProposalReplies} from '../shared/story-party-proposals';
-import {communicationAvailability} from '../shared/story-communication';
+import {communicationAvailability,deliveredChannelLabel} from '../shared/story-communication';
 import {rules} from '../rules';
 import {residentNarrativeContext} from './resident-narrative';
 import {storyPersona,storyConversationIdentity,storyBackgroundContext} from './story-personas';
@@ -37,9 +37,28 @@ export function recordPartyMessage(state:any,text:string,source:HeardStatement['
 export function partyConversationFacts(state:any,message?:PartyMessage){
  const player=state.人物.列表[state.角色.主控单位ID],recipients=message?.audience.filter(a=>a.delivered)??[];
  return {time:message?.time??state.世界.时间,calendar:rules.world.storyCalendarDate(state),player:storyConversationIdentity(player,false),
-  people:recipients.map(a=>{const p=state.人物.列表[a.personId],backgroundContext=recipients.length===1?storyBackgroundContext(state,p.id):null;return {...storyConversationIdentity(p,false),...(backgroundContext?{backgroundContext}:{}),membershipKind:a.membershipKind,communication:a.channel?.kind??'in-person'};}),
+  people:recipients.map(a=>{const p=state.人物.列表[a.personId],backgroundContext=recipients.length===1?storyBackgroundContext(state,p.id):null;return {...storyConversationIdentity(p,false),...(backgroundContext?{backgroundContext}:{}),membershipKind:a.membershipKind,communication:deliveredChannelLabel(a.channel)};}),
   partyChat:{message:message??null,commonHistory:message?commonPartyMessages(state,recipients.map(a=>a.personId),message.source.turn,message.text):[],meaning:'仅向audience中delivered=true的人送达。未接通者不发言、不知晓本次消息。共用上下文只含共同收到的原话；没有私聊、个人秘密或远方现状。每人可有不同意见，不强迫逐一回复。聊天不替代独立约定、付款、行动或入队。'},
  };
+}
+
+function partySpeakerPerspective(state:any,speakerId:string,resident:ReturnType<typeof residentNarrativeContext>){
+ const playerId=state.角色.主控单位ID;
+ const obedience=resident.obedience.find((r:any)=>r.subjectId===speakerId&&r.authorityId===playerId);
+ const relationship={playerId,attitudeTowardPlayer:resident.attitudeTowardPlayer,obedienceTowardPlayer:obedience?.value??null};
+ const custody=rules.custody.active(state,speakerId);
+ if(custody?.custodianId!==playerId)return {...relationship,custody:null};
+
+ const binding=rules.residentRealms.binding(state,speakerId);
+ const capture=binding&&rules.residentRealms.table(state).events.find((event:any)=>event.type==='captured'&&event.id===binding.slot.eventId);
+ const defeatId=capture?.qualification.defeatId??custody.defeatId;
+ const defeat=defeatId?rules.custody.table(state).defeats[defeatId]:null;
+ // Capture can occur while unconscious. Current custody and remembered battle opening have different sources.
+ const rememberedFight=defeat?.battleKind==='lethal'&&defeat.eligibleActorIds.includes(playerId)&&resident.battles.some(battle=>battle.battleId===defeat.battleId);
+ return {...relationship,custody:{status:'本人当前受玩家看管',
+  ...(binding?.realm.ownerId===playerId?{realmBinding:'本人被收入玩家的画境，当前仍然绑定'}:{}),
+  ...(rememberedFight?{rememberedFight:{battleId:defeat.battleId,experience:'本人记得与玩家在死斗开场分属敌对双方'}}:{}),
+ }};
 }
 
 /** Independent reply input: only this speaker's private perspective is added. */
@@ -49,8 +68,9 @@ export function partySpeakerFacts(state:any,message:PartyMessage,speakerId:strin
  const facts=partyConversationFacts(state,message),person=state.人物.列表[speakerId];
  facts.partyChat.commonHistory=commonPartyMessages(state,[speakerId],message.source.turn,message.text);
  const self=facts.people.find(p=>p.id===speakerId)!;
- Object.assign(self,{characterization:storyPersona(state,person),relationships:perceivedRelations(state,speakerId),changeInteractions:changeInteractionContext(state,speakerId)});
- return {...facts,residentContext:residentNarrativeContext(state,speakerId),npcGoals:npcConversationGoals(state,speakerId)};
+ const residentContext=residentNarrativeContext(state,speakerId);
+ Object.assign(self,{partySpeakerPerspective:partySpeakerPerspective(state,speakerId,residentContext),characterization:storyPersona(state,person),relationships:perceivedRelations(state,speakerId),changeInteractions:changeInteractionContext(state,speakerId)});
+ return {...facts,residentContext,npcGoals:npcConversationGoals(state,speakerId)};
 }
 
 export function partyReplyAudience(state:any,message:PartyMessage){

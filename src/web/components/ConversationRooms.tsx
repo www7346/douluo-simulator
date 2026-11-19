@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import {useGame} from '../game-context';
 import {Button,Modal} from '../components';
 import {useActionFeedback} from '../use-action-feedback';
+import {sendMessageOnEnter} from '../message-enter';
 import ActionFeedback from './ActionFeedback';
 import CharacterPortrait from './CharacterPortrait';
 export default function ConversationRooms({facts,onBack}:{facts:any;onBack:()=>void}){
@@ -9,9 +10,16 @@ export default function ConversationRooms({facts,onBack}:{facts:any;onBack:()=>v
  useEffect(()=>{if(!selected&&rooms.length)setSelected(rooms.at(-1).id);},[selected,rooms.length]);
  const create=()=>feedback.run(async()=>{await controller.dispatch('conversation.create',{title,personIds:members});setCreating(false);setMembers([]);setSelected('');});
  const send=()=>feedback.run(async()=>{await controller.dispatch('conversation.send',{conversationId:room.id,text});setText('');});
+ const connected=room?.availability.some((a:any)=>a.available),canSend=connected&&!busy&&!!text.trim();
  return <section className="story-chat conversation-rooms"><header className="communication-view__head"><Button variant="ghost" onClick={onBack}>‹ 会话列表</Button><strong>人物私信与群组</strong></header><div className="conversation-rooms__setup"><ActionFeedback feedback={feedback}/><p>群组独立于战斗队伍。人物可主动私信或群聊，也可以选择沉默。</p><div className="field-actions"><Button disabled={busy} onClick={()=>setCreating(v=>!v)}>发起私信／拉群</Button><Button variant="ghost" disabled={busy} onClick={()=>controller.retryPersonWorldWork()}>等待人物发言／重试</Button></div>{unresolved&&<p>先完成当前故事回合，再发送新的会话消息。</p>}
   <Modal open={creating} title="建立会话" onClose={()=>setCreating(false)} actions={<Button disabled={busy||!title.trim()||!members.length||members.length>15} onClick={()=>void create()}>建立会话 · {members.length+1}人</Button>}><ActionFeedback feedback={feedback}/><label>名称<input maxLength={60} value={title} onChange={e=>setTitle(e.target.value)}/></label>{(facts?.people??[]).map((p:any)=><label className="toggle-row" key={p.personId}><input type="checkbox" checked={members.includes(p.personId)} disabled={busy} onChange={e=>setMembers(e.target.checked?[...members,p.personId]:members.filter(id=>id!==p.personId))}/>{p.name}</label>)}{!facts?.people.length&&<p>当前没有实际可接通的人物。</p>}</Modal>
   <nav className="conversation-rooms__list" aria-label="本人会话">{rooms.map((r:any)=><button aria-pressed={selected===r.id} key={r.id} onClick={()=>setSelected(r.id)}><strong>{r.title}</strong><small>{r.members.length}人 · {r.messages.at(-1)?.name??'尚无发言'}</small><span>{r.messages.at(-1)?.text??'可以开始交谈'}</span></button>)}</nav>{!rooms.length&&<p>还没有会话。你可以拉群，人物的主动私信也会出现在这里。</p>}
-  {room&&<><h3>{room.title}</h3><p className="muted">{room.members.map((p:any)=>p.name).join('、')}</p></>}</div>{room&&<><div className="conversation-rooms__messages" aria-label="实际收到的消息">{room.messages.slice(-100).map((m:any)=><article className={m.speakerId===state.角色.主控单位ID?'conversation-rooms__message conversation-rooms__message--self':'conversation-rooms__message'} key={m.id}><span className="conversation-avatar"><CharacterPortrait state={state} figureUrl={view.figureUrl} person={{...state.人物.列表[m.speakerId],id:m.speakerId,name:m.name,kind:state.战斗单位.列表[m.speakerId]?.扩展?.角色库ID?'character':'resident'}}/></span><div><strong>{m.name}</strong><p>{m.text}</p></div></article>)}{!room.messages.length&&<p>暂时没有发言。</p>}</div><div className="conversation-rooms__composer"><label>发送原话<textarea maxLength={2000} value={text} onChange={e=>setText(e.target.value)}/></label><Button disabled={busy||!text.trim()||!room.availability.some((a:any)=>a.available)} onClick={()=>void send()}>发送</Button>{!room.availability.some((a:any)=>a.available)&&<p>当前没有成员能够接通。</p>}</div></>}
+  {room&&<><h3>{room.title}</h3><p className="muted">{room.members.map((p:any)=>p.name).join('、')}</p></>}</div>{room&&<>
+   <div className="conversation-rooms__messages" aria-label="实际收到的消息">{room.messages.slice(-100).map((m:any)=><article className={m.speakerId===state.角色.主控单位ID?'conversation-rooms__message conversation-rooms__message--self':'conversation-rooms__message'} key={m.id}><span className="conversation-avatar"><CharacterPortrait state={state} figureUrl={view.figureUrl} person={{...state.人物.列表[m.speakerId],id:m.speakerId,name:m.name,kind:state.战斗单位.列表[m.speakerId]?.扩展?.角色库ID?'character':'resident'}}/></span><div><strong>{m.name}</strong><p>{m.text}</p></div></article>)}{!room.messages.length&&<p>暂时没有发言。</p>}</div>
+   <form className="conversation-rooms__composer" onSubmit={e=>{e.preventDefault();if(canSend)void send();}}>
+    <label>发送原话<textarea maxLength={2000} value={text} onChange={e=>setText(e.target.value)} onKeyDown={sendMessageOnEnter} enterKeyHint="send"/></label>
+    <Button type="submit" disabled={!canSend}>发送</Button>{!connected&&<p>当前没有成员能够接通。</p>}
+   </form>
+  </>}
  </section>;
 }

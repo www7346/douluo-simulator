@@ -3,14 +3,17 @@ import {useId,useEffect,useRef,useState} from 'react';
 import {illustratedArt} from '../illustration-catalog';
 import {portraitGeometry} from '../portrait-geometry';
 import {assetUrl,portraitAsset} from '../asset-delivery';
+import {artwork} from '../../runtime/art-catalog';
 
-export function PortraitImage({art,name,className='',fit='meet'}:{art:Art;name:string;className?:string;fit?:'meet'|'slice'}) {
- art=illustratedArt(art);
+export type PortraitOverride={kind:'preset';key:string}|{kind:'upload';url:string};
+export function PortraitImage({art,name,className='',fit='meet',custom}:{art:Art;name:string;className?:string;fit?:'meet'|'slice';custom?:PortraitOverride}) {
+ art=illustratedArt(custom?.kind==='preset'?artwork(custom.key):art);
  const element=useRef<SVGSVGElement>(null),[visible,setVisible]=useState(typeof IntersectionObserver==='undefined');
- useEffect(()=>{if(visible||!element.current)return;const observer=new IntersectionObserver(rows=>{if(rows.some(r=>r.isIntersecting)){setVisible(true);observer.disconnect();}},{rootMargin:'240px'});observer.observe(element.current);return()=>observer.disconnect();},[visible]);
+ useEffect(()=>{if(visible||!element.current)return;const observer=new IntersectionObserver(rows=>{if(rows.some(r=>r.isIntersecting)){setVisible(true);observer.disconnect();}},{rootMargin:'240px'});observer.observe(element.current);return()=>observer.disconnect();},[visible,custom?.kind]);
  const clip=useId().replace(/[^a-zA-Z0-9_-]/g,'');
  const geometry=portraitGeometry(art);
  const cropped=portraitAsset(art);
+ if(custom?.kind==='upload')return <img className={`portrait-art ${className}`} loading="lazy" style={{objectFit:fit==='slice'?'cover':'contain'}} src={assetUrl(custom.url)} alt={name}/>;
  return <svg ref={element} className={`portrait-art ${className}`} preserveAspectRatio={`xMidYMid ${fit}`} data-art={`${art.src}#${art.cell}`} viewBox={geometry.viewBox} role="img" aria-label={name} overflow="hidden"><defs><clipPath id={`portrait-${clip}`}><rect {...geometry.clip}/></clipPath></defs><g clipPath={`url(#portrait-${clip})`}><image href={visible?(cropped??assetUrl(art.src)):undefined} {...(cropped?geometry.clip:geometry.image)} preserveAspectRatio="none"/></g></svg>;
 }
 

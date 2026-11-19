@@ -6,8 +6,9 @@ import {validateCharacterProfile} from './character-profile';
 import {assignGenericHumanArt} from '../shared/generic-human-art';
 
 const presetSoulOptions=rules.presets.list({category:'武魂'}).map((entry:any)=>({id:entry.id,name:entry.name,quote:rules.presets.compile(entry.id,{budget:Number.MAX_SAFE_INTEGER})})).filter((entry:any)=>entry.quote.pass&&rules.npcLoadouts.ordinarySoul(entry));
-export function storyPersonCreationOptions(){
- return Object.entries(rules.world.NPC_ARCHETYPES).map(([id,a]:[string,any])=>({id,identity:a.identity,occupation:a.occupation,full:a.full,...(a.creationGuidance?{creationGuidance:a.creationGuidance}:{}),profileFields:['biography','values','speech','shortTermGoal','longTermGoal'],budget:rules.world.npcCreationBudget(id),customSoulBudget:rules.world.npcMartialSoulDesignBudget(id),generationPolicy:'新人物按定位实时创建武魂与魂环能力；不指定范本时交给人物生成器，普通人物不采用专属传承或跨时代来源。',presetSouls:a.full?presetSoulOptions.filter((entry:any)=>entry.quote.value<=rules.world.npcMartialSoulBudget(id)).map((entry:any)=>({id:entry.id,name:entry.name,value:entry.quote.value})):[],levels:a.full?a.level:null,escort:a.escort?{...a.escort}:null,martialSouls:a.full?(a.martialSouls??[]).filter((id:string)=>rules.npcLoadouts.ordinarySoul(rules.world.MARTIAL_SOUL_TEMPLATES[id])).map((id:string)=>({id,name:rules.world.MARTIAL_SOUL_TEMPLATES[id]?.名称??id})):[]}));
+export function storyPersonCreationOptions(preference?:string){
+ const genderPreference=preference==='male'?'未指定性别的自动生成角色为男。':preference==='female'?'未指定性别的自动生成角色为女。':'';
+ return Object.entries(rules.world.NPC_ARCHETYPES).map(([id,a]:[string,any])=>({id,identity:a.identity,occupation:a.occupation,full:a.full,...(a.creationGuidance?{creationGuidance:a.creationGuidance}:{}),profileFields:['biography','values','speech','shortTermGoal','longTermGoal'],budget:rules.world.npcCreationBudget(id),customSoulBudget:rules.world.npcMartialSoulDesignBudget(id),generationPolicy:'新人物按定位实时创建武魂与魂环能力；不指定范本时交给人物生成器，普通人物不采用专属传承或跨时代来源。'+genderPreference,presetSouls:a.full?presetSoulOptions.filter((entry:any)=>entry.quote.value<=rules.world.npcMartialSoulBudget(id)).map((entry:any)=>({id:entry.id,name:entry.name,value:entry.quote.value})):[],levels:a.full?a.level:null,escort:a.escort?{...a.escort}:null,martialSouls:a.full?(a.martialSouls??[]).filter((id:string)=>rules.npcLoadouts.ordinarySoul(rules.world.MARTIAL_SOUL_TEMPLATES[id])).map((id:string)=>({id,name:rules.world.MARTIAL_SOUL_TEMPLATES[id]?.名称??id})):[]}));
 }
 export function validateStoryPersonCreation(input:Record<string,any>){
  const allowed=['kind','objectId','objectStep','identity','occupation','archetypeId','name','age','gender','appearance','personality','profile','level','martialSoulTemplateId','martialSoulDescription','martialSoulDraft','presetId'];
@@ -26,6 +27,8 @@ export function validateStoryPersonCreation(input:Record<string,any>){
   if(!(linked&&input.level===undefined)&&(!Number.isSafeInteger(input.level)||input.level<archetype.level[0]||input.level>archetype.level[1]))throw Error('人物等级超出所选定位范围');
   if(input.presetId!==undefined){
    if(typeof input.presetId!=='string'||!input.presetId||(input.martialSoulTemplateId!==undefined&&input.martialSoulTemplateId!=='')||input.martialSoulDescription!==undefined||input.martialSoulDraft!==undefined)throw Error('精品武魂须独立选择，不能同时指定模板或自定义构想');
+   const entry=rules.presets.get(input.presetId);
+   if(entry)rules.npcLoadouts.assertOrdinarySoul(entry);
    const preset=rules.presets.compile(input.presetId,{budget:rules.world.npcMartialSoulBudget(input.archetypeId)});
    if(!preset.pass||preset.category!=='武魂')throw Error(preset.reason||'武魂须是定位预算内的登记精品');
   }else if(input.martialSoulDescription!==undefined){
@@ -70,7 +73,7 @@ export function introduceStoryPerson(state:any,input:Record<string,any>,sourceId
   person.扩展.storyObjectId=object.id;person.扩展.storyObjectBasis=storyObjectKnownDetails(linked);
   // Keep biography from its source; the same archetype resolves mechanics only when an operation needs them.
   if(input.age===undefined)person.age=null;
-  for(const field of ['gender','appearance','personality'])if(input[field]===undefined)person[field]='';
+  for(const field of ['gender','appearance','personality'])if(input[field]===undefined&&(field!=='gender'||!['male','female'].includes(result.state.世界.npcGender)))person[field]='';
  }
  assignGenericHumanArt(result.state,result.state.人物.列表[id]);
  const met=meetStoryPerson(result.state,id);

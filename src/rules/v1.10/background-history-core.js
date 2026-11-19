@@ -16,8 +16,9 @@
     if(!Array.isArray(input)||input.length>9)throw Error('开局魂环设计最多九枚');
     const seen=new Set();
     return input.map(raw=>{
-      if(!raw||Object.keys(raw).some(k=>!['ordinal','years','acquisition','source','requestedSkills','sourceProofVersion','sourceLocked'].includes(k))||!Number.isInteger(raw.ordinal)||raw.ordinal<1||raw.ordinal>9||seen.has(raw.ordinal))throw Error('请选择不重复的魂环序号');
+      if(!raw||Object.keys(raw).some(k=>!['ordinal','years','acquisition','source','requestedSkills','sourceProofVersion','sourceLocked','soulBinding'].includes(k))||!Number.isInteger(raw.ordinal)||raw.ordinal<1||raw.ordinal>9||seen.has(raw.ordinal))throw Error('请选择不重复的魂环序号');
       seen.add(raw.ordinal);const result={ordinal:raw.ordinal};
+      if(raw.soulBinding!==undefined){if(typeof raw.soulBinding!=='string'||raw.soulBinding.length>80||!raw.requestedSkills?.length)throw Error('魂技武魂绑定无效');result.soulBinding=raw.soulBinding;}
       if(raw.years!==undefined){if(!Number.isSafeInteger(raw.years)||raw.years<1)throw Error('魂环年限须为大于零的安全整数');result.years=raw.years;}
       if(raw.acquisition!==undefined){
         const source=raw.acquisition;
@@ -329,7 +330,16 @@
     }catch(error){errors.push(error.message);}
     return errors;
   }
+  function ringPackageSoul(soul){
+    const {artId,sourceDescription,playerConfirmed,...identity}=globalThis.SoulSaveTransferCore.martialSoulDraftFrom(soul);
+    return identity;
+  }
+  function soulBinding(soul){return hash(ringPackageSoul(soul));}
+  function assertDesignSoul(draft,designs){
+    if(designs?.some(d=>d.soulBinding&&d.soulBinding!==soulBinding(draft.martialSoulDrafts[0])))throw Error('已导入的魂技绑定了另一套武魂，请恢复对应武魂或移除导入的魂技');
+  }
   function prepareDraft(draft,{level=92,manual=false,selectedIds=[],budget=9999,designs,soulId='background-preview-soul',actorId='background-preview',compatibilityByOrdinal,paidRecords}={}) {
+    assertDesignSoul(draft,designs);
     const compiled=f.MARTIAL_SOUL_CORE.finalizeDraft({...draft.martialSoulDrafts[0],playerConfirmed:true},{budget,id:soulId});
     const soul=f.normalizeMartialSoul({id:compiled.id,名称:compiled.name,持有者单位ID:actorId,结构化武魂:compiled,扩展:{结构化武魂:compiled}},actorId);
     return prepare({martialSoul:soul,attributes:draft.attributes,years:STANDARD_YEARS.slice(0,Math.min(9,Math.floor((level-1)/10))),seed:'background-history-v2'+(globalThis.SoulControlCore.adultDraft(draft)?'':':ordinary-only'),selectedIds,autoSelect:!manual,designs:designs?.filter(d=>d.ordinal<=Math.min(9,Math.floor((level-1)/10))),compatibilityByOrdinal,paidRecords});
@@ -351,7 +361,9 @@
   }
   function installDraft(state,actorId,draft,{manual=false,sourceId,selectedIds=[],designs}={}) {
     const growth=state.成长.列表[actorId],soulId=growth.武魂ID列表[0],soul=state.武魂.列表[soulId],level=growth.魂力等级;
-    const q=prepare({martialSoul:soul,attributes:draft.attributes,years:STANDARD_YEARS.slice(0,Math.min(9,Math.floor((level-1)/10))),seed:'background-history-v2'+(globalThis.SoulControlCore.adultDraft(draft)?'':':ordinary-only'),selectedIds,autoSelect:!manual,designs});
+    assertDesignSoul(draft,designs);
+    const count=Math.min(9,Math.floor((level-1)/10));
+    const q=prepare({martialSoul:soul,attributes:draft.attributes,years:STANDARD_YEARS.slice(0,count),seed:'background-history-v2'+(globalThis.SoulControlCore.adultDraft(draft)?'':':ordinary-only'),selectedIds,autoSelect:!manual,designs:designs?.filter(d=>d.ordinal<=count)});
     const receipt=install(state,{actorId,soulId,sourceId,...q.request,selectedIds:q.selectedIds});
     (growth.扩展??={}).backgroundHistory=receipt;
     if(level>=91)growth.封号=f.normalizeTitleRecord({封号:titleName(soul.名称,soul.定位),来源:'代码生成',取得等级:level},level);
@@ -368,8 +380,8 @@
   function validateCreationBinding(state,actorId,receipt){
     const errors=[];try{
       const opening=state.世界.opening?.background,config=opening?.config,b=config?.background,bg=globalThis.SoulBackgroundCore;
-      if(!['sealed-titled','jiumeitu-heir'].includes(b?.id))throw Error('历史能力只能绑定本次已配置魂环的开局');
-      const actor=b.id==='jiumeitu-heir'&&actorId===opening.mainId?{...bg.resolveActor(config,'main'),id:opening.mainId}:b.id==='sealed-titled'?Object.values(bg.resolveSlots(config)).find(actor=>actor.id===actorId):null;if(!actor||actor.source==='canon')throw Error('历史能力承担者不属于本次原创人物');
+      if(!['sealed-titled','jiumeitu-heir','custom'].includes(b?.id))throw Error('历史能力只能绑定本次已配置魂环的开局');
+      const actor=['custom','jiumeitu-heir'].includes(b.id)&&actorId===opening.mainId?{...bg.resolveActor(config,'main'),id:opening.mainId}:b.id==='sealed-titled'?Object.values(bg.resolveSlots(config)).find(actor=>actor.id===actorId):null;if(!actor||actor.source==='canon')throw Error('历史能力承担者不属于本次原创人物');
       const soul=state.武魂.列表[receipt.soulId],expected=f.MARTIAL_SOUL_CORE.finalizeDraft({...actor.draft.martialSoulDrafts[0],playerConfirmed:true},{budget:actor.budget,id:soul.id});
       if(hash(compiledOf(soul).definition)!==hash(expected.definition))throw Error('历史武魂与人物创建配置不符');
       // Rebuild from the creation definition in its real namespace so receipt validation can reuse the same pure compilation.
@@ -385,5 +397,5 @@
     if(r.sourceId!==state.世界.opening?.background?.sourceId)return ['历史能力未绑定本次背景创建'];
     return [...validateCreationBinding(state,actorId,r),...validate(state,r)];
   }
-  return Object.freeze({VERSION,STANDARD_YEARS,ACQUISITION_KINDS,lineageOf,stageFacts,normalizeDesigns,prepare,prepareDraft,sourceDraft,generateTitle,selectLocal,install:installDraft,validate:validateActor,validateReceipt:validate});
+  return Object.freeze({VERSION,STANDARD_YEARS,ACQUISITION_KINDS,lineageOf,stageFacts,normalizeDesigns,ringPackageSoul,soulBinding,prepare,prepareDraft,sourceDraft,generateTitle,selectLocal,install:installDraft,validate:validateActor,validateReceipt:validate});
 });

@@ -1,10 +1,12 @@
 import {rules} from '../rules';
 import {abilityWritingMeaning} from './ability-writing';
+import {martialSoulChannelDescription} from './martial-soul-channels';
 
 // Wording for the registered hooks used by foundation/combat, not additional abilities.
 // All current trait templates have one level. Keep this catalogue exhaustive.
 const hookMeanings:Record<string,(parameter:string)=>string>={
-  independentRealm:p=>{if(p==='所选项目')return Object.keys(rules.residentRealms.PROFILES).map(id=>hookMeanings.independentRealm(id)).join('；');const profile=rules.residentRealms.PROFILES[p];if(!profile)throw Error('独立空间缺少已登记规则');return `自带九庭独立空间，每枚实际魂环开放一个永久席位，最多${profile.maxSlots}人。符合条件的女性可以收入、分押或合押，环境与活动许可由画主管理；人物身份与原有经历保留。服从达到${profile.realBodyThreshold}才能真身出画，真身为原人物，按普通队伍人数、修炼与吸环规则行动。投影保留原人物完整生命、六维、命中与抵抗，伤害、治疗、护盾随画主实际1—3/4—6/7—9环分别为80%/90%/100%；首次召唤20/30/40魂力，同场重召30/45/60魂力，战中每画主回合每具维持2/3/4魂力，施法共用画主魂力。击散后可在画主下一次合法主行动重召，冷却和次数沿用原人物。投影是召唤物，不占普通队伍人数，可在场内外召唤；本人意识进入投影，不能反抗画主，原体不能并行行动。投影没有固定持续时限，依附召唤者；实际主动召回、被击散、来源失效或无法支付维持费时才结束，不能由原体魂力推算成持续若干时辰。`;},
+  permanentManifestation:()=> '武魂形成常驻实体，拥有跟随主人的基础等级、六维和完整基准生命。由实体施放本武魂魂技，与主人共用魂力、次数和冷却；装备、魂骨及其他武魂不复制。日常外放不持续耗魂力，召回保留伤势。战中显形或召回消耗主人主要行动，击溃后须在场外静息30分钟并支付最大魂力的20%重凝。',
+  independentRealm:p=>{if(p==='所选项目')return Object.keys(rules.residentRealms.PROFILES).map(id=>hookMeanings.independentRealm(id)).join('；');const profile=rules.residentRealms.PROFILES[p];if(!profile)throw Error('独立空间缺少已登记规则');return `自带九庭独立空间，每枚实际魂环开放一个永久席位，最多${profile.maxSlots}人。符合条件的女性可以收入、分押或合押，环境与活动许可由画主管理；人物身份与原有经历保留。服从达到${profile.realBodyThreshold}才能真身出画，真身为原人物，按普通队伍人数、修炼与吸环规则行动。投影的生命和魂力上限、伤害、治疗与护盾取原人物的80%，保留原人物的命中与抵抗。投影用自己的魂力施法。画主按实际1—3、4—6、7—9环分别支付首次召唤20/30/40、同场重召30/45/60魂力，战中每画主回合每具维持3/4/5魂力。击散后可在画主下一次合法主行动重召，冷却和次数沿用原人物。投影是召唤物，不占普通队伍人数，可在场内外召唤；本人意识进入投影，不能反抗画主，原体不能并行行动。投影没有固定持续时限，依附召唤者；实际主动召回、被击散、来源失效或无法支付维持费时才结束，不能由原体魂力推算成持续若干时辰。`;},
   abilityScore:p=>`${p}增加1点。`,
   checkBonus:p=>`${p}增加1点。`,
   saveAdvantage:p=>`使用${p}抵抗效果时获得豁免优势。`,
@@ -39,6 +41,7 @@ export function martialSoulTraitMeaning(template:any,parameter='所选项目'){
 }
 
 export function martialSoulTraitTiming(template:any){
+ if(template.hook==='permanentManifestation')return '显形后持续存在，来源武魂封禁时暂停，主人死亡时消散；主人失去回应能力时遵循已有指令或自卫。';
  if(template.hook==='independentRealm')return '建立后持续容纳人物。收入、调遣与管理须本人清醒并能使用来源武魂；收起武魂保留囚位与居住，画主死亡时空间失效，人物退出。';
  if(template.hook==='desireBacklash')return '触发：成功发动对应武魂的主动能力后。结束：按自身经历的时间持续10分钟；收起武魂不会立即消退，再次触发会叠加强度。';
  if(template.hook==='advancedFirstRoundLock')return '触发：对应武魂启用且处于战斗第一回合。结束：进入第二回合，或收起对应武魂。';
@@ -67,7 +70,7 @@ export function registeredMartialSoulWritingMeaning(soul:any){
     development:{
       explanation:'以下属性与能力方向用于后续魂环发展，不是已经获得的额外技能；已获技能以人物abilities和来源记录为准。',
       attributes:(compiled.attributes??[]).map((a:any)=>({name:a.name,investment:a.investment})),
-      channels:(compiled.channels??[]).map((c:any)=>({name:c.name})),
+      channels:(compiled.channels??[]).map((c:any)=>({name:c.name,description:martialSoulChannelDescription(c.id)})),
     },
   };
 }
@@ -90,7 +93,7 @@ export function martialSoulWritingMeaning(raw:any){
     development:{
       explanation:'属性与能力方向影响后续魂环的抽取；它们不是已经获得的额外技能。',
       attributes:draft.attributes.map((a:any)=>({name:soul.ATTRIBUTE_REGISTRY[a.id].name,investment:a.investment})),
-      channels:draft.channels.map((id:string)=>({name:soul.CHANNEL_REGISTRY[id].name,effects:soul.CHANNEL_REGISTRY[id].effectIds.map((effectId:string)=>rules.effects.EFFECT_REGISTRY[effectId].displayName)})),
+      channels:draft.channels.map((id:string)=>({name:soul.CHANNEL_REGISTRY[id].name,description:martialSoulChannelDescription(id),effects:soul.CHANNEL_REGISTRY[id].effectIds.map((effectId:string)=>rules.effects.EFFECT_REGISTRY[effectId].displayName)})),
     },
   };
 }

@@ -1,2000 +1,271 @@
 {
- "ny": [
-  {
-   "name": "⚠️使用介绍",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Tips：总结方式",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "main prompt",
-   "id": "preset-20261030-ny-global-2",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "<user>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Persona Description",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "真实感",
-   "id": "preset-20261030-ny-extra-2",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "</user>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "<info>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "防正能量",
-   "id": "preset-20261030-ny-global-1",
-   "enabled": true,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "World Info (before)",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "</info>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "<character>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Char Description",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "Char Personality",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "Scenario",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "</character>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "World Info (after)",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "NSFW Prompt",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Enhance Definitions",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "Chat Examples",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "<background>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "图片",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "repeat-",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "<history>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🗳Sigon-前情提要",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🗳Sogon-前情提要",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Chat History",
-   "id": "",
-   "enabled": true,
-   "role": "marker",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "🎞 平行故事-多视角",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🎞 平行故事-单角色",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "</history>",
-   "id": "",
-   "enabled": true,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "</background>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⚜️自由创建前端(开启小白x渲染可互动)",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🕰时间框",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🕰时间框简略版",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "👀心理透视",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📋动态状态栏",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪四个选项涩涩版本",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪user视角的四个选项",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪全篇实时总结（字多）",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪全篇实时总结（压缩）",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪文风-男性向1",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪文风1-感知特化",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪文风2-感情特化",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪文风3-语言特化",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪文风4-漫画轻小说",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🖋Sigon-专属定制文风",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🩹 Sogon-角色补丁",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 1,
-   "depth": 0
-  },
-  {
-   "name": "<Order>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "💭Sigon-剧情建议",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📋Sogon-状态贴片",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪防全知",
-   "id": "preset-20261030-ny-extra-1",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🎨图片生成(需小白X)",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📞实时语音互动(需小白x)",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪涩涩特化",
-   "id": "",
-   "enabled": true,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "👤user第一人称视角",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "👤第二人称user视角",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "👤第二人称char视角",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "👤第三人称",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "➡️防抢话 严格",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "↪️防抢话 宽松 可转述",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "➡️抢话",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "↪️转述",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "本体-长段落",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "本体-短段落",
-   "id": "preset-20261030-ny-extra-0",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "防重复",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪ 英&汉 双语输出",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪ 日&汉 双语输出",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪字数-严格 分段少字少",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪字数-宽松 分段多字多",
-   "id": "",
-   "enabled": true,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪格式加强",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "</Order>",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "❓克制重复cot",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "❓剧情cot",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📌衔接加强",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪扩写模式",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪扩写后推进剧情模式",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▪续写模式",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🎲情景剧场生成器",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Ny预设",
-   "id": "preset-20261030-ny-global-0",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  }
- ],
- "dream": [
-  {
-   "name": "Gemini随机开头",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦境思客Gemini",
-   "id": "preset-20261030-dream-global-0",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦境思客",
-   "id": "preset-20261030-dream-global-1",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "变量初始化",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "schema初始化-thinking",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "schema初始化",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "===预设定===",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "MVU强制 - 掉格式打开",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "MVU不更新 - 额外模型解析打开",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "===预设定结束===",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "预定义对话",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "预定义回答",
-   "id": "",
-   "enabled": true,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "开始设定",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "世界设定开始",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🔵===蓝灯内容与世界历史===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Char Description",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Char Personality",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "World Info (before)",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Persona Description",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "World Info (after)",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Scenario",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "世界设定结束",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "常驻蓝灯设定",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "对话历史开始",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Chat Examples",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "Chat History",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "对话历史结束",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===后置绿灯与变动设定===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "后置DX设定开始",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "绿灯与变量条目",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📚===主要文风（选一开启）===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "无文风",
-   "id": "preset-20261030-dream-style-0",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "新实验文风",
-   "id": "preset-20261030-dream-style-1",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦白话文风",
-   "id": "preset-20261030-dream-style-2",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "萌系轻小说文风",
-   "id": "preset-20261030-dream-style-3",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "自定义文风",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📚===次要文风（可多开，请适度）===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "保持信息差",
-   "id": "preset-20261030-dream-extra-0",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "色色防回避",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "色色软强化",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "禁止霸总",
-   "id": "preset-20261030-dream-extra-1",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "杀解释欲",
-   "id": "preset-20261030-dream-extra-2",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "结尾控制",
-   "id": "preset-20261030-dream-extra-3",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "NSFW-感官刺激",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "NSFW-古风",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🫵===角色设定===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "用户是user",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "用户是char",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "用户是上帝视角",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "用户是自定义角色",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🥷===人称设定===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "第一人称",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "第二人称",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "第三人称",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🔫===抢话设定(选开)===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "深度扮演",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "转述抢话",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "转述不抢话",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "严禁抢话",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "大纲模式",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "▶️===思客人格===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "思客：温和叙者",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "思客：自定义思维链",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "🖌️===字数要求===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "1000 字",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "2500 字",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "动态字数短",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "动态字数长",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "自定义字数",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===模型禁词===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "DeepSeek禁词",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Glm/Gemini禁词",
-   "id": "preset-20261030-dream-wording",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "自定义禁词",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===渠道适配===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "KimiK3思考",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Deepseek官方",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "硅基流动或其他",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Gemini思考适配",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===思考强度===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "普通思考",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "超短思考",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===角色分析===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "通用角色分析",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "同人角色分析",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "自定义角色分析",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===思维链===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "默认思维链",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "发散思维链",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "隐式发散思维链",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "DeepseekV4pro思维链",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "自定义思维链",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===选开功能===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "八股超杀（V2版本）",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦境选项 - 正常推进",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦境选项 - NSFW推进",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "思客说书（旧） - 剧情推进指导",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "思客大调查 - 展现你的剧情理解吧",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦鲸摘要 - 小总结（建议Gemini使用）",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦境场景信息",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦境平行事件",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "梦境自检修复 - 反八股",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "自定义缝合处",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===数据库兼容===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "SP黑科技数据库兼容",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "柚月の记忆表格兼容",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "柏宝书兼容",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Ruby分析兼容",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===设定结束===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "后置DX设定结束",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===输出模式(仅开启一个)===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "写作模式",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "大总结模式",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "聊天模式",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⭐===预填充===",
-   "id": "",
-   "enabled": false,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "☆Gemini预填充对话",
-   "id": "",
-   "enabled": true,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "☆Gemini预填充回复",
-   "id": "",
-   "enabled": true,
-   "role": "user",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "☆混元3预填充",
-   "id": "",
-   "enabled": false,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "☆KimiK3预填充",
-   "id": "",
-   "enabled": false,
-   "role": "assistant",
-   "position": 0,
-   "depth": 4
-  }
- ],
- "meow": [
-  {
-   "name": "（不要关）token重定义+初始化",
-   "id": "preset-20261030-meow-global-1",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "（必看）免责声明",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "用户角色",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "（不要关）召唤术",
-   "id": "preset-20261030-meow-global-0",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Persona Description",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "别关",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "World Info (before)",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "char",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Char Description",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Char Personality",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "/char",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Scenario",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "World Info (after)",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "（不要关）上下文构造-衔接",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "Chat Examples",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "Chat History",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "继续游戏",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "----角色控制----",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "😸情绪别太激烈",
-   "id": "preset-20261030-meow-extra-0",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "😸活人感加强",
-   "id": "preset-20261030-meow-extra-1",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "----涩涩内容----",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⛔️关闭NSFW",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "❤️防发情",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "❤️nsfw风格|色色！",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "❤️nsfw风格|正常",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "❤️nsfw风格|更舒缓",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "❤️ASMR对话",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "----文风要求----",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "要转述",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "不要转述",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📝文风（选一）丨s喵特调一",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📝文风（选一）|五感",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📝|文风（偷）",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "📝人称控制",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📝防投石",
-   "id": "preset-20261030-meow-extra-2",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📝字数要求",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "----额外设定----",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⚙️我不是主角（可以改）",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⚙️防抢话",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⚙️背景npc发展",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⚙️多视角（智能）",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⚙️多视角（全局）",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "⚙️内心话",
-   "id": "",
-   "enabled": false,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "🧪历史回顾",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "----格式要求----",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📏<game>标签（别关）",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📏行动选项",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📏小总结",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📏猫猫留言~",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "📏其它格式",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 0
-  },
-  {
-   "name": "【别关】",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  },
-  {
-   "name": "长思考",
-   "id": "",
-   "enabled": true,
-   "role": "system",
-   "position": 0,
-   "depth": 4
-  }
- ]
+  "ny": [
+    {"id":"","name":"⚠️使用介绍","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b6723799-fd45-4559-82ae-94900d331d56","sourceIndex":0,"disposition":"来源说明 · 作者给玩家的阅读与配置说明"},
+    {"id":"","name":"Tips：总结方式","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"main","sourceIndex":1,"disposition":"来源说明 · 作者给玩家的阅读与配置说明"},
+    {"id":"preset-20261030-ny-global-2","name":"main prompt","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"791897cb-e178-410a-b069-5bfb13408947","sourceIndex":2,"disposition":"已有内置条目"},
+    {"id":"","name":"<user>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1fb9d317-09ab-4195-876d-3f150f0b822e","sourceIndex":3,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"Persona Description","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"personaDescription","sourceIndex":4,"disposition":"游戏资料 · 玩家档案"},
+    {"id":"preset-20261030-ny-extra-2","name":"真实感","enabled":true,"role":"user","position":0,"depth":0,"order":100,"triggers":[],"originalId":"1da80252-d2b3-4aa8-a2c2-9be95adcfccd","sourceIndex":5,"disposition":"已有内置条目"},
+    {"id":"","name":"</user>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"8705058a-738d-4ff6-94f2-714a234e4552","sourceIndex":6,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"<info>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"678d7285-156d-4dd8-b747-cba0dbf15a1d","sourceIndex":7,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"preset-20261030-ny-global-1","name":"防正能量","enabled":true,"role":"assistant","position":0,"depth":4,"order":100,"triggers":[],"originalId":"478d8d54-088c-41d9-a460-3db832dbd5e7","sourceIndex":8,"disposition":"已有内置条目"},
+    {"id":"","name":"World Info (before)","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"worldInfoBefore","sourceIndex":9,"disposition":"游戏资料 · 世界设定和本轮事实"},
+    {"id":"","name":"</info>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0c36d113-25e2-4fba-b69b-3ce6688a9048","sourceIndex":10,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"<character>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"740fdc64-2bef-4deb-9bec-f7ddfea67fd3","sourceIndex":11,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"Char Description","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"charDescription","sourceIndex":12,"disposition":"游戏资料 · 本轮相关人物档案"},
+    {"id":"","name":"Char Personality","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"charPersonality","sourceIndex":13,"disposition":"游戏资料 · 当前性格与表达习惯"},
+    {"id":"","name":"Scenario","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"scenario","sourceIndex":14,"disposition":"游戏资料 · 当前场景及实际经过"},
+    {"id":"","name":"</character>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"5a6c9ec5-5e54-46da-b87d-f658e334e623","sourceIndex":15,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"World Info (after)","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"worldInfoAfter","sourceIndex":16,"disposition":"游戏资料 · 当前世界、人物与事件资料"},
+    {"id":"preset-20261105-ny-nsfw-core","name":"NSFW Prompt","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"nsfw","sourceIndex":17,"disposition":"独立写作条目"},
+    {"id":"","name":"Enhance Definitions","enabled":false,"role":"system","position":0,"depth":0,"order":100,"triggers":[],"originalId":"enhanceDefinitions","sourceIndex":18,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"Chat Examples","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"dialogueExamples","sourceIndex":19,"disposition":"游戏资料 · 人物档案中的示范对白"},
+    {"id":"","name":"<background>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"39f479af-0e7a-480c-96b6-238e4efb49fd","sourceIndex":20,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"图片","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"42d33c82-9953-4b47-a6a5-1efe916e243a","sourceIndex":21,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"preset-20261105-ny-fresh-structure","name":"repeat-","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"35039b4d-0c1c-48b4-97d4-21ec39705827","sourceIndex":22,"disposition":"独立写作条目"},
+    {"id":"","name":"<history>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"87ade5ee-d598-48e3-8dbf-86cf8adf7d93","sourceIndex":23,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"🗳Sigon-前情提要","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3466eec2-ed23-4b87-b272-af273f67b85a","sourceIndex":24,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"🗳Sogon-前情提要","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6ec3cda4-f117-435f-a33c-cbb8e85f6efc","sourceIndex":25,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"Chat History","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"chatHistory","sourceIndex":26,"disposition":"游戏资料 · 实际送达的会话、近期正文和相关回忆"},
+    {"id":"","name":"🎞 平行故事-多视角","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"4f1f6a81-c7ce-43f3-8773-f01479250691","sourceIndex":27,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"🎞 平行故事-单角色","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ac72863d-dfba-4bfa-b4ab-0f35b698a37f","sourceIndex":28,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-ny-history-seam","name":"</history>","enabled":true,"role":"assistant","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f7505ab0-b3ce-4e0c-b56a-fcbcf5c908f5","sourceIndex":29,"disposition":"独立写作条目"},
+    {"id":"","name":"</background>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3daafd2f-ef8a-4578-9869-f2367ae2955d","sourceIndex":30,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"⚜️自由创建前端(开启小白x渲染可互动)","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"40179724-40d2-41f4-88f8-692cc1c4201b","sourceIndex":31,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"","name":"🕰时间框","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"273affa2-f843-40bd-83ab-98e697ea4784","sourceIndex":32,"disposition":"游戏资料 · 真实世界时间和场景进度"},
+    {"id":"","name":"🕰时间框简略版","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"4339ad2a-6031-4183-8be5-fbf0884daabe","sourceIndex":33,"disposition":"游戏资料 · 真实世界时间和场景进度"},
+    {"id":"","name":"👀心理透视","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"cc12cbb8-3bcc-4018-a19a-6f39e12f58a8","sourceIndex":34,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"📋动态状态栏","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"eabfc78c-7a1f-4577-946f-0f98ef64bf00","sourceIndex":35,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"preset-20261105-ny-nsfw-options","name":"▪四个选项涩涩版本","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"02f34637-1760-4e9e-8f20-44a2a1d430dd","sourceIndex":36,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-options","name":"▪user视角的四个选项","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"4db99d2f-70cd-4c9c-acbf-441372a27f1f","sourceIndex":37,"disposition":"独立写作条目"},
+    {"id":"","name":"▪全篇实时总结（字多）","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"5efe4903-3d4b-4051-a322-7588c3e51f37","sourceIndex":38,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"▪全篇实时总结（压缩）","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b56ee13b-1737-4eee-9b97-dad988adcfe2","sourceIndex":39,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"preset-20261030-ny-style-2","name":"▪文风-男性向1","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"7b6f5320-093d-425b-8d8f-e5c016c3c445","sourceIndex":40,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-ny-style-0","name":"▪文风1-感知特化","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"fa4b314b-ebf6-4c24-ad4a-c36445fa306c","sourceIndex":41,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-ny-style-1","name":"▪文风2-感情特化","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"af6c8fe7-c36d-40fd-bde2-4cc7b673b4da","sourceIndex":42,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-ny-style-3","name":"▪文风3-语言特化","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"dc8b32e5-f04d-4090-8369-f152d156d198","sourceIndex":43,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-ny-style-4","name":"▪文风4-漫画轻小说","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3827b2f4-a5cb-4261-925e-00e13d54382b","sourceIndex":44,"disposition":"已有内置条目"},
+    {"id":"","name":"🖋Sigon-专属定制文风","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"051f8f81-7676-4042-954f-52de5b588aa7","sourceIndex":45,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"🩹 Sogon-角色补丁","enabled":false,"role":"system","position":1,"depth":0,"order":100,"triggers":[],"originalId":"250a47ab-c686-4dc7-bc23-b201f55f7ff6","sourceIndex":46,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"<Order>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"bc34649e-9a32-46d0-83b3-404a1934ad6b","sourceIndex":47,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"💭Sigon-剧情建议","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"7c56380b-8ff6-4d06-89dd-51ed2c43b9a9","sourceIndex":48,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"📋Sogon-状态贴片","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"c1e26d0f-cc4b-4ede-9cf1-af31f6ca0fcd","sourceIndex":49,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261030-ny-extra-1","name":"▪防全知","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"839d9413-ba2f-4ebd-9644-8fce45a61a47","sourceIndex":50,"disposition":"已有内置条目"},
+    {"id":"","name":"🎨图片生成(需小白X)","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"8e2d5902-5d40-40a7-bdbb-0aebc6485c97","sourceIndex":51,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"","name":"📞实时语音互动(需小白x)","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"eb1797b0-a9ce-495c-9e4d-6171a9154dd2","sourceIndex":52,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"preset-20261105-ny-nsfw-strong","name":"▪涩涩特化","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"54d7e17d-1c43-44c7-8b7a-cc5a56bf1260","sourceIndex":53,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-first-person","name":"👤user第一人称视角","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ca8e8878-4b1f-4c6c-ba47-e11559889cd3","sourceIndex":54,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-second-person","name":"👤第二人称user视角","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6bd48052-3934-41e6-b120-7fceb8986c11","sourceIndex":55,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-second-person-npc","name":"👤第二人称char视角","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"7bc08c3d-d6aa-4586-aff5-ffaf0caff06f","sourceIndex":56,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-third-person","name":"👤第三人称","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e6a810a2-4fef-4640-849c-4950a17bf6e5","sourceIndex":57,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-no-retell","name":"➡️防抢话 严格","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"c8a186da-38ed-415c-acb2-bbbdac80308f","sourceIndex":58,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-retell","name":"↪️防抢话 宽松 可转述","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f2665b90-7822-479d-82b5-d68e0e08e4b2","sourceIndex":59,"disposition":"独立写作条目"},
+    {"id":"","name":"➡️抢话","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"64494b5b-fe14-4ee2-8fea-8a728226ca01","sourceIndex":60,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"↪️转述","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"78d0baea-4299-4d0b-be38-e77b14fd4611","sourceIndex":61,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"本体-长段落","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ad0d52df-91e9-4fd5-9713-7893b261b02d","sourceIndex":62,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261030-ny-extra-0","name":"本体-短段落","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"63e83d5e-cc9a-4a59-a42b-3a3725c01404","sourceIndex":63,"disposition":"已有内置条目"},
+    {"id":"preset-20261105-ny-avoid-repeat","name":"防重复","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"2359d9f9-31f3-46bd-8862-79aabdbd2cf0","sourceIndex":64,"disposition":"独立写作条目"},
+    {"id":"","name":"▪ 英&汉 双语输出","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1af3464f-6b8d-44ab-ac9e-b9bf255dbe81","sourceIndex":65,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"▪ 日&汉 双语输出","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"32332690-4691-46ec-b5fa-cf13fdac3010","sourceIndex":66,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-ny-length-short","name":"▪字数-严格 分段少字少","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d787e4d8-51f3-4696-b82a-eb76ccc02ffb","sourceIndex":67,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-ny-length-long","name":"▪字数-宽松 分段多字多","enabled":true,"role":"assistant","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0fbcb9ec-d1ce-4544-a532-096d74423378","sourceIndex":68,"disposition":"独立写作条目"},
+    {"id":"","name":"▪格式加强","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"27f2563f-1b70-42ad-b29b-085271b3c2f3","sourceIndex":69,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"</Order>","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b9c341bb-69a4-4116-ad48-e0000e4bbae3","sourceIndex":70,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"❓克制重复cot","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"8976f8f2-dad0-417e-86ab-b97678b568ab","sourceIndex":71,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"❓剧情cot","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"94b712f9-2300-4296-b61e-2e026b014673","sourceIndex":72,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"📌衔接加强","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1b4645eb-1798-4160-9ced-8d949bbbe4ff","sourceIndex":73,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"▪扩写模式","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"475e6350-8037-4fc7-8b04-25f4f0c6cd25","sourceIndex":74,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-ny-continue","name":"▪扩写后推进剧情模式","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"a2f48752-985c-4d3e-b3ad-0fc75f9ed6dd","sourceIndex":75,"disposition":"独立写作条目"},
+    {"id":"","name":"▪续写模式","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d0471fba-de9c-4c48-9378-7af2d21ed11b","sourceIndex":76,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"🎲情景剧场生成器","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"aedf1d68-1673-412d-acd7-ca46a975e59b","sourceIndex":77,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261030-ny-global-0","name":"Ny预设","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"jailbreak","sourceIndex":78,"disposition":"已有内置条目"},
+    {"id":"","name":"G向（S向）开关","enabled":false,"role":"system","position":0,"depth":0,"order":100,"triggers":[],"originalId":"97cd43c6-b4ac-4460-b865-459bab6c6725","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"G向（M向）开关","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"49b75e8d-2904-4bc2-8635-d6dfdeec51ee","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"<format>","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ee7ddfde-a383-4a94-b6e2-b6bff55701d9","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"</format>","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"57ff635e-238d-4421-8da9-e49f2343a765","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"禁止搬运","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"fe23d0b8-e379-4256-ba52-43976e61e5a0","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"repeat+","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"648c588d-456d-4b65-90d6-7b2940e3ad42","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"▪时间框12小时制","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"a9e64758-022a-4741-9b03-eaa32ba688ed","sourceIndex":null,"disposition":"游戏资料 · 真实世界时间和场景进度"},
+    {"id":"","name":"📈 Sogon-关系进展","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"2a2e92c0-9ec5-4b30-8d62-43ef917d4e36","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"}
+  ],
+  "dream": [
+    {"id":"","name":"Gemini随机开头","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"06b5771b-109d-47b1-94d0-8bbc805bc15e","sourceIndex":0,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261030-dream-global-0","name":"梦境思客Gemini","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"02aa9bce-9fb8-44ed-9abe-1f9561fc9d99","sourceIndex":1,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-dream-global-1","name":"梦境思客","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1433f09e-6d04-44b0-99bb-17485ac37bc5","sourceIndex":2,"disposition":"已有内置条目"},
+    {"id":"","name":"变量初始化","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0621b81b-407d-4ed7-ba69-fe871d3a8fa9","sourceIndex":3,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"schema初始化-thinking","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"88e12467-534b-47d2-bcef-371030b91b03","sourceIndex":4,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"schema初始化","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"7d6c0a00-27b6-4ccd-98a3-24bd3fd9a503","sourceIndex":5,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"===预设定===","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"a5a8b4f0-2cb6-492b-a5aa-bca8d4993560","sourceIndex":6,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"MVU强制 - 掉格式打开","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"eee97456-b142-4a3f-a5fd-d09463748341","sourceIndex":7,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"MVU不更新 - 额外模型解析打开","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e4b97186-b0ec-4ea3-85b2-ab6e83dd0473","sourceIndex":8,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"===预设定结束===","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"487be7a5-10e0-4f70-8a4a-f28fc9dac603","sourceIndex":9,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261105-dream-example-user","name":"预定义对话","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1a5b25dc-58d0-4441-bfc1-cae172bba740","sourceIndex":10,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-example-assistant","name":"预定义回答","enabled":true,"role":"assistant","position":0,"depth":4,"order":100,"triggers":[],"originalId":"cb7fb49f-4496-4ca2-b2d2-39aed039ae5d","sourceIndex":11,"disposition":"独立写作条目"},
+    {"id":"","name":"开始设定","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"c3a3247c-3486-4084-bc69-11529811129c","sourceIndex":12,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"世界设定开始","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"202d1102-db4f-4848-b05b-c648e7631ced","sourceIndex":13,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"🔵===蓝灯内容与世界历史===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"15b0ffd7-b3f3-42bd-989d-12b48c3b64e3","sourceIndex":14,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"Char Description","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"charDescription","sourceIndex":15,"disposition":"游戏资料 · 本轮相关人物档案"},
+    {"id":"","name":"Char Personality","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"charPersonality","sourceIndex":16,"disposition":"游戏资料 · 当前性格与表达习惯"},
+    {"id":"","name":"World Info (before)","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"worldInfoBefore","sourceIndex":17,"disposition":"游戏资料 · 世界设定和本轮事实"},
+    {"id":"","name":"Persona Description","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"personaDescription","sourceIndex":18,"disposition":"游戏资料 · 玩家档案"},
+    {"id":"","name":"World Info (after)","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"worldInfoAfter","sourceIndex":19,"disposition":"游戏资料 · 当前世界、人物与事件资料"},
+    {"id":"","name":"Scenario","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"scenario","sourceIndex":20,"disposition":"游戏资料 · 当前场景及实际经过"},
+    {"id":"","name":"世界设定结束","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e0032969-7a36-4fe1-8bb9-c01effb1860b","sourceIndex":21,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"常驻蓝灯设定","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3588b992-33b7-4dd9-9280-0d13f70e04db","sourceIndex":22,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"对话历史开始","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d6fa9796-1521-4b1c-bf26-75273339e399","sourceIndex":23,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"Chat Examples","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"dialogueExamples","sourceIndex":24,"disposition":"游戏资料 · 人物档案中的示范对白"},
+    {"id":"","name":"Chat History","enabled":true,"role":"marker","position":0,"depth":0,"order":100,"triggers":[],"originalId":"chatHistory","sourceIndex":25,"disposition":"游戏资料 · 实际送达的会话、近期正文和相关回忆"},
+    {"id":"","name":"对话历史结束","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0257d3af-fe22-4d44-a905-695f0d4a5397","sourceIndex":26,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"⭐===后置绿灯与变动设定===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"18fdc66a-c736-4d44-9c42-8cd95faac8b8","sourceIndex":27,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"后置DX设定开始","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d0d838dd-972c-4dec-b584-fb9c8ba39733","sourceIndex":28,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"绿灯与变量条目","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e393d2c5-c816-46d8-9307-6755fafcaab8","sourceIndex":29,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"📚===主要文风（选一开启）===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"eefed85e-d116-4b1c-8076-8cc6563c8999","sourceIndex":30,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261030-dream-style-0","name":"无文风","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"058d487d-8618-4c87-88ef-bf4d03e38131","sourceIndex":31,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-dream-style-1","name":"新实验文风","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6327272d-d815-43d0-b25a-321b82e63fcb","sourceIndex":32,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-dream-style-2","name":"梦白话文风","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"943a7622-c7c4-44d8-9b44-402c9d0804d6","sourceIndex":33,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-dream-style-3","name":"萌系轻小说文风","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"c9b38821-a38f-4fce-ae48-bc8bed750dc3","sourceIndex":34,"disposition":"已有内置条目"},
+    {"id":"","name":"自定义文风","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"242592ec-ac13-439d-8135-3642062de6e6","sourceIndex":35,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"📚===次要文风（可多开，请适度）===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6a97cb2a-df26-449b-b2c2-cffffbe68990","sourceIndex":36,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261030-dream-extra-0","name":"保持信息差","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"87216a1e-f644-4b5e-97a6-2160871b261c","sourceIndex":37,"disposition":"已有内置条目"},
+    {"id":"preset-20261105-dream-nsfw-no-dodge","name":"色色防回避","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"715adf10-ad71-4538-a556-84273e99a51f","sourceIndex":38,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-nsfw-soft-boost","name":"色色软强化","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1dacba2b-216c-42a5-bc54-bdb7dfda39c3","sourceIndex":39,"disposition":"独立写作条目"},
+    {"id":"preset-20261030-dream-extra-1","name":"禁止霸总","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"5e5347ed-9241-4940-b03e-723a8037eeed","sourceIndex":40,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-dream-extra-2","name":"杀解释欲","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"37111d97-a06c-4fc2-b911-73056c06c6e5","sourceIndex":41,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-dream-extra-3","name":"结尾控制","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ae74c448-b286-4bca-8be0-67e8d4e64077","sourceIndex":42,"disposition":"已有内置条目"},
+    {"id":"preset-20261105-dream-nsfw-sensory","name":"NSFW-感官刺激","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"8522ca06-b871-4c21-8c42-eed583055c7c","sourceIndex":43,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-nsfw-ancient","name":"NSFW-古风","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"a0b66658-d54e-4f59-9073-e6807e81fdcd","sourceIndex":44,"disposition":"独立写作条目"},
+    {"id":"","name":"🫵===角色设定===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"00dcf67b-38bd-45b2-8f16-5d1834e97e58","sourceIndex":45,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261105-dream-player","name":"用户是user","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"903b5218-c0df-43c0-93d3-47d3f4bff055","sourceIndex":46,"disposition":"独立写作条目"},
+    {"id":"","name":"用户是char","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"afb7aeb5-585a-409c-8ffc-a6e890dda1c7","sourceIndex":47,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"用户是上帝视角","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b8e57f95-5e49-4023-845f-8a5dcd80feff","sourceIndex":48,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"用户是自定义角色","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"69cd4036-17f7-4717-b665-8572b1552cf6","sourceIndex":49,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"🥷===人称设定===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"a9d6791a-cfff-4b1e-b344-77c6e4444af4","sourceIndex":50,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261105-dream-first-person","name":"第一人称","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"2484aae9-3774-498a-9c77-24ee912a9525","sourceIndex":51,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-second-person","name":"第二人称","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"cca6a516-245e-4705-931d-b5ada82250e3","sourceIndex":52,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-third-person","name":"第三人称","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"88f3b1dc-cbe8-4134-98bd-4dac6bee2d40","sourceIndex":53,"disposition":"独立写作条目"},
+    {"id":"","name":"🔫===抢话设定(选开)===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"fa24e2db-f35c-47f4-8946-0c8ed315b243","sourceIndex":54,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"深度扮演","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"09e5950f-099d-445d-8c52-887052c852db","sourceIndex":55,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-dream-retell","name":"转述抢话","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0a3cad85-a699-4634-9586-8a28d9b72861","sourceIndex":56,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-retell-strict","name":"转述不抢话","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0adbc2de-e0d6-402e-b380-332341e3665d","sourceIndex":57,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-no-retell","name":"严禁抢话","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"c5483323-d9a1-4fb3-8894-40360f1bb595","sourceIndex":58,"disposition":"独立写作条目"},
+    {"id":"","name":"大纲模式","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0a6bfc49-49df-4530-afea-c96500eec0c0","sourceIndex":59,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"▶️===思客人格===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"a4011f48-de12-430f-917d-f763ad8f9017","sourceIndex":60,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261105-dream-gentle-narrator","name":"思客：温和叙者","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0aa50f6d-8a2d-4200-8653-b925f2583396","sourceIndex":61,"disposition":"独立写作条目"},
+    {"id":"","name":"思客：自定义思维链","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"eabbddf6-e34f-4539-be57-4e274bf9d692","sourceIndex":62,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"🖌️===字数要求===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"470b46c3-3eb9-451d-8f0f-3b691842694f","sourceIndex":63,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261105-dream-length-1000","name":"1000 字","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f6f2b039-39c2-4dd5-b6e1-ff7c634c22e2","sourceIndex":64,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-length-2500","name":"2500 字","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"83b91941-721c-4712-a945-513c918e921c","sourceIndex":65,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-length-short","name":"动态字数短","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6840a0dd-0d5b-43cf-a146-4f30c2771159","sourceIndex":66,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-length-long","name":"动态字数长","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d7e8bca3-966e-44a7-acc7-e22293851eb2","sourceIndex":67,"disposition":"独立写作条目"},
+    {"id":"","name":"自定义字数","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d202d8f7-7f2b-4ee0-97e8-67267f9b6cce","sourceIndex":68,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⭐===模型禁词===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"96e30356-6365-4ada-a139-a931da709873","sourceIndex":69,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"DeepSeek禁词","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"bc555774-4ac3-4ace-bd92-44c32714d7d3","sourceIndex":70,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261030-dream-wording","name":"Glm/Gemini禁词","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e884cc76-408f-4813-9a72-4388e48653be","sourceIndex":71,"disposition":"已有内置条目"},
+    {"id":"","name":"自定义禁词","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d8398484-6bd9-48af-9624-c73b224b6d2a","sourceIndex":72,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⭐===渠道适配===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f486ea8f-4d5e-454d-abb2-8685cd412f33","sourceIndex":73,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"KimiK3思考","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"5ee048ba-4e21-4d9a-9136-a4c95c4c2333","sourceIndex":74,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"Deepseek官方","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1b440ea8-b60a-4c07-bb38-5cd43a2a97ce","sourceIndex":75,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"硅基流动或其他","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"10298f99-a751-4c3c-99af-0c4de3baaae4","sourceIndex":76,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"Gemini思考适配","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3814c037-27c0-4c1e-a437-a877c93a3c03","sourceIndex":77,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"⭐===思考强度===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"8f49fd83-d412-4ad0-bc7d-0e441713c109","sourceIndex":78,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"普通思考","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"41afc8b5-c5be-4a85-8a0a-3c1f902fe711","sourceIndex":79,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"超短思考","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"35e220ba-06d6-4f8e-bd46-a31865fda58d","sourceIndex":80,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"⭐===角色分析===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6348b3de-da11-4909-9b08-027d032857ec","sourceIndex":81,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"通用角色分析","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"bf414b5f-7d76-4bf6-ae58-20f186254565","sourceIndex":82,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"同人角色分析","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6937edf8-ef42-4b6e-bcf8-7ff0c858d669","sourceIndex":83,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"自定义角色分析","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f61935f3-9e10-4b56-ae05-ae892e85fc01","sourceIndex":84,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"⭐===思维链===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d0548376-b40f-4765-b8f9-49b66f78eead","sourceIndex":85,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"默认思维链","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0da6f4d7-961d-4966-a084-857a3dd876ad","sourceIndex":86,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"发散思维链","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"4f045ab1-5b4a-4e9e-b8f4-deccc5664c67","sourceIndex":87,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"隐式发散思维链","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"494c3093-cca7-41d3-98ca-fc9a051aa7ad","sourceIndex":88,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"DeepseekV4pro思维链","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"81b2facd-db99-4bdc-9597-7cc1d08726dd","sourceIndex":89,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"自定义思维链","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"25e9984e-02c2-40c7-a095-bf4683f7d04e","sourceIndex":90,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"⭐===选开功能===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1f3a91e0-29e3-4da4-b751-f8af45f3b1ca","sourceIndex":91,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"八股超杀（V2版本）","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"7cfbff76-346a-400f-b47d-46e55f5fe0fa","sourceIndex":92,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-dream-options","name":"梦境选项 - 正常推进","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"11cdd506-1513-4008-b6b9-c883dbad65c5","sourceIndex":93,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-dream-nsfw-advance-options","name":"梦境选项 - NSFW推进","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f96f47f7-01ef-4676-b0fe-6f254ae7e550","sourceIndex":94,"disposition":"独立写作条目"},
+    {"id":"","name":"思客说书（旧） - 剧情推进指导","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f9b03e19-fd96-4782-8867-73ad2cbabfb9","sourceIndex":95,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"思客大调查 - 展现你的剧情理解吧","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"27bf435f-4283-4937-8c6f-3c31abc4f6d2","sourceIndex":96,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"梦鲸摘要 - 小总结（建议Gemini使用）","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"6a8e799c-9445-44f2-a853-c6c71b92b855","sourceIndex":97,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"梦境场景信息","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"43f8a625-93e6-46c0-9c20-b635c57e3b19","sourceIndex":98,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"梦境平行事件","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"807eefad-93ca-490c-a629-1d51038e3626","sourceIndex":99,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"梦境自检修复 - 反八股","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"4e26a3ac-4d46-45ed-85bf-0110fbe06cd2","sourceIndex":100,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"自定义缝合处","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0507e8d7-99e4-4cb6-84d8-e0a467da2ff7","sourceIndex":101,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⭐===数据库兼容===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"123078d1-17f0-4886-89cc-152207634454","sourceIndex":102,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"SP黑科技数据库兼容","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"21837143-741e-4cc8-8107-b26acacfdee6","sourceIndex":103,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"","name":"柚月の记忆表格兼容","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"4f83df17-8d9e-4290-8561-5b74f5573373","sourceIndex":104,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"柏宝书兼容","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e93c52c7-10dc-4c47-88ab-7cc74b31ea60","sourceIndex":105,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"","name":"Ruby分析兼容","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"cbe5b03e-f488-4afc-bc2b-8650af0f97bf","sourceIndex":106,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"","name":"⭐===设定结束===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f410c5aa-cd07-4691-8203-dd3afc8c7800","sourceIndex":107,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"后置DX设定结束","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"250dd7ab-e6fa-4b5f-abf0-5e488451d033","sourceIndex":108,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"⭐===输出模式(仅开启一个)===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"c8f21225-f44d-46c8-8621-b92324fa8449","sourceIndex":109,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261105-dream-words","name":"写作模式","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"881044e5-cbef-43c7-ad19-c6e7f6d150b4","sourceIndex":110,"disposition":"独立写作条目"},
+    {"id":"","name":"大总结模式","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e8e8b082-e3ca-4d4d-afe9-d5632b3b38e0","sourceIndex":111,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"聊天模式","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"dc9d8c8f-2588-47d9-ba16-aa42306c6726","sourceIndex":112,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⭐===预填充===","enabled":false,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ab66a568-77c0-4473-a500-30f7de63f869","sourceIndex":113,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"☆Gemini预填充对话","enabled":true,"role":"assistant","position":0,"depth":4,"order":100,"triggers":[],"originalId":"e59a0f26-6a73-4906-9177-6eb51052adcf","sourceIndex":114,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"☆Gemini预填充回复","enabled":true,"role":"user","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f52512ce-751b-4df8-a272-e65ccf7b1ebc","sourceIndex":115,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"☆混元3预填充","enabled":false,"role":"assistant","position":0,"depth":4,"order":100,"triggers":[],"originalId":"9e3a3ea9-505f-461c-bc01-acce029cf909","sourceIndex":116,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"☆KimiK3预填充","enabled":false,"role":"assistant","position":0,"depth":4,"order":100,"triggers":[],"originalId":"958ce7b4-2397-44ce-b128-e1c59034bfaa","sourceIndex":117,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"Main Prompt","enabled":false,"role":"system","position":0,"depth":0,"order":100,"triggers":[],"originalId":"main","sourceIndex":null,"disposition":"游戏资料 · 基础写作职责"},
+    {"id":"","name":"Auxiliary Prompt","enabled":false,"role":"system","position":0,"depth":0,"order":100,"triggers":[],"originalId":"nsfw","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"Post-History Instructions","enabled":false,"role":"system","position":0,"depth":0,"order":100,"triggers":[],"originalId":"jailbreak","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"Enhance Definitions","enabled":false,"role":"system","position":0,"depth":0,"order":100,"triggers":[],"originalId":"enhanceDefinitions","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"}
+  ],
+  "meow": [
+    {"id":"preset-20261030-meow-global-1","name":"（不要关）token重定义+初始化","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"a00fb1fe-9907-4709-b230-43ae0d236529","sourceIndex":0,"disposition":"已有内置条目"},
+    {"id":"","name":"（必看）免责声明","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"main","sourceIndex":1,"disposition":"来源说明 · 作者给玩家的阅读与配置说明"},
+    {"id":"preset-20261105-meow-player","name":"用户角色","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"9c015364-9395-46a6-b6dc-fca5637e9f06","sourceIndex":2,"disposition":"独立写作条目"},
+    {"id":"preset-20261030-meow-global-0","name":"（不要关）召唤术","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"enhanceDefinitions","sourceIndex":3,"disposition":"已有内置条目"},
+    {"id":"","name":"Persona Description","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"personaDescription","sourceIndex":4,"disposition":"游戏资料 · 玩家档案"},
+    {"id":"","name":"别关","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"7a077e05-2616-4b58-b725-53c80ecf4931","sourceIndex":5,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"World Info (before)","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"worldInfoBefore","sourceIndex":6,"disposition":"游戏资料 · 世界设定和本轮事实"},
+    {"id":"","name":"char","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ab29af7b-4f0e-402f-8236-80b15800e554","sourceIndex":7,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"Char Description","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"charDescription","sourceIndex":8,"disposition":"游戏资料 · 本轮相关人物档案"},
+    {"id":"","name":"Char Personality","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"charPersonality","sourceIndex":9,"disposition":"游戏资料 · 当前性格与表达习惯"},
+    {"id":"","name":"/char","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"34aca678-07d4-4aeb-96ca-37f78617c525","sourceIndex":10,"disposition":"游戏资料 · 真实的场景、玩家和人物档案"},
+    {"id":"","name":"Scenario","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"scenario","sourceIndex":11,"disposition":"游戏资料 · 当前场景及实际经过"},
+    {"id":"","name":"World Info (after)","enabled":true,"role":"marker","position":0,"depth":4,"order":100,"triggers":[],"originalId":"worldInfoAfter","sourceIndex":12,"disposition":"游戏资料 · 当前世界、人物与事件资料"},
+    {"id":"preset-20261105-meow-history-seam","name":"（不要关）上下文构造-衔接","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"nsfw","sourceIndex":13,"disposition":"独立写作条目"},
+    {"id":"","name":"Chat Examples","enabled":true,"role":"marker","position":0,"depth":0,"order":0,"triggers":[],"originalId":"dialogueExamples","sourceIndex":14,"disposition":"游戏资料 · 人物档案中的示范对白"},
+    {"id":"","name":"Chat History","enabled":true,"role":"marker","position":0,"depth":0,"order":0,"triggers":[],"originalId":"chatHistory","sourceIndex":15,"disposition":"游戏资料 · 实际送达的会话、近期正文和相关回忆"},
+    {"id":"preset-20261105-meow-continue","name":"继续游戏","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"jailbreak","sourceIndex":16,"disposition":"独立写作条目"},
+    {"id":"","name":"----角色控制----","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"2cb59685-23fb-4187-9dec-4d9765af9e79","sourceIndex":17,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261030-meow-extra-0","name":"😸情绪别太激烈","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3682cbc5-2edd-46ab-9466-a670908b67e7","sourceIndex":18,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-meow-extra-1","name":"😸活人感加强","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"37fc5f95-679d-4aba-83c7-21e15a60919d","sourceIndex":19,"disposition":"已有内置条目"},
+    {"id":"preset-20261105-meow-nsfw-section","name":"----涩涩内容----","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b614d087-a9c0-44cd-a006-0045e95dd014","sourceIndex":20,"disposition":"独立写作条目"},
+    {"id":"","name":"⛔️关闭NSFW","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"18e1bcb1-c329-4aba-957a-c22fb77712be","sourceIndex":21,"disposition":"场景写作 · 可用正文编辑器单独选择亲密描写条目和适用范围"},
+    {"id":"preset-20261105-meow-intimacy-pace","name":"❤️防发情","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"0fb9ef19-6676-4acb-a844-6c870a81a2df","sourceIndex":22,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-meow-intimacy-strong","name":"❤️nsfw风格|色色！","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"9f6fb39c-5373-47a0-a3d9-dc6fcbbe83de","sourceIndex":23,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-meow-intimacy-tone","name":"❤️nsfw风格|正常","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"d6fa9105-b1ec-4079-a3be-a608388a4812","sourceIndex":24,"disposition":"独立写作条目"},
+    {"id":"","name":"❤️nsfw风格|更舒缓","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b0930f00-156e-428a-8247-4977549ca41f","sourceIndex":25,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-meow-intimacy-dialogue","name":"❤️ASMR对话","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"80aa69d4-0bcf-4f95-a0be-60a50cfb5376","sourceIndex":26,"disposition":"独立写作条目"},
+    {"id":"","name":"----文风要求----","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"968c1caa-a85b-42c0-a81a-840c372d61a8","sourceIndex":27,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"preset-20261105-meow-retell","name":"要转述","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"9ac6be6e-304f-4888-9ee5-aedb8c7df103","sourceIndex":28,"disposition":"独立写作条目"},
+    {"id":"preset-20261105-meow-no-retell","name":"不要转述","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ed3b6119-cb78-47b4-beab-6d109beb9e38","sourceIndex":29,"disposition":"独立写作条目"},
+    {"id":"preset-20261030-meow-style-1","name":"📝文风（选一）丨s喵特调一","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"eda5ebe9-54d0-455c-878e-7dbe7d0ec8c0","sourceIndex":30,"disposition":"已有内置条目"},
+    {"id":"preset-20261030-meow-style-0","name":"📝文风（选一）|五感","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"1fd196ce-ff82-4447-928a-cc0bd625740f","sourceIndex":31,"disposition":"已有内置条目"},
+    {"id":"","name":"📝|文风（偷）","enabled":false,"role":"system","position":0,"depth":0,"order":0,"triggers":[],"originalId":"b85e04c5-9306-486d-accb-de99eb3ccb0a","sourceIndex":32,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-meow-perspective","name":"📝人称控制","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ee33ae12-feea-42fd-98fe-97c995903f11","sourceIndex":33,"disposition":"独立写作条目"},
+    {"id":"preset-20261030-meow-extra-2","name":"📝防投石","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b9c29eab-3a14-4d7f-a8b0-fdd268c2d0ab","sourceIndex":34,"disposition":"已有内置条目"},
+    {"id":"preset-20261105-meow-length","name":"📝字数要求","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"9fcf4beb-5996-4d01-8490-7332502bc422","sourceIndex":35,"disposition":"独立写作条目"},
+    {"id":"","name":"----额外设定----","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"c0db6fd9-86a0-4678-b896-d26ee9a02771","sourceIndex":36,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"⚙️我不是主角（可以改）","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"5e89beb6-bcb8-4854-af27-49dcb2e6292a","sourceIndex":37,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⚙️防抢话","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"630b20d3-2d85-4b20-85ce-cc5e483e14b8","sourceIndex":38,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⚙️背景npc发展","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"ef48b167-dac9-4015-b42c-b16a7cf69ec9","sourceIndex":39,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⚙️多视角（智能）","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"b568bd80-af5b-4b14-9b0e-bb7d90c9a62c","sourceIndex":40,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⚙️多视角（全局）","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"7733f4e2-ddda-45d9-af9f-5716acd5ad6b","sourceIndex":41,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"⚙️内心话","enabled":false,"role":"system","position":0,"depth":0,"order":0,"triggers":[],"originalId":"eb65ec28-14a7-401c-887a-e6e22c3295c9","sourceIndex":42,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"preset-20261105-meow-recall","name":"🧪历史回顾","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"42303fec-82ae-4ec4-96a8-4cd424d782e5","sourceIndex":43,"disposition":"独立写作条目"},
+    {"id":"","name":"----格式要求----","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"456c5c49-f1b4-4fc2-afc9-3a1851f1a20f","sourceIndex":44,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"},
+    {"id":"","name":"📏<game>标签（别关）","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"f65144f0-d39e-43e6-84e7-5c1d78a1a23d","sourceIndex":45,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"preset-20261105-meow-options","name":"📏行动选项","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"046af93d-0c63-4561-b0b2-052cd265fecd","sourceIndex":46,"disposition":"独立写作条目"},
+    {"id":"","name":"📏小总结","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3867af9e-9bad-4fdf-9ef8-83ca07d8c68e","sourceIndex":47,"disposition":"游戏资料 · 已保存的相关剧情和回忆；酒馆附加格式留在来源文件"},
+    {"id":"","name":"📏猫猫留言~","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"48863da8-9556-4f14-b5bf-1816e4d4207b","sourceIndex":48,"disposition":"酒馆扩展 · 源文件中的显示、脚本或外部工具"},
+    {"id":"","name":"📏其它格式","enabled":true,"role":"system","position":0,"depth":0,"order":0,"triggers":[],"originalId":"cb34b310-4802-4f79-8456-85e70aa55721","sourceIndex":49,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"【别关】","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"3df19ba7-b44d-4d46-b17a-de514d86e5d5","sourceIndex":50,"disposition":"游戏流程 · 本轮输入、规则结算和当前用途的输出协议；酒馆宏及外部状态格式留在来源文件"},
+    {"id":"","name":"长思考","enabled":true,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"91918c0a-bfc6-4101-9796-5421aab6fae8","sourceIndex":51,"disposition":"适配设置 · 当前模型的思考和预填充设置；源模型专用指令独立保留"},
+    {"id":"","name":"【勿删】版本信息","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"version_info","sourceIndex":null,"disposition":"源文件备选 · 保留原始开关、角色与位置"},
+    {"id":"","name":"SPreset配置","enabled":false,"role":"system","position":0,"depth":4,"order":100,"triggers":[],"originalId":"SPresetSettings","sourceIndex":null,"disposition":"来源说明 · 原文件中的章节、用法或独立创作模式"}
+  ]
 }

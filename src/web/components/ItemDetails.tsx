@@ -45,12 +45,18 @@ export default function ItemDetails({item,catalog=false,wearing=false}:{item:any
     {details.temporary&&<p className="economy-quote__reason">尚未带离险地。安全完成本次探索或赛事后，才能收入永久行囊。</p>}
     {details.bound&&<p className="muted">已与魂师绑定。</p>}
     {details.restraint&&<RestraintDetails device={details.restraint}/>}
+    {details.blueprintBook&&<PresetBlueprintStudy itemId={item.id} book={details.blueprintBook} catalog={catalog}/>}
     <PassiveDetails modifiers={details.modifiers} passive={details.passiveCombat}/>
     {details.passiveEffectGraph&&<AbilityDetails skill={{id:`item-defense:${item.id}`,name:item.type==='魂骨'?'魂骨庇护':'装备被动',category:item.type,sourceItemId:item.id,effectGraph:details.passiveEffectGraph}} presentation={details.passiveInfo}/>}
     {details.skills.map((skill:any)=><AbilityDetails key={skill.id} skill={skill}/>)}
 
-    {!details.skills.length&&['消耗品','工具','材料'].includes(item.type)&&<p className="muted">随身携带，可在相应探索与交易中使用。</p>}
+    {!details.restraint?.realm&&!details.skills.length&&['消耗品','工具','材料'].includes(item.type)&&<p className="muted">随身携带，可在相应探索与交易中使用。</p>}
   </div>;
+}
+
+function PresetBlueprintStudy({itemId,book,catalog}:{itemId:string;book:any;catalog:boolean}){
+ const {controller,view}=useGame(),feedback=useActionFeedback();
+ return <section aria-label="学习制作图纸"><p>成品品级：{book.grade.name}。学习后可在工坊按图制作，仍需准备相应材料。</p>{book.known?<p role="status">已经掌握这份制作图纸。</p>:catalog?<p>购买后可从行囊学习这张图纸。</p>:<><Button disabled={view.busy||!book.study.available} onClick={()=>void feedback.run(()=>controller.dispatch('world.intent',{type:'learn-preset-blueprint',itemId}))}>学习这张图纸</Button>{book.study.reason&&<p role="status">{book.study.reason}</p>}</>}<ActionError message={feedback.error} onDismiss={feedback.dismiss}/></section>;
 }
 
 const MEDICINE_OPERATIONS:Record<string,string>={'prepare-poisoned-serving':'混入一份食物','offer-disguised-drug':'伪装用途给药','coat-item':'涂覆一件物品','apply-contact-drug':'接触施药','direct-spray':'直接喷洒','release-toxic-cloud':'释放毒雾','touch-coated-item':'用涂层物品接触'};

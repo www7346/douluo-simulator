@@ -68,4 +68,5 @@
   ['碧海回声','人鱼','潮歌守庭','笛声留在身边，海蓝音纹围成随行的光庭。身处其中的同伴在每次行动前得到新的护持。','展开为同伴刷新护盾的领域。','self',field(shield(2))]
  ],{combo:'听潮寻找战机，镇海曲稳定同伴；幽歌制造恐惧或魅惑，水镜与回声保证吹奏者和队伍能继续行动。'});
  const focused=globalThis.SoulYuehuaCatContent??require('./yuehua-cat-content.js');focused(h);
+ const witch=globalThis.SoulMengYiranContent??require('./meng-yiran-content.js');witch(h);
 });

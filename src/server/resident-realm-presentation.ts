@@ -43,13 +43,14 @@ export function residentRealmPresentation(state:any,input:{selectedPersonId?:str
      recovery:action('safe-point-recover'),recall:action('recall-resident'),
      deployOptions:['projection','body'].filter(mode=>r.profile.permanent||(mode==='projection'?r.profile.projectionPercent>0:r.profile.allowBody)).map(mode=>({mode,...action('deploy-resident',{mode})})),
     }:{};
-    const projectionPolicy=rules.combatDeployments.projectionTerms(state,{realm:rules.residentRealms.get(state,r.id),slot});
+    const deployment=rules.combatDeployments.active(state).find((d:any)=>d.prototypeId===slot.personId);
+    const projectionPolicy=deployment?.proof?.projectionPolicy??rules.combatDeployments.projectionTerms(state,{realm:rules.residentRealms.get(state,r.id),slot});
     const changes=rules.obedience.table(state).events.filter((e:any)=>e.subjectId===p.id&&e.authorityId===actorId);
     const today=Math.floor((globalThis as any).SoulPersonCore.now(state)/1440);
     const gainedToday=changes.filter((e:any)=>Math.floor(e.at/1440)===today).reduce((n:number,e:any)=>n+Math.max(0,e.delta??0),0);
     const kindness=(p.扩展?.善意往来??[]).filter((e:any)=>e.playerId===actorId).slice(-3);
     const recentCare=r.events.filter((e:any)=>e.targetId===p.id&&e.result?.attitude).at(-1);
-    return {...catalogSlot(slot),...options,kindness,gainedToday,lastObedience:changes.at(-1),recentCare:recentCare?{name:recentCare.result.name,...recentCare.result.attitude}:null,arrangement,effectiveRestrictions:Object.keys(rules.controls.restrictions(state,p.id).blocked),shame:{value:rules.personShame.value(state,p.id)},deployment:structuredClone(rules.combatDeployments.active(state).find((d:any)=>d.prototypeId===slot.personId)??null),communication:communicationAvailability(state,p.id),projectionPolicy,projectionPercent:projectionPolicy?.percent??r.profile.projectionPercent,agreements:details?rules.performanceAgreements.facts(state,actorId).filter((a:any)=>a.subjectId===slot.personId).map((a:any)=>({...a,responseReason:rules.performanceAgreements.responseReason(state,a)})):[],attitude:p.relationship?.player??0,realBodyThreshold:r.profile.realBodyThreshold,gender:p.gender,dead:p.status==='dead',regionId:member?.regionId??'',permissions:member?.limits??null,health:unit?.资源.生命,soulPower:unit?.资源.魂力};
+    return {...catalogSlot(slot),...options,kindness,gainedToday,lastObedience:changes.at(-1),recentCare:recentCare?{name:recentCare.result.name,...recentCare.result.attitude}:null,arrangement,effectiveRestrictions:Object.keys(rules.controls.restrictions(state,p.id).blocked),shame:{value:rules.personShame.value(state,p.id)},deployment:structuredClone(deployment??null),communication:communicationAvailability(state,p.id),projectionPolicy,projectionPercent:projectionPolicy?.percent??r.profile.projectionPercent,agreements:details?rules.performanceAgreements.facts(state,actorId).filter((a:any)=>a.subjectId===slot.personId).map((a:any)=>({...a,responseReason:rules.performanceAgreements.responseReason(state,a)})):[],attitude:p.relationship?.player??0,realBodyThreshold:r.profile.realBodyThreshold,gender:p.gender,dead:p.status==='dead',regionId:member?.regionId??'',permissions:member?.limits??null,health:unit?.资源.生命,soulPower:unit?.资源.魂力};
    })};
  });
  // Realm management projects its own residents. Outside capture targets remain

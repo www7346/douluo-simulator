@@ -11,6 +11,11 @@
 .soul-editor__section.exchange-builder fieldset { min-width:0; max-width:100%; }
 .soul-editor__chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }.soul-editor__chips button { background:#faf5e6; border:1px solid rgba(169,151,115,0.25); color:#3d352c; padding:8px 10px; cursor:pointer; font-size:12px; }
 .soul-editor__adder,.soul-editor__trait-adder { display:flex; gap:9px; }.soul-editor__adder select,.soul-editor__trait-adder select { flex:1; min-width:0; }.soul-editor__adder .button,.soul-editor__trait-adder .button { flex-shrink:0; }
+.soul-editor__directions { display:grid; gap:8px; margin-bottom:12px; min-width:0; }
+.soul-editor__directions article { display:flex; align-items:flex-start; gap:10px; padding:9px 11px; border:1px solid rgba(169,151,115,.25); border-radius:6px; }
+.soul-editor__directions article>div { flex:1; min-width:0; overflow-wrap:anywhere; }
+.soul-editor__directions p { margin:3px 0 0; font-size:12px; line-height:1.7; }
+.soul-editor__directions .button { flex-shrink:0; }
 .soul-editor__base { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }.soul-editor__base select { margin-top:8px; }
 .soul-editor__entries>div { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 0; font-size:12px; }
 .soul-editor__entries button { border:0; color:#6e6858; background:none; cursor:pointer; font-size:11px; }

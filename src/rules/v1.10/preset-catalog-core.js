@@ -1,7 +1,7 @@
 (function(root,factory){const api=factory(root);if(typeof module!=='undefined'&&module.exports)module.exports=api;if(root)root.SoulPresetCatalog=api;})(typeof globalThis!=='undefined'?globalThis:this,function(root){
  'use strict';
  const VERSION=1,CATEGORIES=Object.freeze(['武魂','魂技','魂导器','暗器','丹药','毒药','魂兽','魂骨','拘束器','消耗品']);
- const FOUNDATION_COUNTS=Object.freeze({'武魂':30,'魂技':96,'魂导器':32,'暗器':12,'丹药':12,'毒药':12,'魂兽':40,'魂骨':12,'拘束器':10});
+ const FOUNDATION_COUNTS=Object.freeze({'武魂':50,'魂技':99,'魂导器':32,'暗器':21,'丹药':12,'毒药':12,'魂兽':40,'魂骨':12,'拘束器':10});
  const clone=v=>JSON.parse(JSON.stringify(v));
  const freeze=v=>{if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;};
  const get=(name,path)=>root?.[name]??(typeof require==='function'?require(path):null);
@@ -154,16 +154,20 @@
   const e=entryFor(id);if(!e)return {pass:false,errors:['未登记精品预设']};
   return verifyRecipe(e.category,rawRecipe(e,providers()),mechanics);
  }
- function verifyHistoricalRing(id,skill){
+ function historicalRingEntry(id,skill){
   const active=entryFor(id);
   if(active?.category==='魂技'&&active.artId===skill.artId&&verifySignature(id,skill).pass){
     const gates=inferGates(active,providers());
-    if(skill.ringOrdinal>=gates.minimumRingOrdinal&&skill.ageYears>=gates.minimumYears)return true;
+    if(skill.ringOrdinal>=gates.minimumRingOrdinal&&skill.ageYears>=gates.minimumYears)return active;
   }
   const archive=root.SoulArchivedRingContracts??(typeof require==='function'?require('./archived-ring-contracts.js'):null);
-  const prior=archive?.recipes[archive.byId[id]];
-  return !!prior&&prior.artId===skill.artId&&skill.ringOrdinal>=prior.minimumRingOrdinal&&skill.ageYears>=prior.minimumYears&&verifyRecipe('魂技',prior.recipe,skill).pass;
+  for(const index of archive?.byId[id]??[]){const prior=archive.recipes[index];
+   if(prior&&prior.artId===skill.artId&&skill.ringOrdinal>=prior.minimumRingOrdinal&&skill.ageYears>=prior.minimumYears&&verifyRecipe('魂技',prior.recipe,skill).pass)return {...prior,gates:prior.gates??{minimumYears:prior.minimumYears,minimumRingOrdinal:prior.minimumRingOrdinal,requiredChannels:[],requiredAttributes:[]}};
+  }
+  return null;
  }
+ function verifyHistoricalRing(id,skill){return !!historicalRingEntry(id,skill);}
+ function verifiedRingGates(id,skill){const entry=historicalRingEntry(id,skill);if(!entry)throw Error('魂技缺少有效的已付来源合同');return inferGates(entry,providers());}
  function verifyRecipe(category,recipe,mechanics){
   const p=providers(),r=recipe.requestedSkills?.length===1?recipe.requestedSkills[0]:recipe,errors=strictSignature(r,mechanics,p),graph=mechanics.effectGraph??mechanics.graph;
   if(r.requestedBranches?.length){
@@ -182,5 +186,5 @@
   return {pass:!errors.length,errors};
  }
  function verifyRequestedSignature(recipe,skill){const errors=skill?strictSignature(recipe,skill,providers()):['缺少登记能力'];return {pass:!errors.length,errors};}
- const api={indexFor,presentation,VERSION,CATEGORIES,FOUNDATION_COUNTS,registerCanonicalEntries,list,get:entryFor,request,compile,quote,feasibility:compile,routeFor,select,validate,itemTemplates,verifySignature,verifyHistoricalRing,verifyRequestedSignature,gates:id=>{const entry=entryFor(id);if(!entry)throw Error('精品预设不存在');return inferGates(entry,providers());}};Object.defineProperty(api,'ENTRIES',{enumerable:true,get:entries});Object.defineProperty(api,'BY_ID',{enumerable:true,get:()=>Object.fromEntries(entries().map(e=>[e.id,e]))});return Object.freeze(api);
+ const api={indexFor,presentation,VERSION,CATEGORIES,FOUNDATION_COUNTS,registerCanonicalEntries,list,get:entryFor,request,compile,quote,feasibility:compile,routeFor,select,validate,itemTemplates,verifySignature,verifyHistoricalRing,verifiedRingGates,verifyRequestedSignature,gates:id=>{const entry=entryFor(id);if(!entry)throw Error('精品预设不存在');return inferGates(entry,providers());}};Object.defineProperty(api,'ENTRIES',{enumerable:true,get:entries});Object.defineProperty(api,'BY_ID',{enumerable:true,get:()=>Object.fromEntries(entries().map(e=>[e.id,e]))});return Object.freeze(api);
 });

@@ -2,6 +2,7 @@ import {playerDescription} from '../../runtime/player-copy';
 import {useEffect,useRef,useState} from 'react';
 import {Button,ModalActions} from '../components';
 import {useGame} from '../game-context';
+import {sendMessageOnEnter} from '../message-enter';
 import {blankResearchDiscussion,type ResearchDesignDiscussion} from '../../shared/research-design-discussion';
 import type {ResearchWorkspace} from '../../runtime/research-workbench';
 import AbilityDetails,{PassiveDetails} from './AbilityDetails';
@@ -32,11 +33,13 @@ export default function ResearchDesignAdvisor({draft,materials,onAdopt,flush,own
   catch(e){if(live.current)setError((e as Error).message);}finally{if(live.current)setWorking(false);}
  };
  const blocked=working||loading||view.busy;
+ const canConsult=!blocked&&view.modelEnabled&&(!!discussion.pending||!!discussion.request.trim()&&discussion.exchanges.length<20);
+ const send=()=>{if(canConsult)void consult();};
  return <section className="research-design-advisor" aria-label="制作前主持人设计">
   <h3>设计{category}图纸</h3><p>描述用途和外形，讨论方案后再投入材料试制。定稿后获得图纸及一件样品。</p>
-  <label>作品构想<textarea rows={3} maxLength={4000} value={discussion.request} disabled={blocked||!!discussion.pending} placeholder="例如：设计一件能修复装备的随身魂导器，并说明使用代价。" onChange={event=>remember({...latest.current,request:event.target.value})}/></label>
+  <label>作品构想<textarea rows={3} maxLength={4000} onKeyDown={e=>sendMessageOnEnter(e,send)} enterKeyHint="send" value={discussion.request} disabled={blocked||!!discussion.pending} placeholder="例如：设计一件能修复装备的随身魂导器，并说明使用代价。" onChange={event=>remember({...latest.current,request:event.target.value})}/></label>
   <label className="workshop-option"><input type="checkbox" checked={ownedOnly} disabled={blocked||!!discussion.pending} onChange={e=>onOwnedOnly(e.target.checked)}/>仅用现有可用材料</label><label>方案目标<select value={goal} disabled={blocked||!!discussion.pending} onChange={e=>onGoal(e.target.value as 'purpose'|'value')}><option value="purpose">优先满足我的用途</option><option value="value">优先成品估值</option></select></label>
-  <div className="field-actions"><Button disabled={blocked||!view.modelEnabled||(!discussion.pending&&(!discussion.request.trim()||discussion.exchanges.length>=20))} onClick={()=>void consult()}>{discussion.pending?.notStarted?'连接恢复后继续原设计':discussion.pending?'取回原设计答复':working?'主持人正在设计…':'生成方案'}</Button>{working&&<Button variant="ghost" onClick={()=>{abort.current?.abort();if(view.modelTask)controller.cancelModelTask(view.modelTask.id);}}>停止构思</Button>}{discussion.pending&&!discussion.pending.notStarted&&!working&&<Button variant="secondary" disabled={!view.modelEnabled} onClick={()=>void consult(true)}>重新发起设计</Button>}</div>
+  <div className="field-actions"><Button disabled={!canConsult} onClick={send}>{discussion.pending?.notStarted?'连接恢复后继续原设计':discussion.pending?'取回原设计答复':working?'主持人正在设计…':'生成方案'}</Button>{working&&<Button variant="ghost" onClick={()=>{abort.current?.abort();if(view.modelTask)controller.cancelModelTask(view.modelTask.id);}}>停止构思</Button>}{discussion.pending&&!discussion.pending.notStarted&&!working&&<Button variant="secondary" disabled={!view.modelEnabled} onClick={()=>void consult(true)}>重新发起设计</Button>}</div>
   {discussion.exchanges.length>=20&&!discussion.pending&&<p>本轮讨论已满，可以先采用候选，或清空本品类讨论重新构思。</p>}
   {!view.modelEnabled&&<p>请先在设置中连接主持人；构想会保留。</p>}
   {discussion.pending?.notStarted&&!working&&<p>本次设计尚未发送，原构想与用料仍保留。继续原设计会先恢复连接，再提交原请求。</p>}

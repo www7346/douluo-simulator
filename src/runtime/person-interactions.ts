@@ -12,7 +12,7 @@ export function personInteractions(state:any,input:Record<string,any>){
  const canonical=rules.arena.CHARACTER_CATALOG[input.characterId],name=person?.name??canonical?.name;
  const meeting=storyMeetingAvailability(state,input.characterId);
  const communication=person?communicationAvailability(state,personId):{available:meeting.available,mode:'in-person',reason:meeting.reason||'尚未当面相识',contactId:null,channel:undefined};
- const realmContact=communication.channel?.kind==='realm';
+ const realmContact=communication.mode==='realm'||communication.mode==='projection';
  const block=(realmContact?rules.world.worldActionBlockReason(state,conversationActivityOptions(state,personId)):communication.mode==='in-person'?meeting.reason:rules.world.worldActionBlockReason(state,{allowCaptivity:true,allowContained:rules.sealing.isAwakeContained(state,state.角色?.主控单位ID)}))||(!communication.available?communication.reason||'这位人物目前不在此处':'');
  const member=rules.world.partyMembers(state).find((m:any)=>m.personId===personId),join=rules.world.partyJoinAvailability(state,personId,'long-term',!!soulContact(state,personId));
  const actions=[
@@ -25,5 +25,5 @@ export function personInteractions(state:any,input:Record<string,any>){
   const item=state.物品.实例[id];if(!item)return [];
   const options=medicineActionOptions(state,item,viewer);return options?[{id,name:item.name??item.名称,options}]:[];
  });
- return {combat:{spar,duel,experience:rules.arena.previewSparExperience(state,input.characterId)},medicineItems,personId,characterId:input.characterId,name:person?rules.disguise.presentation(state,personId,state.角色.主控单位ID).name:name,registered:!!person,communication,block,member:member??null,actions};
+ return {attitude:relation.score,combat:{spar,duel,experience:rules.arena.previewSparExperience(state,input.characterId)},medicineItems,personId,characterId:input.characterId,name:person?rules.disguise.presentation(state,personId,state.角色.主控单位ID).name:name,registered:!!person,communication,block,member:member??null,actions};
 }

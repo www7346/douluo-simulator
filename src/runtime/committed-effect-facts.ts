@@ -78,6 +78,8 @@ export function compileCommittedEffect(effect:Record<string,any>,actorId:string,
  if(has('movedUnitId'))record('实际位置变化',['movedUnitId','from','to'],effect.movedUnitId);
  if(has('zoneId'))record('区域实例结果',['zoneId','location','remainingRounds']);
  if(has('domainId'))record('领域实例结果',['domainId','location','remainingRounds','durationMode','replacedDomainIds','centerMode','radius','strength','dominanceDie','dominanceTotal','state','suppressorIds']);
+ record('召唤物的天生招式',['innateSkillsByUnit'],actorId);
+ record('侦察见闻',['report'],actorId);
  record('召唤出的单位及继承技能',['nodeId','summonedUnitIds','inheritedSkillsByUnit'],actorId);
  record('实际复制的技能',['sourceUnitId','copiedSkillIds'],actorId);
  record('已被打断的技能',['counteredSkillId'],actorId);

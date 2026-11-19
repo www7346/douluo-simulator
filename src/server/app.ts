@@ -1,7 +1,7 @@
 import {BrowserModelConnections} from './browser-model-connections';
 import {createServer,type IncomingMessage,type ServerResponse} from 'node:http';
 import {randomBytes,randomUUID} from 'node:crypto';
-import {gzipSync} from 'node:zlib';
+import {gzipSync,createGunzip} from 'node:zlib';
 import {CLOUD_PROTOCOL,CloudError,CLIENT_RESULT_FAILURE_CODES,CLIENT_RESULT_FAILURE_STAGES} from '../cloud/protocol';
 import {assertJson,INPUT_LIMITS,PUBLIC_COMMANDS} from './input';
 import {CalculationPool} from './worker-pool';
@@ -41,17 +41,25 @@ export async function createCloudServer(options:CloudServerOptions){
   }
   async function body(req:IncomingMessage,max:number,kind:'command'|'snapshot'|'query'='command'){
     if(!String(req.headers['content-type']).startsWith('application/json'))throw new CloudError('content-type','请求格式不受支持',415);
-    if(req.headers['content-encoding'])throw new CloudError('content-encoding','请求编码不受支持',415);
+    const compressed=kind==='snapshot'&&req.headers['content-encoding']==='gzip';
+    if(req.headers['content-encoding']&&!compressed)throw new CloudError('content-encoding','请求编码不受支持',415);
     const declared=req.headers['content-length']===undefined?max:Number(req.headers['content-length']);
     if(!Number.isSafeInteger(declared)||declared<0||declared>max)throw new CloudError('input-limit','本次内容超过传输上限',413);
-    if(receivingBytes+declared>128*1024*1024)throw new CloudError('service-busy','服务正在读取其他旅程，请稍后重试',503);
-    receivingBytes+=declared;
+    const reserved=compressed?INPUT_LIMITS.snapshotBytes:declared;
+    if(receivingBytes+reserved>128*1024*1024)throw new CloudError('service-busy','服务正在读取其他旅程，请稍后重试',503);
+    receivingBytes+=reserved;
+    const decoder=compressed?createGunzip():undefined;
+    const interrupted=()=>decoder?.destroy(new CloudError('connection-lost','请求传输中断，本机进度仍保留',400));
+    let encodedBytes=0;
+    const countEncoded=(chunk:Buffer)=>{encodedBytes+=chunk.length;if(encodedBytes>declared||encodedBytes>max)decoder?.destroy(new CloudError('input-limit','本次内容超过传输上限',413));};
+    if(decoder){req.once('aborted',interrupted);req.on('data',countEncoded);}
     try{
       const chunks:Buffer[]=[];let bytes=0;
-      for await(const chunk of req){bytes+=chunk.length;if(bytes>declared||bytes>max)throw new CloudError('input-limit','本次内容超过传输上限',413);chunks.push(chunk);}
+      try{for await(const chunk of decoder?req.pipe(decoder):req){bytes+=chunk.length;if(bytes>max||!compressed&&bytes>declared)throw new CloudError('input-limit','本次内容超过传输上限',413);chunks.push(chunk);}}
+      catch(error){if(error instanceof CloudError)throw error;throw new CloudError('invalid-json','请求内容不完整',400);}
       try{const value=JSON.parse(Buffer.concat(chunks).toString('utf8'));assertJson(value,max,kind);return value;}
       catch(error){if(error instanceof CloudError)throw error;throw new CloudError('invalid-json','请求内容不完整');}
-    }finally{receivingBytes-=declared;}
+    }finally{if(decoder){req.off('aborted',interrupted);req.off('data',countEncoded);req.unpipe(decoder);decoder.destroy();req.resume();}receivingBytes-=reserved;}
   }
   function reply(req:IncomingMessage,res:ServerResponse,status:number,payload:unknown){
     let bytes=Buffer.from(JSON.stringify(payload));

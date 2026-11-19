@@ -1,3 +1,5 @@
+import {issueWorkflowTicket} from './workflow-ticket';
+import {requestEvolutionDecision} from './evolution-advisor';
 import {runPersonContractResponseWorkflow,runPersonContractOrderWorkflow} from './person-contract-workflow';
 import {runPerformanceAgreementResponseWorkflow} from './person-performance-agreement-workflow';
 import {runPersonGrowthWorkflow,runPersonGrowthAllocationWorkflow} from './person-growth-workflow';
@@ -32,6 +34,7 @@ export async function runPersonWorldWorkflow(snapshot:GameSnapshot,worldId:strin
  if(next.kind==='story-social'){const r=await runCommitmentWorkflow(snapshot,worldId,next.input,gateway,secret,signal);return {ticket:r.ticket,value:{pending:true}};}
  if(next.kind==='story-autonomy'){const r=await runNpcAutonomyWorkflow(snapshot,worldId,next.input,gateway,secret,signal);return {ticket:r.ticket,value:{pending:true}};}
  if(next.kind==='person-performance-agreement'){const r=await runPerformanceAgreementResponseWorkflow(snapshot,worldId,next.input,gateway,secret,signal);return {ticket:r.ticket,value:{pending:true}};}
+ if(next.kind==='evolution-response'){return {ticket:issueWorkflowTicket(secret,worldId,snapshot,{type:'person.respond-evolution',payload:await requestEvolutionDecision(gateway,snapshot.state,next.input.planId,signal)}),value:{pending:true}};}
  if(next.kind==='person-growth'){const r=await runPersonGrowthWorkflow(snapshot,worldId,next.input,gateway,secret,signal);return {ticket:r.ticket,value:{pending:true}};}
  if(next.kind==='person-growth-allocation'){const r=await runPersonGrowthAllocationWorkflow(snapshot,worldId,next.input,gateway,secret,signal);return {ticket:r.ticket,value:{pending:true}};}
  if(next.kind==='person-conversation'){const r=await runPersonConversationWorkflow(snapshot,worldId,next.input,gateway,secret,signal);return {ticket:r.ticket,value:{pending:true}};}

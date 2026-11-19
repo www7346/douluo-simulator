@@ -22,14 +22,14 @@ export async function reviewDesignAuthority(gateway:ModelGateway,args:{task:stri
 }
 /** Exactly one semantic correction, keeping the first rejected candidate and
  * the same compiler context. A remaining disagreement never adopts a design. */
-export async function checkedDesign<T>(gateway:ModelGateway,args:{task:string;messages:ChatMessage[];read:(value:unknown)=>T;review:(value:T,budget:ModelRecoveryBudget)=>Promise<DesignConflict[]>;signal?:AbortSignal;repairValidation?:boolean|((error:unknown)=>boolean)}){
+export async function checkedDesign<T>(gateway:ModelGateway,args:{task:string;messages:ChatMessage[];correctionBase?:()=>ChatMessage[];read:(value:unknown)=>T;review:(value:T,budget:ModelRecoveryBudget)=>Promise<DesignConflict[]>;signal?:AbortSignal;repairValidation?:boolean|((error:unknown)=>boolean)}){
  const budget=gateway.recoveryBudget??new ModelRecoveryBudget();
  let raw:unknown;
  const obtain=(messages:ChatMessage[])=>gateway.structured(messages,value=>{raw=structuredClone(value);return args.read(value);},{task:args.task,signal:args.signal,recoveryBudget:budget,repairValidation:args.repairValidation});
  let result=await obtain(args.messages),conflicts=await args.review(result,budget);
  if(conflicts.length){
   budget.consume('design-repair');
-  const repair=[...args.messages,{role:'assistant' as const,content:JSON.stringify(raw)},promptDataMessage({kind:'design-correction',authority:conflicts[0].authority,conflicts:conflicts.map(({authority,...issue})=>issue),instruction:'依据相同玩家意图、预算与代码作用说明修正这些文字或对应选择。提案尚未采用，返回完整原协议JSON。'},{instruction:'design-repair'})];
+  const repair=[...(args.correctionBase?.()??args.messages),{role:'assistant' as const,content:JSON.stringify(raw)},promptDataMessage({kind:'design-correction',authority:conflicts[0].authority,conflicts:conflicts.map(({authority,...issue})=>issue),instruction:'依据相同玩家意图、预算与代码作用说明修正这些文字或对应选择。提案尚未采用，返回完整原协议JSON。'},{instruction:'design-repair'})];
   result=await obtain(repair);conflicts=await args.review(result,budget);
   if(conflicts.length)throw new ModelGatewayError('invalid-response','创建说明仍与实际方案不符，尚未采用；请调整构想后重试。');
  }

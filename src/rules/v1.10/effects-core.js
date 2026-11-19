@@ -64,6 +64,8 @@
     return hash >>> 0;
   };
   function effectPolarity(effectId, params = {}) {
+    if(['reaction.interpose','payload.recon'].includes(effectId))return 'beneficial';
+    if(effectId==='move.pull'&&params.援护牵引)return 'beneficial';
     if (effectId === 'status.buff') return Number(params?.数值 ?? 1) < 0 ? 'harmful' : 'beneficial';
     if (effectId === 'status.resistance_shift') return params?.模式 === '易伤' ? 'harmful' : 'beneficial';
     if (HARMFUL_EFFECT_IDS.has(effectId)) return 'harmful';
@@ -98,9 +100,11 @@
   // (current charges/resources) is never a price input.
   const OPTIONAL_EFFECT_PARAMETERS=Object.freeze({
     'trigger.contract':{处罚方式:['单项','组合']},
-    'payload.damage':{事件槽:[1,8],发动魂力:[0,999],定额发动:[true,false],领域触发:['展开','回合开始'],引爆状态:['灼烧','中毒'],状态来源:['自身','自身与所属召唤'],消耗状态:[true,false]},
-    'payload.shield':{发动魂力:[0,999],定额发动:[true,false]},
+    'payload.damage':{加骰条件:['减速或束缚','生命比例'],生命阈值:[1,99],追加骰数:[1,12],追加骰面:[4,12],追加加值:[0,60],事件槽:[1,8],发动魂力:[0,999],定额发动:[true,false],领域触发:['展开','回合开始'],引爆状态:['灼烧','中毒'],状态来源:['自身','自身与所属召唤'],消耗状态:[true,false]},
+    'move.pull':{援护牵引:[true,false]},
+    'payload.shield':{护盾回合:[1,6],发动魂力:[0,999],定额发动:[true,false]},
     'payload.cleanse':{发动魂力:[0,999],定额发动:[true,false]},
+    'payload.heal':{附加悟性:[true,false],领域触发:['回合开始']},
     'target.allies':{每目标魂力:[1,20]},
     'target.single':{沿用首目标:[true,false]},
     'status.bind':{命中后抵抗:[true,false],抵抗属性:['力量','身法','体魄','悟性','感知','意志']},
@@ -110,16 +114,42 @@
     'status.amplify':{作用范围:['同源武魂'],伤害属性:['火','冰','雷','水','风','土','光','暗','物理','精神','灵魂','毒蚀','生命','死亡','空间','阴','阳'],叠加方式:['同源相加']},
     'move.flight':{持续方式:['来源维持']},
     'move.step':{发动魂力:[0,999],定额发动:[true,false]},
-    'domain.field':{持续方式:['来源维持'],发动魂力:[0,999],定额发动:[true,false]},
+    'domain.field':{触发次数:[1,12],定点守卫:[true,false],持续方式:['来源维持'],发动魂力:[0,999],定额发动:[true,false]},
     'status.battle_resource':{名称:['归乡回响','战斗蓄能','战意','印记']},
-    'target.burst':{本人优先:[true,false],落点:['自身'],覆盖全部:[true,false]},
-    'summon.entity':{魂力分配:[0,9999],继承环序上限:[1,9],离散缩放:['不放大','向下取整最少1'],同源继承:[true,false],固定继承:[true,false],最大同时存在:[1,3],范围减伤百分比:[0,50],发动魂力:[0,999],定额发动:[true,false]},
+    'target.burst':{以友方为中心:[true,false],本人优先:[true,false],落点:['自身'],覆盖全部:[true,false]},
+    'summon.entity':{接受指令:[true,false],魂力分配:[0,9999],继承环序上限:[1,9],离散缩放:['不放大','向下取整最少1'],同源继承:[true,false],固定继承:[true,false],最大同时存在:[1,3],范围减伤百分比:[0,50],发动魂力:[0,999],定额发动:[true,false]},
     'transform.martial_avatar':{持续方式:['本场战斗'],同源伤害增幅百分比:[0,100],同源射程增幅:[0,2],同源范围增幅:[0,2],范围魂环序号:[1,9],召唤技能效果倍率:[20,100],精神防护加值:[0,4],同源启动减耗百分比:[0,50],同源维持减耗百分比:[0,50],发动魂力:[0,999],定额发动:[true,false],同源命中加值:[0,10],同源难度加值:[0,10],冷却起点:['结束']},
     'sustain.maintain':{计费方式:['逐目标'],启动魂力:[1,20],维持距离区:[1,4],发动魂力:[0,999],定额发动:[true,false],冷却起点:['结束']},
     'status.invulnerable':{持续方式:['来源维持','来源下回合'],发动魂力:[0,999],高阶抵挡次数:[1,9],低阶转盾百分比:[0,100],护盾上限百分比:[1,100]}
   });
+  const INNATE_EFFECTS=Object.freeze(['target.self','target.single','release.touch','release.melee','release.projectile','check.physical_attack','check.soul_attack','check.save','payload.damage','payload.shield','payload.heal','payload.recon','status.mark','status.slow','move.knockback','reaction.interpose']);
   const BATTLE_EVENT_KINDS=Object.freeze(['charges-created','action-hit','action-release','confluence']);
   function checkedStructuredParameter(effectId,key,value){
+    if(effectId==='summon.entity'&&key==='显形名'){
+      if(typeof value!=='string'||!value.trim()||value.length>20)throw Error('召唤形态名称须为1至20字');
+      return value.trim();
+    }
+    if(effectId==='summon.entity'&&key==='天生招式'){
+      // Price and execute the same normalized child graph. Only bounded terminal
+      // payloads enter this vocabulary; a child cannot create another actor.
+      if(!Array.isArray(value)||!value.length||value.length>3)throw Error('天生招式须为1至3项');
+      const names=new Set();
+      return value.map(row=>{
+        if(!row||typeof row.名称!=='string'||!row.名称.trim()||row.名称.length>20||names.has(row.名称.trim())||Object.keys(row).some(k=>!['名称','魂力','冷却','节点'].includes(k)))throw Error('天生招式名称或字段无效');
+        names.add(row.名称.trim());
+        if(!Number.isInteger(row.魂力)||row.魂力<0||row.魂力>40||!Number.isInteger(row.冷却)||row.冷却<0||row.冷却>8||!Array.isArray(row.节点)||!row.节点.length||row.节点.length>7)throw Error('天生招式消耗、冷却或节点数量无效');
+        for(const spec of row.节点){
+          if(!Array.isArray(spec)||spec.length!==2||!INNATE_EFFECTS.includes(spec[0])||!spec[1]||typeof spec[1]!=='object'||Array.isArray(spec[1]))throw Error('天生招式只能组合已登记的基本主动效果');
+          for(const [k,v] of Object.entries(spec[1]))if(!Object.hasOwn(EFFECT_REGISTRY[spec[0]].parameterBounds,k)||!effectParameterAllowed(spec[0],k,v))throw Error('天生招式含未登记或越界参数：'+k);
+        }
+        const graph=makeLinearGraph(row.节点),report=validateGraph(graph,{ageTier:'千年',mechanismCap:'进阶'});
+        if(!report.pass)throw Error('天生招式：'+report.errors.join('；'));
+        if(graph.nodes.filter(n=>n.family==='targeting').length!==1||['release','check'].some(family=>graph.nodes.filter(n=>n.family===family).length>1))throw Error('天生招式需要一个明确目标和一条施放路径');
+        const terminal=graph.nodes.filter(n=>['payload','status','movement','reaction'].includes(n.family));
+        if(!terminal.length||terminal.length>3||terminal.some(n=>effectPolarity(n.effectId,n.params)==='harmful')&&!graph.nodes.some(n=>n.family==='check'))throw Error('天生招式攻击须有独立检定');
+        return clone(row);
+      });
+    }
     if(effectId==='status.amplify'&&key==='成长序列'){
       if(!Array.isArray(value)||value.length!==9||value.some(v=>!Number.isInteger(v)||v<0||v>100)||value.some((v,i)=>i&&v<value[i-1]))throw Error('增幅成长须为九个递增或持平的整数（0至100）');
       return clone(value);
@@ -150,9 +180,13 @@
       const value=p[key],numeric=bounds.length===2&&bounds.every(Number.isFinite);
       if(numeric?!Number.isInteger(value)||value<bounds[0]||value>bounds[1]:!bounds.includes(value))throw Error(`效果参数越界：${effectId}/${key}`);
     }
-    for(const key of ['继承技能ID','事件规则','伪装模板','成长序列'])if(Object.hasOwn(p,key)){
+    for(const key of ['继承技能ID','天生招式','显形名','事件规则','伪装模板','成长序列'])if(Object.hasOwn(p,key)){
       if(checkedStructuredParameter(effectId,key,p[key])===undefined)throw Error(`效果参数未登记：${effectId}/${key}`);
     }
+    if(effectId==='payload.damage'&&['加骰条件','生命阈值','追加骰数','追加骰面','追加加值'].some(k=>Object.hasOwn(p,k))){
+      if(!p.加骰条件||!p.追加骰数||!p.追加骰面||(p.加骰条件==='生命比例')!==Object.hasOwn(p,'生命阈值'))throw Error('条件加骰须指定触发条件、骰数和骰面，生命比例须指定阈值');
+    }
+    if(effectId==='domain.field'&&p.定点守卫&&(p.跟随施术者!==false||!p.触发次数||p.持续方式==='来源维持'))throw Error('定点守卫需要固定位置、有限次数和回合期限');
     if(p.定额发动===true&&!Number.isInteger(p.发动魂力))throw Error('定额发动须声明完整魂力费用');
     if(effectId==='payload.damage'&&(p.状态来源!==undefined||p.消耗状态!==undefined)&&!p.引爆状态)throw Error('状态引爆须声明实际状态条件');
     if(effectId==='status.amplify'&&p.叠加方式==='同源相加'&&p.作用范围!=='同源武魂')throw Error('同源加算须限定本来源武魂');
@@ -323,13 +357,15 @@
     }),
     'transform.form': effect({family: 'transform', displayName: '形态变化', baseCost: 188, executor: 'transformForm', mechanismLevel: '进阶', minimumAgeTier: '千年', sourceTags: ['变身', '石化', '复制'], expressionTags: ['变身', '形态'], parameterBounds: {属性加值: [0, 8], 持续回合: [1, 6], 形态: ['强化形态', '兽形', '元素形态', '石化', '复制形态']}, duration: '固定回合', stacking: '不同来源独立，同形态生效取最高', cleanup: '持续结束、来源失能或驱散'}),
     'transform.martial_avatar': effect({family: 'transform', displayName: '武魂真身', baseCost: 280, executor: 'transformMartialAvatar', mechanismLevel: '强力', minimumAgeTier: '万年', sourceTags: ['武魂', '血脉', '真身'], expressionTags: ['武魂真身', '同源强化'], parameterBounds: {属性增幅档: [0, 4], 身心防御加值: [0, 4], 基础动作增幅: [0, 4], 同源魂技增幅: [0, 4], 持续回合: [2, 6], 锁定魂力: [8, 30], 每回合魂力: [2, 15], 禁用其他武魂: [true, false]}, parameterDefaults: {属性增幅档: 2, 身心防御加值: 2, 基础动作增幅: 2, 同源魂技增幅: 2, 持续回合: 3, 锁定魂力: 12, 每回合魂力: 5, 禁用其他武魂: true}, duration: '本场战斗、主动解除或维持中断', stacking: '每单位仅一个；同武魂每场一次', cleanup: '死亡、失能、维持中断、战斗结束或主动解除'}),
+    'reaction.interpose':effect({family:'reaction',displayName:'代挡单体攻击',executor:'registerReaction',baseCost:65,minimumAgeTier:'百年',allowedContexts:['battle'],sourceTags:['守护','甲壳','防御'],expressionTags:['护盾','守护','防御'],parameterBounds:{距离区:[1,2],次数:[1,3],持续回合:[1,4]},duration:'指定回合或次数耗尽',cleanup:'来源失能、驱散或战斗结束'}),
+    'payload.recon':effect({family:'payload',displayName:'侦察回传',executor:'recon',baseCost:38,minimumAgeTier:'百年',allowedContexts:['field'],sourceTags:['侦察','感知','视觉'],expressionTags:['感知','视野','追踪'],parameterBounds:{道路距离:[0,1],最大情报:[1,4]}}),
     'reaction.counter': effect({family: 'reaction', displayName: '反制', baseCost: 224, executor: 'registerReaction', mechanismLevel: '强力', minimumAgeTier: '万年', sourceTags: ['反制', '干扰', '守护'], expressionTags: ['反应', '打断'], parameterBounds: {次数: [1, 3], 强度: [1, 6], 持续回合: [1, 6]}, parameterDefaults: {持续回合: 2}, duration: '固定回合或次数耗尽', stacking: '不同来源独立', cleanup: '持续结束、次数耗尽、来源失能或驱散'}),
     'reaction.reflect': effect({family: 'reaction', displayName: '反弹吸收转化', baseCost: 24, executor: 'registerReaction', sourceTags: ['反弹', '守护', '不动', '神圣'], expressionTags: ['反射', '吸收', '转化'], parameterBounds: {次数: [1, 9], 反射百分比: [0, 100], 最大距离区: [0, 4], 最大攻击魂技序号: [0, 9], 吸收转护盾百分比: [0, 100], 吸收转魂力百分比: [0, 100], 持续回合: [1, 6]}, parameterDefaults: {次数: 1, 反射百分比: 50, 最大距离区: 1, 最大攻击魂技序号: 0, 吸收转护盾百分比: 0, 吸收转魂力百分比: 0, 持续回合: 2}, duration: '固定回合或次数耗尽', stacking: '不同来源独立', cleanup: '持续结束、次数耗尽、来源失能或驱散'}),
     'sustain.maintain': effect({family: 'sustain', displayName: '维持', baseCost: 44, executor: 'maintainEffect', sourceTags: ['持续', '领域', '控制'], expressionTags: ['持续', '维持'], parameterBounds: {锁定魂力: [0, 30], 每回合魂力: [0, 20]}, cleanup: '停止维持、失能或魂力不足'})
   }).map(([id,definition])=>{
     if(OPTIONAL_EFFECT_PARAMETERS[id])definition=Object.freeze({...definition,optionalParameterBounds:OPTIONAL_EFFECT_PARAMETERS[id]});
     if(id==='status.battle_resource')definition=Object.freeze({...definition,structuredParameterBounds:{事件规则:{minimum:1,maximum:16,事件:BATTLE_EVENT_KINDS,事件槽:[1,8],数量:[1,99,'实际']}}});
-    if(id==='summon.entity')definition=Object.freeze({...definition,structuredParameterBounds:{继承技能ID:{minimum:0,maximum:18,unique:true,type:'skill-id'}}});
+    if(id==='summon.entity')definition=Object.freeze({...definition,structuredParameterBounds:{显形名:{type:'text',maximumLength:20},天生招式:{type:'array',minimum:1,maximum:3,fields:['名称','魂力','冷却','节点'],allowedEffects:INNATE_EFFECTS},继承技能ID:{minimum:0,maximum:18,unique:true,type:'skill-id'}}});
     const penaltyPolicy={'payload.damage':'damage','payload.death':'instant','payload.soul_damage':'instant','status.power_seal':'power','status.buff':'negative-world','status.mute':'world'}[id];
     if(penaltyPolicy)definition=Object.freeze({...definition,contractPenaltyPolicy:penaltyPolicy});
     return [id,controlCore.PERSISTENT_STATUS_IDS.includes(id)?Object.freeze({...definition,parameterBounds:{...controlCore.DURATION_BOUNDS,...definition.parameterBounds},parameterDefaults:{...controlCore.DURATION_DEFAULTS,...definition.parameterDefaults}}):definition];
@@ -508,7 +544,7 @@
       result[key]=value;
     }
     const effectId=EFFECT_IDS_BY_TEMPLATE.get(template);
-    for(const key of ['继承技能ID','事件规则','伪装模板','成长序列'])if(Object.hasOwn(source,key)){const checked=checkedStructuredParameter(effectId,key,source[key]);if(checked!==undefined)result[key]=checked;}
+    for(const key of ['继承技能ID','天生招式','显形名','事件规则','伪装模板','成长序列'])if(Object.hasOwn(source,key)){const checked=checkedStructuredParameter(effectId,key,source[key]);if(checked!==undefined)result[key]=checked;}
     if (['payload', 'status', 'movement'].includes(template.family) && DOMAIN_FACTIONS.includes(source.领域阵营)) {
       result.领域阵营 = source.领域阵营;
     }
@@ -641,6 +677,8 @@
       if(p.叠加方式==='同源相加')cost+=20;
       return cost;
     }
+    if(effectId==='payload.damage'&&p.加骰条件)cost+=p.追加骰数*p.追加骰面*4+(p.追加加值??0)*6;
+    if(effectId==='move.pull'&&p.援护牵引)cost+=12;
     if(effectId==='payload.damage'&&p.引爆状态)cost+=30;
     if(effectId==='status.burn')cost+=Number(p.加值??0)*Number(p.持续回合??1)*3;
     if(effectId==='transform.martial_avatar')cost+=Number(p.同源范围增幅??0)*35;
@@ -701,8 +739,17 @@
     if(effectId==='status.desire')cost+=24*((p.强度??1)-1);
     if(effectId==='status.power_seal'&&p.封印对象==='装备与道具')cost+=180;
     if(effectId==='target.burst'&&p.本人优先)cost+=20;
+    if(effectId==='target.burst'&&p.以友方为中心&&p.阵营规则!=='友方')throw Error('友方中心需要友方范围');
     if(effectId==='payload.damage'&&p.事件槽!==undefined)cost+=8;
     if(effectId==='summon.entity'&&p.继承环序上限!==undefined)cost+=p.技能继承数量*12;
+    if(effectId==='summon.entity'&&p.天生招式){
+      const value=p.天生招式.reduce((sum,art)=>sum+art.节点.reduce((n,[id,params])=>n+calculateNodeCost(id,params),0),0);
+      cost+=p.数量*value;
+    }
+    if(effectId==='summon.entity'&&p.接受指令)cost+=20*p.数量;
+    if(effectId==='reaction.interpose')cost+=p.次数*24+(p.距离区-1)*24;
+    if(effectId==='payload.recon')cost+=p.道路距离*30+p.最大情报*6;
+    if(effectId==='domain.field'&&p.定点守卫)cost+=40+10*p.触发次数;
     if(effectId==='summon.entity'&&p.继承技能ID!==undefined)cost+=p.继承技能ID.length*12;
     if(effectId==='summon.entity'&&p.离散缩放==='向下取整最少1')cost+=20;
     if(effectId==='status.power_seal')cost+=(p.范围==='全部'?60:0)+(p.封印对象==='魂力'?50:0);
@@ -1057,7 +1104,7 @@
       for (const [key, value] of Object.entries(node.params ?? {})) {
         const bounds = template.parameterBounds[key]??OPTIONAL_EFFECT_PARAMETERS[node.effectId]?.[key];
         if(node.effectId==='status.amplify'&&key==='成长序列')continue;
-        if((node.effectId==='summon.entity'&&key==='继承技能ID')||(node.effectId==='status.battle_resource'&&key==='事件规则')||(node.effectId==='transform.disguise'&&key==='伪装模板'))continue;
+        if((node.effectId==='summon.entity'&&['继承技能ID','天生招式','显形名'].includes(key))||(node.effectId==='status.battle_resource'&&key==='事件规则')||(node.effectId==='transform.disguise'&&key==='伪装模板'))continue;
         if(key==='限制'&&node.effectId==='status.power_seal'&&node.params?.封印对象==='精细')continue;
         if (key === '领域阵营' && ['payload','status','movement'].includes(template.family) && DOMAIN_FACTIONS.includes(value)) continue;
         if (!Array.isArray(bounds)) { errors.push(`效果参数未登记：${node.effectId}/${key}`); continue; }
@@ -1149,6 +1196,10 @@
         for(const required of definition?.requires??[])if(!scopeNodes.some(other=>other.effectId===required))errors.push(`${definition.displayName}需要同一分支的${EFFECT_REGISTRY[required]?.displayName??required}`);
         for(const conflict of definition?.conflicts??[])if(scopeNodes.some(other=>other.effectId===conflict))errors.push(`${definition.displayName}不能与同一分支的${EFFECT_REGISTRY[conflict]?.displayName??conflict}组合`);
       }
+      if(scopeNodes.some(n=>n.effectId==='reaction.interpose')&&!scopeNodes.some(n=>n.effectId==='target.single'&&n.params.阵营规则==='友方'))errors.push('代挡须指定一名友方');
+      if(scopeNodes.some(n=>n.effectId==='payload.recon')&&!scopeNodes.some(n=>n.effectId==='target.self'))errors.push('侦察回报须由施术者本人接收');
+      if(scopeNodes.some(n=>n.effectId==='domain.field'&&n.params.定点守卫)&&(!scopeNodes.some(n=>n.effectId==='target.burst')||scopeNodes.some(n=>!['release','targeting','check','domain','payload','status','movement'].includes(n.family)||EFFECT_REGISTRY[n.effectId]?.allowedContexts?.every(c=>c!=='battle'))))errors.push('定点守卫须指定落点并使用战斗子效果');
+      if(scopeNodes.some(n=>n.effectId==='domain.field')&&scopeNodes.some(n=>['reaction.interpose','payload.recon'].includes(n.effectId)))errors.push('请将侦察或代挡独立成另一个用途');
       if(scopeNodes.some(n=>n.effectId==='domain.field')&&scopeNodes.some(n=>n.effectId==='transform.martial_avatar'))errors.push('武魂真身不能作为领域子效果');
       if(scopeNodes.some(n=>n.effectId==='transform.martial_avatar')&&(scopeNodes.filter(n=>n.family==='targeting').length!==1||!scopeNodes.some(n=>n.effectId==='target.self')))errors.push('武魂真身必须仅以施术者自身为目标');
       if(scopeNodes.some(n=>n.effectId==='status.amplify'||n.params?.持续方式==='来源维持')&&!scopeNodes.some(n=>n.effectId==='sustain.maintain'))errors.push('来源维持效果必须支付持续维持');
@@ -2353,7 +2404,7 @@
       nextTargetId = 'target.single';
       plan.bridgeByEffect[nextTargetId] = replacement.id;
     }
-    plan.nodes[targetIndex] = [nextTargetId,{...clone(targetParams ?? {}),阵营规则:factionRule,选择模式:policy === 'ally' ? '自动最低生命' : '主目标'}];
+    plan.nodes[targetIndex] = [nextTargetId,{...clone(targetParams ?? {}),阵营规则:factionRule,选择模式:branch.requestedEffects?.find(([id])=>id===nextTargetId)?.[1]?.选择模式??(policy === 'ally' ? '自动最低生命' : '主目标')}];
     if (!plan.nodes.some(([effectId]) => EFFECT_REGISTRY[effectId]?.family === 'release')&&!plan.nodes.some(([id,p])=>id==='target.burst'&&p?.落点==='自身')) {
       const release = bridges.flatMap(item => item.effectIds.map(effectId => ({item,effectId})))
         .filter(entry => EFFECT_REGISTRY[entry.effectId]?.family === 'release' && foundation.MARTIAL_SOUL_CORE.allowsEffect(martialSoul,entry.effectId,{}))
@@ -2820,8 +2871,12 @@
     const checked=validateGraph(graph,{ageTier:foundation.getAgeTier(beastProfile.年限).名称,mechanismCap:foundation.getAgeTier(beastProfile.年限).机制上限,budget:budget.usable,costContract:skill});if(!checked.pass)throw Error(checked.errors.join('；'));abilities.seal(skill);
     return {skillCount:1,skillLimit:1,minimumSkillBudget:0,skills:[skill],compatibility:clone(skill.compatibility),budget:{...budget,available:budget.usable,allocations:[budget.usable],spent,unallocated:budget.usable-spent,residualFallback:false,baseActionFallback:false}};
   }
-  function fixedRealmSkillMatches(skill,soul,profile){try{const expected=compileFixedRealmRing({martialSoul:soul,beastProfile:profile,ringOrdinal:skill.nativeCastRank,options:{skillId:skill.id,compatibility:skill.compatibility.ratio}}).skills[0];return abilities.verify(skill).pass&&Object.keys(abilities.mechanics(expected)).every(key=>abilities.hash(abilities.mechanics(skill)[key])===abilities.hash(abilities.mechanics(expected)[key]))&&abilities.hash(skill.budget)===abilities.hash(expected.budget);}catch{return false;}}
+  function fixedRealmSkillMatches(skill,soul,profile){try{const expected=compileFixedRealmRing({martialSoul:soul,beastProfile:profile,ringOrdinal:skill.nativeCastRank,options:{skillId:skill.id,compatibility:skill.compatibility.ratio}}).skills[0];const current=abilities.mechanics(expected),saved=abilities.mechanics(skill);
+    // Before the fixed court art was registered these sealed ring skills had no artId.
+    if(!Object.hasOwn(skill,'artId'))delete current.artId;
+    return abilities.verify(skill).pass&&Object.keys(current).every(key=>Object.hasOwn(saved,key)&&abilities.hash(saved[key])===abilities.hash(current[key]))&&abilities.hash(skill.budget)===abilities.hash(expected.budget);}catch{return false;}}
   function compileRingSkills({martialSoul, beastProfile, beastSkills = [], ringOrdinal = 1, options = {}, budgetContext}) {
+    if(options.evolutionTarget&&!budgetContext){const original=martialSoul,plan=globalThis.SoulEvolution.planRingExpression(original,options.evolutionTarget,beastProfile),bridges=resolveBridges(original,beastProfile,beastSkills),ratio=options.compatibility??(bridges.length?Math.min(1,.55+bridges.reduce((n,b)=>n+b.efficiency,0)*.18):.2),sourceBudget=calculateRingBudget(beastProfile,original,ratio),nextOptions={...options,compatibility:ratio};delete nextOptions.evolutionTarget;return compileRingSkills({martialSoul:plan.soul,beastProfile,beastSkills,ringOrdinal,options:nextOptions,budgetContext:{sourceBudget,expressionGrowth:plan.growth}});}
     if(fixedRealmPolicy(martialSoul))return compileFixedRealmRing({martialSoul,beastProfile,beastSkills,ringOrdinal,options});
     martialSoul=boonExpression(martialSoul,beastProfile);
     const bridges=resolveBridges(martialSoul,beastProfile,beastSkills);
@@ -2920,6 +2975,25 @@
     return modes.includes('contact')?['触及追击不能同时把接触目标设为施放前提；接触前提在追击之前检查。从非接触位置发动时，请用触及释放表示追击后的接触，并重新核对条件与费用。']:[];
   }
 
+  // New authored designs share these guards across rings and devices. They do
+  // not reprice or rewrite frozen skills already present in a saved world.
+  const DESIGN_BALANCE_POLICY=Object.freeze({maximumSustainedReduction:75});
+  function designBalanceErrors(skill){
+    if(!skill?.effectGraph)return [];
+    const errors=[],nodes=skill.effectGraph.nodes??[],immediate=nodes.filter(n=>!phase.deferredNode(skill,n.id));
+    const reductions=nodes.filter(n=>n.effectId==='status.amplify'&&n.params.指标==='伤害减免');
+    if(reductions.some(n=>Math.max(n.params.数值??0,...(n.params.成长序列??[]))>DESIGN_BALANCE_POLICY.maximumSustainedReduction))errors.push('持续伤害减免最多75%；需要短时完全防护时，请使用带次数或持续条件的无敌效果。');
+    const death=immediate.some(n=>n.effectId==='payload.death');
+    for(const branch of graphBranches(skill.effectGraph))if(branch.nodes.some(n=>n.effectId==='payload.death'&&!phase.deferredNode(skill,n.id))&&!branch.nodes.some(n=>n.effectId==='check.save'))errors.push('直接死亡效果必须在同一项能力中保留目标豁免；命中或弹射不能替代死亡抵抗。');
+    const limited=Number(skill.cooldownTurns??0)>0||['perBattleLimit','dailyLimit','worldCooldownDays'].some(key=>Number(skill.usageRules?.[key]??0)>0);
+    const modes=skill.castModes?.length?skill.castModes.map(mode=>mode.id):[undefined];
+    const paid=Number(skill.durabilityCost??0)>0||modes.every(modeId=>abilities.describe({id:'authored-design',...skill},{modeId}).costs.length>0);
+    if(death&&!skill.disposable&&(!limited||!paid))errors.push('可反复使用的直接死亡能力须同时有实际消耗和冷却或次数限制，不能免费连续发动。');
+    const strong=death||reductions.length>0||immediate.some(n=>['payload.shield','status.invulnerable','payload.revive'].includes(n.effectId));
+    if(strong&&!skill.disposable&&!paid&&!limited)errors.push('防护、复苏或死亡能力不能同时零消耗、无冷却且不限次数；请设置实际代价或使用限制。');
+    return [...new Set(errors)];
+  }
+
   function ringSkillPackageFingerprint(compiled) {
     const normalized = (compiled?.skills ?? []).map(skill => {
       const graph = skill?.effectGraph ?? {};
@@ -2952,6 +3026,7 @@
 
   function ringCandidateRoles(martialSoul,beastProfile,beastSkills=[]){return [...new Set(resolveBridges(martialSoul,beastProfile,beastSkills).flatMap(bridge=>bridge.effectIds.flatMap(id=>soulEffectVariants(martialSoul,id,{},[bridge]).map(params=>diversity.effectRole(id,params)))).filter(role=>role&&role!=='shell'))];}
   function compileRingSkillChoices({martialSoul, beastProfile, beastSkills = [], ringOrdinal = 1, choiceCount = 2, options = {}}) {
+    if(options.evolutionTarget){const compiled=compileRingSkills({martialSoul,beastProfile,beastSkills,ringOrdinal,options}),fingerprint=ringSkillPackageFingerprint(compiled);return {choiceCount:1,distinctChoiceCount:1,candidates:[{...compiled,id:'evolution-ring-choice-'+fingerprint,index:0,fingerprint,title:compiled.skills.map(s=>s.name).join('、'),description:'新魂环牵引武魂变化，并领悟本环魂技。'}],mechanicsHash:stableHash(JSON.stringify([fingerprint])).toString(16).padStart(8,'0'),sourceBudget:{...calculateRingBudget(beastProfile,martialSoul,compiled.budget.compatibility),available:calculateRingBudget(beastProfile,martialSoul,compiled.budget.compatibility).usable},presetFailures:[],availability:{requestedCount:1,actualCount:1,summary:'所选进化方向与新魂环',details:[]}};}
     if(fixedRealmPolicy(martialSoul)){const compiled=compileFixedRealmRing({martialSoul,beastProfile,beastSkills,ringOrdinal,options}),fingerprint=ringSkillPackageFingerprint(compiled),candidate={...compiled,id:`realm-ring-choice-${martialSoul.id}-${beastProfile.id}-${ringOrdinal}-${fingerprint}`,index:0,fingerprint,title:compiled.skills[0].name,description:compiled.skills[0].description};return {choiceCount:1,distinctChoiceCount:1,candidates:[candidate],mechanicsHash:stableHash(JSON.stringify([fingerprint])).toString(16).padStart(8,'0'),sourceBudget:{...calculateRingBudget(beastProfile,martialSoul,compiled.compatibility.ratio),available:compiled.budget.usable},presetFailures:[],availability:{requestedCount:1,actualCount:1,summary:'对应席位的召唤魂技',details:['魂环年限增强对应人物，召唤方式由当前服从和人数决定。']}};}
     martialSoul=boonExpression(martialSoul,beastProfile);
     const sourceBridges=resolveBridges(martialSoul,beastProfile,beastSkills);
@@ -3179,7 +3254,7 @@
   }
 
   return Object.freeze({
-    validateDefenseNarrative,designActionTimingErrors,
+    validateDefenseNarrative,designActionTimingErrors,designBalanceErrors,DESIGN_BALANCE_POLICY,
     CANDIDATE_ROLE_LABELS:diversity.ROLE_LABELS,
     candidateEffectRole:diversity.effectRole,
     strongCandidateProfile:candidate=>diversity.strongProfile(candidate,calculateNodeCost),

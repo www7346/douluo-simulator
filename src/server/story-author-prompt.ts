@@ -17,7 +17,7 @@ import {storyWritingSectionCards,type PreviousWritingSection} from './story-batt
 
 export {STORY_FACT_SOURCE_CONTRACT,STORY_MEMORY_SOURCE_CONTRACT,STORY_AUTHOR_ROLE,STORY_AUTHOR_CONTRACT} from './story-author-contract';
 
-export function prepareStoryAuthorPrompt(args:{turn:StoryTurn;writingPackage:StoryWritingPackage;kind:'story-writer'|'story-rewrite';config:StoryPromptConfig;input:Record<string,any>;history:StoryRecent[];recall:StoryRecall[];narrativeSummaries:unknown[];previousSection?:PreviousWritingSection}){
+export function prepareStoryAuthorPrompt(args:{participantDialogue?:unknown[];turn:StoryTurn;writingPackage:StoryWritingPackage;kind:'story-writer'|'story-rewrite';config:StoryPromptConfig;input:Record<string,any>;history:StoryRecent[];recall:StoryRecall[];narrativeSummaries:unknown[];previousSection?:PreviousWritingSection}){
  const {turn,writingPackage,kind,config,input,history,recall,narrativeSummaries}=args;
  const writingView=selectStoryWritingView(writingPackage),writingFacts=storyNovelFacts(writingPackage,writingView);
  const target:StoryPromptTarget=turn.privatePersonId?'private':'writer';
@@ -27,6 +27,7 @@ export function prepareStoryAuthorPrompt(args:{turn:StoryTurn;writingPackage:Sto
  const battleIndex=turn.battleId?writingFacts.events.findIndex(e=>e.facts.battle?.id===turn.battleId):-1;
  if(turn.battleId&&(battleIndex<0||!writingPackage.facts.events.some(e=>e.facts.battle?.id===turn.battleId&&e.facts.battle.status==='已结束')))throw Error('战报写作缺少对应的已结束战斗来源');
  const section=writingPackage.origin.writingSection;
+ const authorParts=activeWriterPromptParts(config).filter(part=>part.category!=='choices'||!section||section.includesEnding);
  const lengthPreference=storyLengthPreference(config,kind,writingPackage);
  const modeId=section?'battle-section-mode':(turn.battleId?'battle-':'')+(kind==='story-rewrite'?'rewrite-mode':'writer-mode');
  const mode=modelPromptText({},modeId);
@@ -41,10 +42,9 @@ export function prepareStoryAuthorPrompt(args:{turn:StoryTurn;writingPackage:Sto
   followingEventPaths:writingFacts.events.slice(battleIndex+1).map((_,i)=>`/events/${battleIndex+1+i}`),
  }):storySourceInput(turn);
  const compiled=compileStoryPrompt({...config,style:'',nsfw:''},{target,trigger:kind==='story-rewrite'?'regenerate':'normal',user:turn.after?.player?.name??'玩家',character,slots:{
-  main:[...writerPromptMessages(config,promptMessage(kind)),promptDataMessage({factSource:{id:writingPackage.id,origin:writingPackage.origin,factsHash:writingPackage.factsHash},...compactStoryPacketReadings({writingFacts:compactBattlePassages(writingFacts),commerceReadings:commerceWritingReadings(writingPackage.facts,writingView.facts)}),mode,narrativeSummaries,recalledNarrative:recall,...(lengthPreference?{lengthPreference}:{}),...(args.previousSection?{previousSection:args.previousSection}:{})},{mode:modeId,...(lengthPreference?{'lengthPreference.instruction':'writer-length'}:{})},'system')],
+  main:[...writerPromptMessages(config,promptMessage(kind),authorParts),promptDataMessage({factSource:{id:writingPackage.id,origin:writingPackage.origin,factsHash:writingPackage.factsHash},...compactStoryPacketReadings({writingFacts:compactBattlePassages(writingFacts),commerceReadings:commerceWritingReadings(writingPackage.facts,writingView.facts)}),mode,narrativeSummaries,recalledNarrative:recall,...(args.participantDialogue?.length?{participantDialogue:{audience:'当时说话的两人',excerpts:args.participantDialogue}}:{}),...(lengthPreference?{lengthPreference}:{}),...(args.previousSection?{previousSection:args.previousSection}:{})},{mode:modeId,...(lengthPreference?{'lengthPreference.instruction':'writer-length'}:{})},'system')],
   chatHistory:[...archivedStoryMessages(history.filter(e=>e.privatePersonId===turn.privatePersonId)),...(turn.battleId?[promptDataMessage(JSON.parse(authorInput),{operation:modeId})]:[{role:'user' as const,content:authorInput}])],
  }});
- const authorParts=activeWriterPromptParts(config);
  let authorIndex=0;
  for(const trace of compiled.trace){
   if(trace.source!=='slot:main'||authorIndex>=authorParts.length)continue;

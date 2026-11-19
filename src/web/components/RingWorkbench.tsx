@@ -28,7 +28,7 @@ export function RingInspection({beastUnitId,onClose}:{beastUnitId:string;onClose
   if(working&&quote.pendingId)activePending.current=quote.pendingId;
   const run=async()=>{
     if(guard.current)return;guard.current=true;setWorking(true);setMessage('');
-    try {if(advised){const review=await controller.query('ring.design-review',{target:{kind:'beast',beastUnitId,martialSoulId:soulId},proposal:advised.proposal});if(!review.pass)throw Error(review.reasons.join('；'));}activePending.current=await controller.prepareRingFromBeast({beastUnitId,martialSoulId:soulId,...(requestedSkills?{requestedSkills}:{})});}
+    try {if(advised){const review=await controller.query('ring.design-review',{target:{kind:'beast',beastUnitId,martialSoulId:soulId},proposal:advised.proposal});if(!review.pass)throw Error(review.reasons.join('；'));}activePending.current=await controller.prepareRingFromBeast({beastUnitId,martialSoulId:soulId,...(requestedSkills?{requestedSkills}:{}),...(advised?.evolutionTarget?{evolutionTarget:advised.evolutionTarget}:{})});}
     catch(error) {setMessage(playerText((error as Error).message,state));} finally {guard.current=false;setWorking(false);}
   };
   if(activePending.current)return <RingChoiceScene pendingId={activePending.current} onClose={onClose}/>;
@@ -44,7 +44,7 @@ export function RingInspection({beastUnitId,onClose}:{beastUnitId:string;onClose
     {quote.reasons.map((reason:string)=><p className="danger-text" key={reason}>{playerText(reason,state)}</p>)}
     {quote.pass&&<p>最多可领悟 {quote.choiceCount} 套魂技方案，本次可选数量见候选列表。方案会保存，选定后才吸收魂环。</p>}
     {!quote.pendingId&&<><Button variant="secondary" disabled={!quote.pass||view.busy||working} onClick={()=>setDiscuss(v=>!v)}>{discuss?'收起主持人讨论':'和主持人讨论魂技方向'}</Button>{discuss&&<RingDesignAdvisor key={'advisor:'+soulId} target={{kind:'beast',beastUnitId,martialSoulId:soulId}} disabled={working||view.busy} onAdopt={plan=>{setAdvised(plan);setRequestedSkills(plan.requestedSkills);setDesignValid(true);setDiscuss(false);}}/>}
-    {advised?<section className="ring-adopted-design"><h3>已选：{advised.name}</h3><p>来源与年限不变，确认领悟后生成这套魂技。</p>{advised.skills.map((skill:any,i:number)=><AbilityDetails key={i} skill={skill} showAvailability={false}/>)}<Button variant="secondary" onClick={()=>{setAdvised(null);setRequestedSkills(undefined);setDesignValid(true);setAdvised(null);setDiscuss(false);}}>取消此设计，改用自动领悟</Button></section>:<RingExchangeEditor key={'exchange:'+soulId} source={{beastUnitId,martialSoulId:soulId}} onChange={setRequestedSkills} onValidity={setDesignValid}/>}</>}
+    {advised?<section className="ring-adopted-design"><h3>已选：{advised.name}</h3><p>来源与年限不变，确认领悟后生成这套魂技。</p>{advised.evolutionPreview&&<p>同时将武魂变化为{advised.evolutionPreview.name}：{advised.evolutionPreview.form}。所需成长投入已从本次魂环中支付。</p>}{advised.skills.map((skill:any,i:number)=><AbilityDetails key={i} skill={skill} showAvailability={false}/>)}<Button variant="secondary" onClick={()=>{setAdvised(null);setRequestedSkills(undefined);setDesignValid(true);setAdvised(null);setDiscuss(false);}}>取消此设计，改用自动领悟</Button></section>:<RingExchangeEditor key={'exchange:'+soulId} source={{beastUnitId,martialSoulId:soulId}} onChange={setRequestedSkills} onValidity={setDesignValid}/>}</>}
     {quote.pendingId&&<p>这枚魂环已有保留方案，请继续选择原方案。</p>}
     <p className="muted">这枚现场魂环无法放入行囊。离开当前房间前，请完成吸收；继续探索时尚未吸收的魂环将消散。</p>
   </Modal>;

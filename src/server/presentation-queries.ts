@@ -29,6 +29,10 @@ export function presentationQuery(state:any,name:string,input:Record<string,any>
   const id=state.人物.列表[input.personId]?input.personId:rules.arena.persistentCharacterId(input.personId);return characterStatusPresentation(state,id);
  }
   switch(name){
+    case 'presentation.player-appearance':{
+      if(Object.keys(input).length)throw Error('样貌描述只读取当前人物');
+      return rules.playerAppearance.preview(state);
+    }
     case 'presentation.person-equipment':return personEquipmentPresentation(state,input);
     case 'presentation.growth-plan':{
       if(Object.keys(input).length)throw Error('加点方案只读取本人当前属性');
@@ -46,6 +50,7 @@ export function presentationQuery(state:any,name:string,input:Record<string,any>
       return rules.deviceOperations.facts(state,actorId,{battleId:input.battle?battle.id:null});
     }
     case 'presentation.resident-realms':{if(Object.keys(input).some(k=>!['selectedPersonId','scope'].includes(k))||input.scope!==undefined&&!['gallery','overview','management'].includes(input.scope)||input.selectedPersonId!==undefined&&typeof input.selectedPersonId!=='string')throw Error('画境只读取本人空间与所选人物');return residentRealmPresentation(state,input);}
+    case 'presentation.summons':{if(Object.keys(input).length)throw Error('召唤指令无需目标');return rules.summonOrders.facts(state);}
     case 'presentation.party':{if(Object.keys(input).length)throw Error('Party takes no target');return rules.world.partyRecoveryPreview(state);}
     case 'presentation.party-ring':{if(Object.keys(input).join(',')!=='beastUnitId'||typeof input.beastUnitId!=='string')throw Error('请选择现场魂兽');return partyRingPresentation(state,input.beastUnitId);}
     case 'presentation.person-growth':{if(Object.keys(input).join(',')!=='personId'||typeof input.personId!=='string')throw Error('请选择实际人物');return personGrowthPresentation(state,input.personId);}

@@ -6,7 +6,7 @@ export function openingPlaybackKey(profileId:string,sourceId:string){
 }
 export interface OpeningPerson {id:string;name:string;gender:string;age:number;appearance:string;canonicalId:string;title:string;present:boolean}
 export interface OpeningSceneFacts {
- sourceId:string;backgroundId:string;acquisitionKind?:'auction'|'found';perspective:string;buyerKind:string;title:string;playerId:string;buyerId:string;subjectId:string;guideId:string;
+ sourceId:string;backgroundId:string;scenarioId?:string;acquisitionKind?:'auction'|'found';perspective:string;buyerKind:string;title:string;playerId:string;buyerId:string;subjectId:string;guideId:string;
  people:OpeningPerson[];devices:{name:string;templateId:string;mode:string;binding?:{part:string;pose:string}}[];locationName?:string;
  containment?:{mode:'awake'|'open';itemId:string};
  realm?:{opened:number;prisonerNames:string[]};
@@ -89,6 +89,7 @@ export function openingScript(f:OpeningSceneFacts):OpeningScript {
  };
  const sect=sects[f.backgroundId];if(sect)return {chapter:sect.chapter,scene:sect.scene,lines:[n(sect.lines[0]),n(`${name}，作为${f.title}，你的修习从这里开始。`),...(guide?[say(guide.id,sect.lines[1]),say(guide.id,sect.lines[2])]:[n(sect.lines[1]),n(sect.lines[2])]),n(sect.lines[3]),n('看看自己的武魂，联系熟悉的人，或直接写下接下来的打算。此后的路由你来走。')]};
  if(f.backgroundId==='jiumeitu-heir')return {chapter:'九庭初醒',scene:'academy',lines:[n('晨光穿过薄雾，一幅黑玉金轴的长卷在掌中徐徐舒展。'),n(`${name}，绢面上的九间居室与公共庭院静候来客。${f.realm?.opened?`你已有${f.realm.opened}枚魂环，画中开放了${f.realm.opened}个永久席位。`:'每取得一枚魂环，就能开放一个永久席位。'}${f.realm?.prisonerNames.length?f.realm.prisonerNames.join('、')+'已被安置在画中。':'此刻画中尚无人居住。'}`),n('先看看九美图的力量，整理行囊，再决定下一步旅途。想改变画境主题或安排，只需直接告诉主持人。'),n(f.guideId?'大师留下的指点仍在记忆里。'+(f.guideContact?'你可以联系他，也可以迈出属于自己的第一步。':'前方的路，正等着你迈出第一步。'):'前方的路，正等着你迈出第一步。')]};
+ if(f.scenarioId==='yu-xiaogang-reunion')return {chapter:'蓝霸重聚',scene:'academy',lines:[n('蓝霸学院的晨雾尚未散去，罗三炮已经守在你脚边。旧友与学员们正在院中安顿下来。'),n('玉小刚，二十九级的瓶颈仍在。但多年研究留下的笔记，让修复魂力运转有了可以尝试的方法。'),n('在武魂详情中查看基础修复方案：八份青髓草、六十分钟修习。学院能采购材料，也可以到猎魂森林亲自采集。'),n('先恢复成长，再决定罗三炮的未来。圣龙、雷霆，或者由你亲手构想的方向，都可以逐步探索。'),n('弗兰德与柳二龙就在身旁。家族和比比东的旧识关系，也可以从一次真实的交谈重新开始。')]};
  if(f.backgroundId==='canonical-character')return {chapter:'旧名，新途',scene:'academy',lines:[n(`晨光越过屋檐，${f.locationName??'眼前的小镇'}的道路上渐渐有了行人。`),n(`${name}，记忆与传承仍伴随着你。此刻的相遇和选择，将写出属于你的另一段旅途。`),n('整理行囊，看看已经掌握的力量，或找人聊聊接下来的打算。'),n('往事仍在记忆里，眼前的道路等着你迈出下一步。')]};
  return {chapter:'风起之处',scene:'academy',lines:[n('行囊已经收好，远处的路在光中延展开去。'),n(`${name}，武魂的力量已在你体内苏醒。故乡的路口人来人往，未曾见过的大陆就在前方。`),n('先整理行囊，联系牵挂的人，或者顺着自己的心意走一段路。'),n('把你的第一步写下来，故事就从这里开始。')]};
 }

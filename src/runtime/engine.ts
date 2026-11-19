@@ -1,3 +1,4 @@
+import {inspectEvolution} from './story-evolution';
 import {stockByName} from './story-commerce';
 import {settleAutomaticBattle} from './automatic-battle';
 import {isSealedValue,mutableSnapshotCopy,sealOwned} from '../shared/frozen-snapshot';
@@ -9,6 +10,7 @@ import {projectionRewriteGrant} from '../shared/historical-projection';
 import {playerCommandDefaults,playerIntentDefaults} from './player-action-defaults';
 import {respondImmediateGift} from './story-immediate-gifts';
 import {assertWorldCommandActor} from './world-command-actor';
+import {MAX_RING_SKILL_DESCRIPTION,playerEditableRingSkill} from './ability-sources';
 import {localStoryFinishCommand} from './story-local-continuation';
 import {decideNpcRestraintPermission} from './person-restraint-permission';
 import {battleActionOptions} from './battle-action-options';
@@ -193,7 +195,7 @@ export class GameEngine {
       rules.personChangeKnowledge.observe(settled.state);
       rules.disguise.observeMeetings(settled.state);
       if(!settled.idempotent)rules.personGrowth.observe(before.state,settled.state,command.id,settled.receipt);
-      const currentReply=['person.respond-drug-offer','person.respond-ability-use','person.decide-restraint-permission','person.respond-rescue','person.resolve-change-reaction','person.respond-growth','person.name-ring','person.choose-ring'].includes(command.type)&&pendingStoryPersonWorldWork(calculationParent.state).some(work=>({'person-drug-offer':'person.respond-drug-offer','person-ability-use':'person.respond-ability-use','person-restraint-permission':'person.decide-restraint-permission','person-rescue-response':'person.respond-rescue','person-change-reaction':'person.resolve-change-reaction','person-growth':'person.respond-growth','person-ring-naming':'person.name-ring','person-ring-choice':'person.choose-ring'} as Record<string,string>)[work.kind]===command.type&&Object.entries(work.input).every(([key,value])=>command.payload[key]===value));
+      const currentReply=['person.respond-evolution','person.respond-drug-offer','person.respond-ability-use','person.decide-restraint-permission','person.respond-rescue','person.resolve-change-reaction','person.respond-growth','person.name-ring','person.choose-ring'].includes(command.type)&&pendingStoryPersonWorldWork(calculationParent.state).some(work=>({'evolution-response':'person.respond-evolution','person-drug-offer':'person.respond-drug-offer','person-ability-use':'person.respond-ability-use','person-restraint-permission':'person.decide-restraint-permission','person-rescue-response':'person.respond-rescue','person-change-reaction':'person.resolve-change-reaction','person-growth':'person.respond-growth','person-ring-naming':'person.name-ring','person-ring-choice':'person.choose-ring'} as Record<string,string>)[work.kind]===command.type&&Object.entries(work.input).every(([key,value])=>command.payload[key]===value));
       if((currentReply||['person.apply-rewrite','person.resolve-rewrite'].includes(command.type))&&settled.state.扩展?.story?.active?.status==='resolved')settled.state.扩展.story.active.after=storyTurnFacts(settled.state,settled.state.扩展.story.active.privatePersonId,settled.state.扩展.story.active.input);
       // Opening a person from the UI registers them without a public narrative appearance.
       if(command.type==='character.meet'&&settled.receipt?.metBefore===false&&settled.state.扩展?.story){
@@ -281,7 +283,7 @@ export class GameEngine {
   #settle(command: GameCommand, state: any,root?:{parent:GameSnapshot;state:any;command:GameCommand;key:string;journal:any},takeover?:()=>boolean): {state: any; receipt?: Record<string, any>; idempotent?: boolean;frames?:BattleTurnView[]} {
     if(state.终局挑战?.当前?.projection?.scope==='historical-projection'){
       const rewrite=['person.apply-rewrite','person.resolve-rewrite'].includes(command.type)&&projectionRewriteGrant(state,command.payload.grantId);
-      if(!rewrite&&!['battle.action','battle.auto-step','battle.auto-until-player','battle.set-strategy','battle.set-automatic','battle.set-preferences','battle.report','arena.reconcile','story.begin-battle-report'].includes(command.type))throw Error('请先完成当前历史投影挑战，再处理现实中的事务');
+      if(!rewrite&&!(command.type==='summon.order'&&state.战斗.状态==='进行中'&&command.payload.mode!=='scout')&&!['battle.action','battle.auto-step','battle.auto-until-player','battle.set-strategy','battle.set-automatic','battle.set-preferences','battle.report','arena.reconcile','story.begin-battle-report'].includes(command.type))throw Error('请先完成当前历史投影挑战，再处理现实中的事务');
       if(['battle.report','story.begin-battle-report'].includes(command.type)&&command.payload.battleId!==state.终局挑战.当前.battleId)throw Error('请先完成当前历史投影的战报');
     }
     expireStoryCommitments(state);
@@ -289,7 +291,7 @@ export class GameEngine {
     if(command.type.startsWith('research.')||command.type==='blueprint.craft'||command.type==='workshop.inspect-story'){
       assertWorldCommandActor(state,payload);if(payload.request)assertWorldCommandActor(state,payload.request);
       if(payload.pendingId)rules.expedition.assertResearchOwner(state,state.研发?.待处理?.[payload.pendingId],state.角色.主控单位ID);
-      if(payload.blueprintId)rules.expedition.assertBlueprintOwner(state,state.研发?.蓝图?.[payload.blueprintId]??rules.deviceLocks.keyBlueprint(state,state.角色.主控单位ID,payload.blueprintId),state.角色.主控单位ID);
+      if(payload.blueprintId)rules.expedition.ownedCraftBlueprint(state,payload.blueprintId,state.角色.主控单位ID);
     }
     if(command.type.startsWith('ring.')){
       assertWorldCommandActor(state,payload);
@@ -309,6 +311,16 @@ export class GameEngine {
       const blocked=rules.world.personalActionBlockReason(state,{allowContained:insideAction,allowSealed:command.type==='world.intent'&&payload.type==='await-seal-release',allowIncapacitated:command.type==='world.intent'&&['captive-daily',].includes(payload.type),allowCaptivity:selfBreak||insideAction||command.type==='world.intent'&&['equip','unequip','use-restorative-item','use-prebattle-pill','use-field-ability','stop-maintenance','dismiss-disguise','inspect-disguise','switch-martial-soul'].includes(payload.type)&&rules.cooperation.preparationAllowed(state,state.角色.主控单位ID,payload)||command.type==='world.intent'&&['dismiss-disguise','inspect-disguise','disclose-identity','issue-field-control','permit-restraint','request-restraint-permission','request-ability-use','respond-ability-use','respond-disguised-drug','respond-restraint-permission-request','revoke-restraint-permission','captive-daily','await-seal-release',...rules.social.INTENTS,...rules.cooperation.INTENTS].includes(payload.type)||command.type==='world.intent'&&(['use-field-ability','consume-food-drink','use-restorative-item'].includes(payload.type)&&rules.world.isSelfFoodUse(state,payload)||payload.type==='consume-food-drink'&&typeof payload.offerId==='string')||command.type==='world.intent'&&payload.type==='detach-restraint'&&state.物品.实例[payload.itemId]?.attachment?.wearerId===state.角色.主控单位ID&&state.物品.实例[payload.itemId]?.durability===0});if(blocked)throw Error(blocked);
     }
     switch (command.type) {
+      case 'player.edit-appearance':return {state,receipt:rules.playerAppearance.apply(state,payload,command.id)};
+      case 'ring.edit-skill-description':{
+        const skill=typeof payload.skillId==='string'&&playerEditableRingSkill(state,payload.skillId);
+        const description=payload.description;
+        if(!skill)throw Error('只能编辑本人已获得的魂环技能描述');
+        if(description!==null&&(typeof description!=='string'||!description.trim()||description.length>MAX_RING_SKILL_DESCRIPTION))throw Error('魂技描述需为1到2048字');
+        if(description===null)delete skill.displayDescription;
+        else skill.displayDescription=description.trim();
+        return {state,receipt:{type:'ring-skill-description-edited',skillId:skill.id,summary:description===null?'已恢复魂技原描述':'魂技描述已保存'}};
+      }
       case 'person.apply-rewrite':case 'person.resolve-rewrite':{
         const actorId=command.type==='person.apply-rewrite'?state.角色.主控单位ID:payload.actorId;
         if(command.type==='person.resolve-rewrite'&&actorId===state.角色.主控单位ID)throw Error('玩家的认知改造应由玩家手动设定');
@@ -429,6 +441,8 @@ export class GameEngine {
         }
         return rules.cycle.confirmRingSkillChoice(state, payload, command.id);
       }
+      case 'evolution.inspect-story':return {state,receipt:{type:'soul-evolution-query',...inspectEvolution(state,payload),summary:'已查阅当前武魂、魂环和实际成长来源。'}};
+      case 'evolution.preview-story':return {state,receipt:{type:'soul-evolution-query',preview:rules.evolution.preview(state,payload),summary:'已预览武魂变化，尚未采用或扣除材料。'}};
       case 'growth.inspect-story':
         return {state,receipt:{type:'growth-inspected',growth:inspectStoryGrowth(state),summary:'已查看等级经验、成长瓶颈、修炼与魂环资格及属性提升代价，尚未执行成长'}};
       case 'growth.allocate':
@@ -439,6 +453,7 @@ export class GameEngine {
         return rules.cycle.registerTitleCandidate(state, payload, command.id);
       case 'title.confirm':
         return rules.cycle.confirmTitle(state, payload, command.id);
+      case 'summon.order':return rules.summonOrders.issue(state,state.角色.主控单位ID,payload,command.id);
       case 'party.recover':return rules.world.recoverParty(state,payload,command.id);
       case 'world.intent':
         assertWorldCommandActor(state,payload);
@@ -477,6 +492,13 @@ export class GameEngine {
       }
       case 'character.meet': return meetStoryPerson(state,payload.characterId);
       case 'character.request-growth':return rules.personGrowth.request(state,payload,command.id);
+      case 'manifestation.action':return rules.manifestation.command(state,payload,command.id);
+      case 'evolution.acquire-source':return rules.evolution.acquireSource(state,payload,command.id);
+      case 'evolution.brew':return rules.evolution.brew(state,payload,command.id);
+      case 'evolution.adopt':return rules.evolution.adopt(state,payload,command.id);
+      case 'evolution.progress':return rules.evolution.progress(state,payload,command.id);
+      case 'evolution.cancel':return rules.evolution.cancel(state,payload,command.id);
+      case 'person.respond-evolution':return rules.evolution.respond(state,payload,command.id);
       case 'person.respond-growth':return rules.personGrowth.respond(state,payload,command.id);
       case 'person.allocate-growth':return rules.personGrowth.allocate(state,payload,command.id);
       case 'conversation.create':return rules.conversations.create(state,payload,command.id);
@@ -559,6 +581,8 @@ export class GameEngine {
       case 'character.respond-npc-request':return rules.world.respondNpcRequest(state,payload,command.id);
       case 'character.ask-release':return requestRelease(state,payload,command.id);
       case 'world.escape-captivity':return escapeCaptivity(state,payload,command.id);
+      case 'world.set-npc-gender':return rules.world.setNpcGender(state,payload,command.id);
+      case 'world.work':return rules.world.work(state,payload,command.id);
       case 'world.cultivate':return rules.world.cultivate(state,payload,command.id);
       case 'world.wait-until':return rules.world.waitUntil(state,payload,command.id);
       case 'world.resume-long-action':assertWorldCommandActor(state,payload);return rules.world.resumeLongAction(state,payload,command.id);

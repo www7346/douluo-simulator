@@ -7,7 +7,7 @@ import {commitmentView,personCommitments,personRelationship,recentEndedCommitmen
 import {freeActionFacts} from './story-free-actions';
 import {createStoryHireFactsReader} from './story-hire-facts';
 import {storyNpcMechanicsFacts} from './story-npc-mechanics';
-import {storyAbilityFacts,storyEraFacts,storyOwnedItemFacts,storyOwnedRingFacts,storyRankFacts,storySoulFacts} from './story-person-dossier';
+import {knownStoryDossier,storyAbilityFacts,storyEraFacts,storyOwnedItemFacts,storyOwnedRingFacts,storyRankFacts,storySoulFacts} from './story-person-dossier';
 import {storyPersonHistorySummary} from './story-person-history';
 import {storyPersonLabels} from './story-person-names';
 import {storyBackgroundContext,storyPersona} from './story-personas';
@@ -26,9 +26,9 @@ export function perceivedScenePerson(state:any, person:any){
 }
 
 export function heardScenePerson(state:any,person:any){
- const playerId=state.角色.主控单位ID;
- return {id:person.id,name:person.扩展?.已知档案?.[playerId]?.name??person.name,scope:'heard',
-  encounter:structuredClone(person.扩展?.已知档案?.[playerId]??null),speech:rules.social.speechFacts(state,playerId)};
+ const playerId=state.角色.主控单位ID,dossier=knownStoryDossier(state,person.id);
+ return {id:person.id,name:dossier?.name??person.name,scope:'heard',
+  encounter:structuredClone(dossier??null),speech:rules.social.speechFacts(state,playerId)};
 }
 
 /** Visible dossiers share service and ability reads within a single observation. */

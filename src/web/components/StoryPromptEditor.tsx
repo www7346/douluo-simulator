@@ -18,7 +18,7 @@ export default function StoryPromptEditor({value,onChange,disabled=false}:{value
  const update=(id:string,patch:Partial<StoryPromptModule>)=>change({...value,modules:value.modules.map(m=>m.id===id?{...m,...patch}:m)});
  const move=(index:number,direction:number)=>{const layout=[...value.layout];[layout[index],layout[index+direction]]=[layout[index+direction],layout[index]];change({...value,layout});};
  const load=async(file:File)=>{setError('');setCatalog(null);setSelected([]);try{if(file.size>4_000_000)throw Error('预设文件超过读取上限');const parsed=parseTavernPromptCatalog(await file.text());setCatalog(parsed);setGroup(parsed.groups[0]?.id??'');}catch(e){setError((e as Error).message);}};
- const importSelected=()=>{try{const imported=importStoryPromptModules(catalog!,group,selected);change({...imported,style:value.style,nsfw:value.nsfw,writerPrompts:value.writerPrompts,writerTargetChars:value.writerTargetChars});setError('');setCatalog(null);}catch(e){setError((e as Error).message);}};
+ const importSelected=()=>{try{const imported=importStoryPromptModules(catalog!,group,selected);change({...imported,style:value.style,nsfw:value.nsfw,writerPrompts:value.writerPrompts,writerPreset:value.writerPreset,writerPresetSwitches:value.writerPresetSwitches,personalWriterPresets:value.personalWriterPresets,writerTargetChars:value.writerTargetChars});setError('');setCatalog(null);}catch(e){setError((e as Error).message);}};
  return <ActionSection title={<>提示词模块与消息结构</>} className="story-prompt-editor"><fieldset disabled={disabled}>
   <label>读取酒馆预设文件<input type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)void load(file);}}/></label>
   {catalog&&<div>

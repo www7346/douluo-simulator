@@ -7,7 +7,7 @@ const pick=(value:any,keys:string[])=>Object.fromEntries(keys.filter(key=>Object
 const SOURCE_FIELDS=['statusId','zoneId','domainId','targetId','unitId','sourceUnitId','sourceSkillId','sourceReceiptId','creditedKillerId'];
 const CALCULATION_FIELDS=['dice','rawAmount','upcastBonus','elementAmplification'];
 const DAMAGE_FIELDS=['damageType','resistance','shieldUsed','hpDamage','equipmentReduction','absorbedAsShield','nonlethalPrevented','nonlethal','shieldOffered','temporaryHpBefore','temporaryHp','shieldUnused','remainingHp'];
-const REMOVAL_EVENTS=['expired','consumed','damaged','cleansed','dispelled','revived','domain-removed','domain-suppressed','domain-membership-ended','attack-revealed','broken-free','source-invalidated','source-incapacitated','source-dead','source-soul-unavailable','source-item-lost','source-item-sealed','source-restraint-inactive','source-restraint-removed','target-dead','maintenance-broken','battle-ended','manual','confluence-consumed','charges-consumed','area-dispelled'];
+const REMOVAL_EVENTS=['expired','consumed','damaged','cleansed','dispelled','revived','domain-removed','domain-suppressed','domain-membership-ended','interposed','attack-revealed','broken-free','source-invalidated','source-incapacitated','source-dead','source-soul-unavailable','source-item-lost','source-item-sealed','source-restraint-inactive','source-restraint-removed','target-dead','maintenance-broken','battle-ended','manual','confluence-consumed','charges-consumed','area-dispelled'];
 const EVENT_GROUPS:Record<string,{meaning:string;fields:string[]}>=Object.fromEntries([
  ...['tick','hazard-tick'].map(event=>[event,{meaning:'持续效果造成伤害',fields:DAMAGE_FIELDS}] as const),
  ['eternal-wound',{meaning:'持续创伤消耗魂力并造成伤害',fields:[...DAMAGE_FIELDS,'upkeep','paid','shortage','soulPowerBefore','remainingSoulPower']}],
@@ -23,6 +23,7 @@ const EVENT_GROUPS:Record<string,{meaning:string;fields:string[]}>=Object.fromEn
  ['intimate-climax',{meaning:'情具刺激到顶，强制高潮',fields:['at','forced']}],
  ['intimate-incontinence',{meaning:'尿意失控，强制失禁',fields:['at','forced','reason']}],
  ['domain-conflict-recomputed',{meaning:'领域对抗后的生效状态',fields:['state','suppressorIds']}],
+ ['interpose',{meaning:'守护者代挡单体攻击',fields:['protectedId','guardId']}],
  ['domain-trigger',{meaning:'领域实际触发效果',fields:['trigger','effects']}],
  ['domain-enter',{meaning:'进入领域范围',fields:[]}],
  ['domain-exit',{meaning:'离开领域范围',fields:[]}],

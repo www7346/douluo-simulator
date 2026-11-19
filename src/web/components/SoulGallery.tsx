@@ -1,16 +1,18 @@
+import SoulEvolution from './SoulEvolution';
+import './soul-evolution.css';
 import CharacterPortrait from './CharacterPortrait';
 import {ownedNineBeautiesSouls,residentRingSlot} from '../../shared/resident-realm-ui';
 import {useServerQuery} from '../use-game-query';
 import PersonLink from './PersonLink';
 import SpiritIllustration from './SpiritIllustration';
 import SoulImageEditor from './SoulImageEditor';
-import {playerSoulImageSlot} from '../../runtime/soul-images';
+import {playerSoulImageSlot,ringSkillImageSlot} from '../../runtime/soul-images';
 import {useMemo,useRef,useState} from 'react';
 import {useGame} from '../game-context';
-import {Button,Modal,SoulRing} from '../components';
+import {Button,Modal,ModalActions,SoulRing} from '../components';
 import {skillArtwork} from '../../runtime/generated-art';
 import {skillName} from '../../runtime/player-text';
-import {abilityPage,ABILITY_KIND_LABELS,soulYearsLabel} from '../../runtime/ability-sources';
+import {abilityPage,ABILITY_KIND_LABELS,MAX_RING_SKILL_DESCRIPTION,playerEditableRingSkill,soulYearsLabel} from '../../runtime/ability-sources';
 import {PortraitImage} from './PortraitArt';
 import GradeBadge,{soulGrade} from './GradeBadge';
 import AbilityDetails from './AbilityDetails';
@@ -19,13 +21,34 @@ import {useGameQuery} from '../use-game-query';
 import QueryStatus from './QueryStatus';
 import {describeError} from '../controller';
 
+function RingSkillDescriptionEditor({skill,onSaved}:{skill:any;onSaved:()=>void}){
+  const {controller,view}=useGame();
+  const query=useServerQuery<{description:string}>('presentation.ability',{skill});
+  const [draft,setDraft]=useState<string|null>(null),[saving,setSaving]=useState(false),[error,setError]=useState('');
+  const text=draft??query.data?.description??'';
+  const save=async(description:string|null)=>{
+    setSaving(true);setError('');
+    try{await controller.dispatch('ring.edit-skill-description',{skillId:skill.id,description});onSaved();}
+    catch(error){setError(describeError(error));}finally{setSaving(false);}
+  };
+  return <>
+    <QueryStatus query={query}/>
+    <label>魂技描述<textarea rows={7} maxLength={MAX_RING_SKILL_DESCRIPTION} value={text} disabled={!query.data||saving} onChange={e=>setDraft(e.target.value)}/></label>
+    <p className="muted">此处修改展示文字。实际效果以「详细效果与判定」为准。</p>
+    {error&&<p role="alert">{error}</p>}
+    <ModalActions><Button disabled={view.busy||saving||!query.data||draft===null||!text.trim()} onClick={()=>void save(text)}>保存描述</Button><Button variant="secondary" disabled={view.busy||saving||skill.displayDescription===undefined} onClick={()=>void save(null)}>恢复原描述</Button></ModalActions>
+  </>;
+}
+
 export default function SoulGallery({souls,catalog,onExport,onInspectRing,onOpenRealm,actorId,activeSoulId,ringRecords,readOnly=false}:{actorId?:string;activeSoulId?:string;ringRecords?:Record<string,any>;readOnly?:boolean;onOpenRealm?:(soulId:string,personId?:string)=>void;souls:any[];catalog:Array<{skill:any;source:import('../../runtime/ability-sources').AbilitySource}>;onExport?:(soul:any)=>void;onInspectRing:(id:string)=>void}) {
   const {state,view,controller}=useGame();
   const archiveRef=useRef<HTMLElement>(null);
   const playerId=actorId??state.角色.主控单位ID,self=!readOnly&&playerId===state.角色.主控单位ID,active=activeSoulId??state.成长.列表[playerId]?.激活武魂ID;
   const realmQuery=useServerQuery<any>('presentation.resident-realms',{scope:'gallery'}, {enabled:self&&ownedNineBeautiesSouls(state,playerId).length>0});
+  const [evolutionOpen,setEvolutionOpen]=useState(false);
   const [imageOpen,setImageOpen]=useState(false),[group,setGroup]=useState(souls.length?'ring':'other'),[soulId,setSoulId]=useState(active),[ringId,setRingId]=useState(''),[skillId,setSkillId]=useState(''),[page,setPage]=useState(0),[kind,setKind]=useState('all');
   const [switchError,setSwitchError]=useState<{context:string;message:string}|null>(null);
+  const [skillEdit,setSkillEdit]=useState<{mode:'image'|'description';id:string;sessionId:typeof view.sessionId}|null>(null);
 
   const soul=souls.find(s=>s.id===soulId)??souls[0];
   const growthContent=[globalThis.SoulBegoniaContent,globalThis.SoulRoyalSwanContent,...globalThis.SoulCanonicalWomenContent.PROFILES].find(content=>content.NODES.length&&content.isSoul(soul)),hasGrowthRoute=!!growthContent;
@@ -38,6 +61,9 @@ export default function SoulGallery({souls,catalog,onExport,onInspectRing,onOpen
   const other=catalog.filter(entry=>['other','basic'].includes(entry.source.group));
   const entries=group==='ring'?catalog.filter(entry=>entry.source.soulId===soul?.id&&entry.source.ringId===ring?.id):other.filter(entry=>kind==='all'||entry.source.kind===kind);
   const paged=abilityPage(entries,page,8),entry=entries.find(e=>e.skill.id===skillId)??paged.items[0],skill=entry?.skill;
+  const editable=Boolean(self&&skill&&playerEditableRingSkill(state,skill.id));
+  const editing=skillEdit?.sessionId===view.sessionId&&self?playerEditableRingSkill(state,skillEdit.id):null;
+  const portrait=(row:any)=><PortraitImage art={skillArtwork(row)} name={skillName(row,state)} custom={self?view.soulImages[ringSkillImageSlot(row.id)]:undefined}/>;
   const reset=()=>{setSkillId('');setPage(0);};
   return <section ref={archiveRef} className="ability-archive" aria-label="武魂与技能">
     <nav className="ability-tabs" aria-label="能力分类">{[['ring','魂环技能'],...(hasGrowthRoute?[['tree','成长路线']]:[]),['other','其他技能']].map(([id,label])=><button key={id} aria-pressed={group===id} onClick={()=>{setGroup(id);reset();if(id==='tree')requestAnimationFrame(()=>archiveRef.current?.scrollIntoView({block:'start'}));}}>{label}</button>)}{self&&<a href="#/inventory">装备与道具 →</a>}</nav>
@@ -46,19 +72,27 @@ export default function SoulGallery({souls,catalog,onExport,onInspectRing,onOpen
       <div className="ability-soul-summary"><SpiritIllustration soul={soul} slot={self?undefined:''} className="spirit-illustration"/><div><h2>{soul.名称} <GradeBadge grade={soulGrade(soul.品级标签)}/></h2><p>{soul.定位} · 已有 {rings.length} 枚魂环</p>
         {self&&soul.id!==active&&!inBattle&&<QueryStatus query={switchPreview} label="正在检查切换条件…"/>}
         {switchError?.context===switchContext&&<p role="alert" className="danger-text">{switchError.message}</p>}
-        {self&&<div className="field-actions">{soul.id!==active&&<Button disabled={view.busy||switchRequiresBattleConsole||switchPreview.loading||Boolean(switchPreview.error)||!switchPreview.data} onClick={()=>{
+        {!self&&state.人物.列表[playerId]&&state.武魂.列表[soul.id]?.持有者单位ID===playerId&&<Button variant="secondary" onClick={()=>setEvolutionOpen(true)}>商议武魂进化</Button>}
+        {self&&<div className="field-actions"><Button variant="secondary" onClick={()=>setEvolutionOpen(true)}>武魂进化与变异</Button>{soul.id!==active&&<Button disabled={view.busy||switchRequiresBattleConsole||switchPreview.loading||Boolean(switchPreview.error)||!switchPreview.data} onClick={()=>{
           setSwitchError(null);
           void controller.dispatch('world.intent',{type:'switch-martial-soul',entityId:playerId,martialSoulId:soul.id}).catch(error=>setSwitchError({context:switchContext,message:describeError(error,state)}));
-        }}>{switchRequiresBattleConsole?'请在战斗战术栏切换':'激活此武魂'}</Button>}{soul.id===active&&<Button variant="secondary" disabled={view.busy||inBattle} onClick={()=>void controller.dispatch('world.intent',{type:'retract-martial-soul',entityId:playerId}).catch(error=>setSwitchError({context:switchContext,message:describeError(error,state)}))}>{inBattle?'战术栏可收回武魂':'收回武魂 · 1分钟'}</Button>}{onOpenRealm&&ownedNineBeautiesSouls(state).some(s=>s.id===soul.id)&&<Button onClick={()=>onOpenRealm(soul.id)}>展开九美图</Button>}<Button variant="secondary" onClick={()=>setImageOpen(true)}>更换武魂图片</Button><Button variant="ghost" onClick={()=>onExport?.(soul)}>导出配置</Button></div>}
+        }}>{switchRequiresBattleConsole?'请在战斗战术栏切换':'激活此武魂'}</Button>}{soul.id===active&&!(soul.扩展?.结构化武魂??soul.结构化武魂)?.mechanicalHooks?.some((h:any)=>h.sourceId==='trait.permanent-manifestation')&&<Button variant="secondary" disabled={view.busy||inBattle} onClick={()=>void controller.dispatch('world.intent',{type:'retract-martial-soul',entityId:playerId}).catch(error=>setSwitchError({context:switchContext,message:describeError(error,state)}))}>{inBattle?'战术栏可收回武魂':'收回武魂 · 1分钟'}</Button>}{onOpenRealm&&ownedNineBeautiesSouls(state).some(s=>s.id===soul.id)&&<Button onClick={()=>onOpenRealm(soul.id)}>展开九美图</Button>}<Button variant="secondary" onClick={()=>setImageOpen(true)}>更换武魂图片</Button><Button variant="ghost" onClick={()=>onExport?.(soul)}>导出配置</Button></div>}
       </div></div>
-      <nav className="ability-rings" aria-label="选择来源魂环">{Array.from({length:9},(_,i)=>{const r=rings.find((r:any)=>r.序号===i+1);return <button key={i} disabled={!r} aria-pressed={Boolean(r&&r.id===ring?.id)} onClick={()=>{setRingId(r.id);reset();}}>{r?<SoulRing index={r.序号} years={r.年限} color={r.颜色}/>:<span className="ability-empty-ring">{i+1}</span>}<b>第{i+1}魂环</b><small>{r?soulYearsLabel(r.年限):'尚未获得'}</small>{realm&&r&&(()=>{const slot=realm.slots.find((s:any)=>s.index===i+1);return slot?<><span className="ability-ring-resident"><CharacterPortrait person={slot.person} state={state} large/></span><small>{slot.name}</small></>:<small>未绑定人物</small>;})()}{r&&<small>{r.魂技ID列表.length}项技能</small>}</button>;})}</nav>
+      <nav className="ability-rings" aria-label="选择来源魂环">{Array.from({length:9},(_,i)=>{const r=rings.find((r:any)=>r.序号===i+1);return <button key={i} disabled={!r} aria-pressed={Boolean(r&&r.id===ring?.id)} onClick={()=>{setRingId(r.id);reset();}}>{r?<SoulRing index={r.序号} years={r.年限} color={r.颜色}/>:<span className="ability-empty-ring">{i+1}</span>}<b>第{i+1}魂环</b><small>{r?soulYearsLabel(r.年限):'尚未获得'}</small>{realm&&r&&(()=>{const slot=realm.slots.find((s:any)=>s.index===i+1);return slot?<><span className="ability-ring-resident"><CharacterPortrait person={slot.person} state={state} large/></span><small>{slot.name}</small></>:<small>未绑定人物</small>;})()}{r&&<small>{r.扩展?.evolutionSealed?'魂技已封存':r.魂技ID列表.length+'项技能'}</small>}</button>;})}</nav>
     </>:group==='ring'?<p>尚未觉醒武魂，可切换到其他技能查看已有能力。</p>:<div className="ability-other-filters"><p>武魂本能、魂骨及其他非魂环能力。被动效果无需施放。</p><label>能力来源<select value={kind} onChange={e=>{setKind(e.target.value);reset();}}><option value="all">全部来源</option>{[...new Set(other.map(e=>e.source.kind))].map(id=><option key={id} value={id}>{ABILITY_KIND_LABELS[id]??'其他技能'}</option>)}</select></label></div>}
     {group==='ring'&&bound&&<section className="resident-ring-detail" aria-label="魂环绑定人物"><h3>第{bound.index}魂环 · {bound.name}</h3><p>{(bound.equipment??[]).map((item:any)=>item.name).join(' · ')}</p><div className="resident-ring-detail__figure"><PersonLink personId={bound.personId}><CharacterPortrait person={bound.person} state={state} large/></PersonLink></div><p>{bound.level}级 · 服从度 {bound.obedience}/100 · 对应魂环 {bound.ringLink.years}年 · 属性增幅 {bound.ringLink.percent}%</p>{onOpenRealm&&<Button onClick={()=>onOpenRealm(soul.id,bound.personId)}>在画卷中查看{bound.name}</Button>}</section>}
     {group!=='tree'&&<div className="ability-workspace"><section className="ability-library"><header><h3>{group==='ring'?(ring?'第'+ring.序号+'魂环 · '+soulYearsLabel(ring.年限):'尚未吸收魂环'):'其他技能'}</h3>{group==='ring'&&ring&&<button className="text-link" onClick={()=>onInspectRing(ring.id)}>查看魂环来源 ↗</button>}</header>
-      <div className="ability-skill-grid">{paged.items.map(e=><button key={e.skill.id} data-skill-id={e.skill.id} aria-pressed={e.skill.id===skill?.id} onClick={()=>setSkillId(e.skill.id)}><PortraitImage art={skillArtwork(e.skill)} name={skillName(e.skill,state)}/><span><b>{skillName(e.skill,state)}</b><small>{e.source.label}</small>{e.source.issue&&<small className="danger-text">暂时无法读取这项能力</small>}</span></button>)}</div>
+      <div className="ability-skill-grid">{group==='ring'&&ring?.扩展?.evolutionSealed&&<p>本环魂技已封存，当前不能释放。可在武魂进化面板查看恢复或重构方案。</p>}{paged.items.map(e=><button key={e.skill.id} data-skill-id={e.skill.id} aria-pressed={e.skill.id===skill?.id} onClick={()=>setSkillId(e.skill.id)}>{portrait(e.skill)}<span><b>{skillName(e.skill,state)}</b><small>{e.source.label}</small>{e.source.issue&&<small className="danger-text">暂时无法读取这项能力</small>}</span></button>)}</div>
       {!entries.length&&<p className="muted">{group==='ring'?'获得魂环后，可在这里查看本环的全部技能。':'当前没有此类能力。'}</p>}
       {paged.count>1&&<nav className="ability-pagination"><button disabled={!paged.index} onClick={()=>{setPage(paged.index-1);setSkillId('');}}>上一页</button><span>{paged.index+1} / {paged.count} · 共{paged.total}项</span><button disabled={paged.index===paged.count-1} onClick={()=>{setPage(paged.index+1);setSkillId('');}}>下一页</button></nav>}
-    </section><aside className="ability-inspector" aria-label="所选技能详情">{skill?<><header><PortraitImage art={skillArtwork(skill)} name={skillName(skill,state)}/><div><small>{entry.source.label}</small><h2>{skillName(skill,state)}</h2></div></header>{entry.source.issue&&<p className="danger-text">暂时无法读取这项能力，请重新打开。</p>}<AbilityDetails skill={skill} showName={false}/></>:<p>选择一项技能，查看完整效果。</p>}</aside></div>}
+    </section><aside className="ability-inspector" aria-label="所选技能详情">{skill?<><header>{portrait(skill)}<div><small>{entry.source.label}</small><h2>{skillName(skill,state)}</h2></div></header>{editable&&<div className="field-actions">
+      <Button variant="secondary" disabled={view.busy} onClick={()=>setSkillEdit({mode:'image',id:skill.id,sessionId:view.sessionId})}>更换魂技图片</Button>
+      <Button variant="secondary" disabled={view.busy} onClick={()=>setSkillEdit({mode:'description',id:skill.id,sessionId:view.sessionId})}>编辑描述</Button>
+    </div>}{entry.source.issue&&<p className="danger-text">暂时无法读取这项能力，请重新打开。</p>}<AbilityDetails skill={skill} showName={false}/></>:<p>选择一项技能，查看完整效果。</p>}</aside></div>}
+    <Modal open={evolutionOpen} title="武魂进化与变异" onClose={()=>setEvolutionOpen(false)}>{evolutionOpen&&<SoulEvolution soul={soul} actorId={actorId??playerId} onNavigate={()=>setEvolutionOpen(false)}/>}</Modal>
     <Modal open={imageOpen} className="appearance-modal" title="更换武魂图片" onClose={()=>setImageOpen(false)}>{imageOpen&&<SoulImageEditor key={view.sessionId+'-'+soul.id} soul={soul} slot={playerSoulImageSlot(state,soul.id)} onSaved={()=>setImageOpen(false)}/>}</Modal>
+    <Modal open={!!editing} className={skillEdit?.mode==='image'?'appearance-modal':''} title={skillEdit?.mode==='image'?'更换魂技图片':'编辑魂技描述'} onClose={()=>setSkillEdit(null)}>
+      {editing&&(skillEdit?.mode==='image'?<SoulImageEditor key={editing.id} soul={editing} slot={ringSkillImageSlot(editing.id)} onSaved={()=>setSkillEdit(null)}/>:<RingSkillDescriptionEditor key={editing.id} skill={editing} onSaved={()=>setSkillEdit(null)}/>)}
+    </Modal>
   </section>;
 }

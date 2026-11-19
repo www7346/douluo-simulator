@@ -122,7 +122,7 @@
     ['freeze','冻结塑形',4,['payload.damage','status.slow','zone.wall']],
     ['paralyze','神经麻痹',5,['status.paralysis','status.stun']],
     ['armor_break','破甲震荡',4,['payload.damage','status.armor_break','move.knockback']],
-    ['shield','护盾守护',4,['target.self','target.single','payload.shield']],
+    ['shield','护盾守护',4,['target.self','target.single','payload.shield','reaction.interpose']],
     ['repair','物质修复',6,['release.touch','target.self','target.single','payload.repair_item']],
     ['fabricate','永久造物',8,['target.self','payload.fabricate'],'高级'],
     ['key-creation','实体钥匙造物',8,['release.touch','target.self','payload.create_key'],'高级'],
@@ -145,7 +145,7 @@
     ['status-guard','状态防护',6,['target.self','target.single','status.status_guard'],'常规',{modes:['抗性','免疫']}],
     ['resistance','抗性改变',6,['target.self','target.single','status.resistance_shift'],'常规',{modes:['抗性','易伤']}],
     ['resource','魂力循环',6,['target.self','target.single','payload.soul_restore','payload.restore']],
-    ['sensory','感知侦察',3,['target.single','target.aura','status.buff','status.mark','zone.obscure']],
+    ['sensory','感知侦察',3,['target.self','payload.recon','target.single','target.aura','status.buff','status.mark','zone.obscure']],
     ['flight','飞行升空',5,['target.self','move.flight'],'高级'],
     ['contract-oath','灵魂誓约',9,['release.touch','target.single','contract.oath','trigger.contract'],'高级'],
     ['death','真实死亡',12,['release.touch','target.single','check.save','payload.death'],'高级'],
@@ -178,6 +178,7 @@
   });
 
   const TRAIT_TEMPLATES = Object.freeze([
+    {id:'trait.permanent-manifestation',name:'常驻外放',baseCost:8,perLevel:0,maxLevel:1,parameters:'none',hook:'permanentManifestation',randomLineage:false},
     {id:'trait.independent-realm',name:'独立画境',baseCost:40,perLevel:0,maxLevel:1,parameters:'realmProfiles',hook:'independentRealm'},
     {id:'trait.source-power',name:'同源载荷增强',baseCost:8,perLevel:8,maxLevel:3,parameters:'none',hook:'sourcePower'},
     {id:'trait.source-control',name:'同源控制专精',baseCost:8,perLevel:0,maxLevel:1,parameters:'none',hook:'sourceControl'},

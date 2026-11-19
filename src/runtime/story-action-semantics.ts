@@ -1,8 +1,16 @@
 /** Existing read operations, shared by the interpreter and result compiler. */
-export const STORY_QUERY_ACTIONS:ReadonlyArray<string>=Object.freeze(['inspect-commerce','inspect-inventory','inspect-opening','inspect-workshop','recommend-research','preview-research','inspect-research','preview-craft','quote-material-sale','quote-item-sale','city-history','resolve-object','check-history','battle-report','quote-hire','person-history','resolve-person','inspect-person','inspect-growth','inspect-ring','inspect-ring-item','inspect-ring-choices']);
+export const STORY_QUERY_ACTIONS:ReadonlyArray<string>=Object.freeze(['inspect-evolution','preview-evolution','inspect-commerce','inspect-inventory','inspect-opening','inspect-workshop','recommend-research','preview-research','inspect-research','preview-craft','quote-material-sale','quote-item-sale','city-history','resolve-object','check-history','battle-report','quote-hire','person-history','resolve-person','inspect-person','inspect-growth','inspect-ring','inspect-ring-item','inspect-ring-choices']);
 
 /** Tool purposes, not prose corrections. Parameters and allowed values live in STORY_ACTION_SCHEMA. */
 export const STORY_ACTION_PURPOSES:Readonly<Record<string,string>>={
+ 'inspect-evolution':'查看选定武魂完整结构、现有魂技、实际材料与取材目录',
+ 'preview-evolution':'按目标生成完整分阶段预览，逐组件校验来源、费用、耗时与旧魂技处理',
+ 'adopt-evolution':'采用玩家明确审阅的方案；NPC本人独立回应前不能实施',
+ 'continue-evolution':'开始或继续已接受方案当前阶段，完成时扣除实际材料，遇阻暂停',
+ 'cancel-evolution':'取消剩余阶段，保留已完成变化与支出',
+ 'acquire-evolution-source':'在目录中实际地点购买或采集材料',
+ 'brew-evolution-item':'在可用工坊将实际材料炼为保留来源的永久成长丹药',
+ 'manifest-soul':'显形、召回或静息后重凝常驻武魂，战中占用主人主要行动',
  'propose-person-contract':'提出普通或灵魂契约的完整有限条款与实际惩罚来源，等待当事人回应',
  'respond-person-contract':'本人接受、拒绝或反提当前完整版本，不代替他人同意',
  'retry-person-contract':'双方已同意后重试实际誓约来源释放',
@@ -103,6 +111,7 @@ export const STORY_ACTION_PURPOSES:Readonly<Record<string,string>>={
  'send-custody-letter':'在公共地点付邮资寄送本人已知消息至指定公开地址，路程和收信人实际到场决定送达，不自动追踪本人',
  'acquire-custody-facility':'在已抵达的城镇一次置办关押地点，或改设已有房产',
  'visit-custody-cell':'只移动操作者本人，通过已开启的门进入囚室；省略cellId回公共区域，不会自动带走其他人物','set-custody-cell-door':'在门旁实际开锁或锁闭房门',
+ 'break-custody-cell-door':'对本人实际所在、仍锁闭的囚室门进行10分钟的力量检定；成功会破坏门锁，但须另行返回公共通道。仍被看管时用escape-captivity中的破门选项。',
  'repair-custody-facility':'到场支付实际修整费用，恢复院落和房门的完好程度，不改变开锁状态',
  'place-captive':'在场开门、安置本人关押的人物并锁门，各步骤在同一次事务完成',
  'admit-captive':'把实际在场且受本人关押的人安置到已开门且有空位的牢房','withdraw-captive':'将仍在此设施关押的人物领到操作者当前空间，操作者不移动；若要领到公共区域，操作者先visit-custody-cell省略cellId离开房间；原有拘束继续生效',
@@ -135,6 +144,7 @@ export const STORY_ACTION_PURPOSES:Readonly<Record<string,string>>={
  'inspect-research':'查看已保留候选的完整效果',
  'choose-research':'选择已知候选，取得原型和图纸',
  'preview-craft':'按已有图纸和用料预览制作报价',
+ 'learn-preset-blueprint':'阅读本人实际拥有并携带的预设设计图，掌握对应完整制作配方；学习不赠送成品或材料',
  'craft-blueprint':'按已同意的用料和数量制作图纸成品',
  'quote-material-sale':'查询个人永久材料回收报价',
  'sell-material':'出售个人永久材料',
@@ -211,7 +221,7 @@ export const STORY_ACTION_PURPOSES:Readonly<Record<string,string>>={
  'attend-invitation':'双方在约定时间窗口和地点实际赴约',
  'respond-npc-request':'拒绝已有补给委托，或交付相应物品并按实际收购价结算',
  'escape-captivity':'按当前真实束缚选项尝试挣脱，或在能移动时避开看守；实际推进10分钟，单件挣脱不自动解除关押',
- cultivate:'执行指定时长修炼，由规则结算成长、瓶颈及打断',
+ cultivate:'按指定时长修炼。未指定时长时安排一天，由规则结算成长、瓶颈及打断',
  'wait-until':'等待到明确的世界日与时刻',
  'resume-long-action':'从保存的断点继续等待、旅行或修炼',
  'abandon-long-action':'放弃保存的长行动剩余部分',

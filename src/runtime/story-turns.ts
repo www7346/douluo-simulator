@@ -1,3 +1,4 @@
+import {EVOLUTION_ACTION_FIELDS,evolutionStoryCommand,evolutionActionSchema,validateEvolutionParameter,evolutionStoryFacts} from './story-evolution';
 import {checkedArchivedProseOriginal} from '../shared/story-archived-prose';
 import {personContractFacts} from './person-contract';
 import {createStoryHireFactsReader} from './story-hire-facts';
@@ -47,7 +48,7 @@ import {validatePartyMessages,validatePartyReplyProposal,partyMessageForTurn,isP
 import {checkPrivateRouteRequest,validatePrivateStoryRoute,type PrivateStoryRoute,type PrivateRouteRequest} from '../shared/story-private-route';
 import {resolvePrivateRoute} from './story-private-route';
 import {meetStoryPerson} from './story-people';
-import {communicationAvailability,soulContact,REMOTE_STORY_ACTIONS} from '../shared/story-communication';
+import {communicationAvailability,soulContact} from '../shared/story-communication';
 import {conversationActivityOptions} from './story-communication-activity';
 import {captivityFacts,releaseFacts} from './story-captivity';
 import {pendingNpcDecisions,visibleNpcGoals,npcCollaborationFacts,npcConversationGoals} from '../shared/npc-autonomy';
@@ -77,9 +78,9 @@ import {validateFreeAction,freeActionFacts,FREE_ACTION_BRANCH_LIMIT,FREE_ACTION_
 import {storyFieldResources} from './story-field-resources';
 import {recordStoryAddress,personAddresses} from './story-addresses';
 import type {GameCommand} from './contracts';
-import {storyAbilityFacts,storySoulFacts,storyEraFacts,storyOwnedItemFacts,storyOwnedRingFacts} from './story-person-dossier';
+import {knownStoryDossier,storyAbilityFacts,storySoulFacts,storyEraFacts,storyOwnedItemFacts,storyOwnedRingFacts} from './story-person-dossier';
 import {storyPersona,storyConversationIdentity,storyBackgroundContext} from './story-personas';
-import {recentBattleReports,readBattleReport} from './battle-reports';
+import {recentBattleReports,readBattleReport,sharedBattleEncounters} from './battle-reports';
 import {PERSON_HISTORY_CATEGORIES,storyPersonHistorySummary} from './story-person-history';
 import {expireStoryCommitments,personCommitments,commitmentView,personRelationship,recentEndedCommitments,RELATIONSHIP_LABELS} from './story-commitments';
 import {pendingStoryCommitments} from '../shared/story-commitments';
@@ -245,11 +246,11 @@ export function validateStoryLedger(state:any):void {
 
 export function checkPrivatePerson(state:any,personId:string){
  text(personId,'私聊人物');
- const p=state.人物?.列表?.[personId],unit=state.战斗单位?.列表?.[personId];
+ const p=state.人物?.列表?.[personId];
  if(!p||personId===state.角色?.主控单位ID)throw Error('没有可以交谈的已登记人物');
  const contact=communicationAvailability(state,personId,{receiving:true});if(!contact.available)throw Error(contact.reason);
  const block=rules.world.worldActionBlockReason(state,{...conversationActivityOptions(state,personId),allowCaptivity:contact.mode==='in-person'});if(block)throw Error(block);
- if(p.status==='dead'||unit&&(unit.存活状态!=='存活'||unit.资源.生命.当前<=0))throw Error('这位人物目前无法回应');
+ if(p.status==='dead')throw Error('这位人物目前无法回应');
  return p;
 }
 
@@ -284,39 +285,43 @@ function privateScenePerson(state:any,personId:string,observerId:string){
 /** Characterization belongs to the actual audience. Private conversation does not grant the other person's inner memories. */
 export function storyTurnFacts(state:any,privatePersonId?:string,query='',observerId=privatePersonId??state.角色?.主控单位ID):Record<string,any>{return rules.controls.withReadIndex(state,()=>readStoryTurnFacts(state,privatePersonId,query,observerId));}
 function readStoryTurnFacts(state:any,privatePersonId?:string,query='',observerId=state.角色?.主控单位ID):Record<string,any>{
- const active=state.扩展?.story?.active;if(!privatePersonId&&active?.partyChat&&active.status==='planning')return {partyChat:true,partyChatRecipients:partyChatRoster(state),partyLoot:{templates:rules.expedition.loot.templates(),priorities:rules.expedition.loot.priorityFacts(state),dungeonId:rules.expedition.DUNGEON_ID,members:rules.expedition.loot.roster(state,rules.expedition.DUNGEON_ID),agreements:rules.expedition.loot.visibleRecords(state).filter((a:any)=>!a.expeditionId).slice(-3),pending:rules.expedition.loot.pending(state),meaning:'自愿提前约定才需逐人同意，且不是进本条件；pending 中 post-trip 收获由原领队在战利品窗口直接分配，无需 AI 同意。仅主持解析使用，不传入人物共享回复。'},player:storyConversationIdentity(state.人物.列表[state.角色.主控单位ID]),time:state.世界.时间,calendar:rules.world.storyCalendarDate(state)};if(!privatePersonId&&active?.results.some((r:any)=>r.action.kind==='tell-party'))return partyConversationFacts(state,partyMessageForTurn(active));
+ const active=state.扩展?.story?.active;if(!privatePersonId&&active?.partyChat&&active.status==='planning')return {evolution:evolutionStoryFacts(state),partyChat:true,partyChatRecipients:partyChatRoster(state),partyLoot:{templates:rules.expedition.loot.templates(),priorities:rules.expedition.loot.priorityFacts(state),dungeonId:rules.expedition.DUNGEON_ID,members:rules.expedition.loot.roster(state,rules.expedition.DUNGEON_ID),agreements:rules.expedition.loot.visibleRecords(state).filter((a:any)=>!a.expeditionId).slice(-3),pending:rules.expedition.loot.pending(state),meaning:'自愿提前约定才需逐人同意，且不是进本条件；pending 中 post-trip 收获由原领队在战利品窗口直接分配，无需 AI 同意。仅主持解析使用，不传入人物共享回复。'},player:storyConversationIdentity(state.人物.列表[state.角色.主控单位ID]),time:state.世界.时间,calendar:rules.world.storyCalendarDate(state)};if(!privatePersonId&&active?.results.some((r:any)=>r.action.kind==='tell-party'))return partyConversationFacts(state,partyMessageForTurn(active));
  if(!privatePersonId)return {...publicStoryFacts(state),narrativeObjects:storyObjectContext(state,undefined,query)};
  const playerId=state.角色.主控单位ID;
  let person:any=privateScenePerson(state,privatePersonId,observerId);
  const facts=jsonFacts({
+  evolution:evolutionStoryFacts(state,privatePersonId),
   time:state.世界?.时间,calendar:rules.world.storyCalendarDate(state),
   huntingDestinations:storyHuntingDestinations(state),
   pendingCompanions:storyPendingCompanions(state).filter((contract:any)=>contract.personId===privatePersonId),
  });
  const blocked=state.扩展?.story?.active?.privatePersonId===privatePersonId?state.扩展.story.active.privateRoute?.blockedReason:undefined;
- const communication={...communicationAvailability(state,privatePersonId),...(blocked?{available:false,reason:blocked}:{})};
+ const channel=communicationAvailability(state,privatePersonId);
+ const canSeePlayer=(channel.mode==='in-person'||channel.mode==='projection')&&rules.actions.perception(state,privatePersonId,playerId,'vision');
+ const communication={...channel,canSeePlayer,...(blocked?{available:false,reason:blocked}:{})};
+ if(communication.mode==='realm'||communication.mode==='soul-device')person=undefined;
  if(!person&&communication.mode==='in-person'){
-  const p=state.人物.列表[privatePersonId],d=p?.扩展?.已知档案?.[state.角色.主控单位ID];
+  const p=state.人物.列表[privatePersonId],d=knownStoryDossier(state,privatePersonId);
   if(!p)throw Error('没有可以交谈的已登记人物');
   const persona=storyPersona(state,p,observerId);
   person={id:p.id,name:p.name,scope:'voice-conversation',characterization:persona,speechStyle:persona.profile?.speech??persona.reference?.speech??null,backgroundContext:storyBackgroundContext(state,p.id),lastEncounter:d?structuredClone(d):null,relationship:relationshipPresentation(personRelationship(state,p.id),state.角色.主控单位ID,p.id),speechFacts:rules.social.speechFacts(state,state.角色.主控单位ID).filter((r:any)=>r.speakerId===p.id)};
  }
  if(!person){
-  const p=state.人物.列表[privatePersonId],d=p?.扩展?.已知档案?.[state.角色.主控单位ID];
-  if(!p||!soulContact(state,p.id)&&!blocked)throw Error('尚未与此人建立魂导通讯联系');
+  const p=state.人物.列表[privatePersonId],d=knownStoryDossier(state,privatePersonId);
+  if(!p||communication.mode==='soul-device'&&!soulContact(state,p.id)&&!blocked)throw Error('尚未与此人建立魂导通讯联系');
   const member=rules.world.partyMembers(state).find((m:any)=>m.personId===p.id);
   person={id:p.id,name:p.name,canonicalId:p.扩展?.角色库ID??state.战斗单位?.列表?.[p.id]?.扩展?.角色库ID??null,identity:d?.identity??null,occupation:d?.occupation??null,
    characterization:storyPersona(state,p,observerId),backgroundContext:storyBackgroundContext(state,p.id),lastEncounter:d?structuredClone(d):null,
    relationshipScore:Number.isFinite(p.relationship?.player)?p.relationship.player:null,relationship:relationshipPresentation(personRelationship(state,p.id),state.角色.主控单位ID,p.id),soulContactId:soulContact(state,p.id)?.id,partyMembership:member?{personId:member.personId,membershipId:member.membershipId,membership:member.membership,dungeonId:member.dungeonId,present:false}:null,
    commitments:personCommitments(state,p.id).map((r:any)=>commitmentView(state,r)).filter((r:any)=>['pending','accepted'].includes(r.status)),recentEndedCommitments:recentEndedCommitments(state,p.id),history:storyPersonHistorySummary(state,p.id),
    ...createStoryHireFactsReader(state)(p.id),recentCompanionAgreements:(p.扩展?.同行约定??[]).filter((a:any)=>a.playerId===state.角色.主控单位ID).slice(-8),recentSharedEvents:(p.扩展?.共同见闻??[]).filter((e:any)=>e.playerId===state.角色.主控单位ID&&e.participants?.includes(p.id)).slice(-8)};
-  person=subjectivePerson(state,person);
-  return {personContracts:personContractFacts(state,privatePersonId).filter((r:any)=>rules.personContracts.get(state,r.id).parties.includes(state.角色.主控单位ID)),residentContext:residentNarrativeContext(state,privatePersonId,state.角色.主控单位ID),communication,custody:conversationCustodyFacts(state,privatePersonId,true),location:{id:null,name:'魂导通讯'},time:facts.time,calendar:facts.calendar,player:storyConversationIdentity(state.人物.列表[playerId],communication.mode==='in-person'&&rules.actions.perception(state,privatePersonId,playerId,'vision')),people:[person],personReferences:storyPersonReferences(state,privatePersonId),partyConversation:personPartyConversation(state,p.id,query),personalKnowledge:personHeardStatements(state,p.id,query),personalContacts:personAddresses(state,p.id,query),npcGoals:npcConversationGoals(state,p.id),autonomousPlans:rules.world.npcPlanFacts(state,p.id,p.id),huntingDestinations:facts.huntingDestinations,pendingCompanions:facts.pendingCompanions,narrativeObjects:storyObjectContext(state,privatePersonId,query)};
+  person=subjectivePerson(state,{...person,sharedBattleEncounters:sharedBattleEncounters(state,privatePersonId)});
+  return {personContracts:personContractFacts(state,privatePersonId).filter((r:any)=>rules.personContracts.get(state,r.id).parties.includes(state.角色.主控单位ID)),residentContext:residentNarrativeContext(state,privatePersonId,state.角色.主控单位ID),communication,custody:conversationCustodyFacts(state,privatePersonId,true),location:{id:null,name:communication.mode==='soul-device'?'魂导通讯':communication.label},time:facts.time,calendar:facts.calendar,player:storyConversationIdentity(state.人物.列表[playerId],canSeePlayer),people:[person],personReferences:storyPersonReferences(state,privatePersonId),partyConversation:personPartyConversation(state,p.id,query),personalKnowledge:personHeardStatements(state,p.id,query),personalContacts:personAddresses(state,p.id,query),npcGoals:npcConversationGoals(state,p.id),autonomousPlans:rules.world.npcPlanFacts(state,p.id,p.id),huntingDestinations:facts.huntingDestinations,pendingCompanions:facts.pendingCompanions,narrativeObjects:storyObjectContext(state,privatePersonId,query)};
  }
 
- person=subjectivePerson(state,person);
+ person=subjectivePerson(state,{...person,sharedBattleEncounters:sharedBattleEncounters(state,privatePersonId)});
  const position=rules.actions.positionOf(state,playerId);
- return {personContracts:personContractFacts(state,privatePersonId).filter((r:any)=>rules.personContracts.get(state,r.id).parties.includes(state.角色.主控单位ID)),residentContext:residentNarrativeContext(state,privatePersonId,state.角色.主控单位ID),communication,location:jsonFacts(storyLocation(state,position,position?.locationId??state.地图?.当前地点ID)),time:facts.time,calendar:facts.calendar,custody:conversationCustodyFacts(state,privatePersonId),captivity:jsonFacts(captivityFacts(state)),releaseResponses:releaseFacts(state,privatePersonId).slice(-8),npcRequests:rules.world.npcRequestFacts(state,state.角色.主控单位ID,privatePersonId),npcCollaborations:npcCollaborationFacts(state,privatePersonId,privatePersonId),npcGoals:npcConversationGoals(state,privatePersonId),autonomousPlans:rules.world.npcPlanFacts(state,privatePersonId,privatePersonId),player:storyConversationIdentity(state.人物.列表[playerId],communication.mode==='in-person'&&rules.actions.perception(state,privatePersonId,playerId,'vision')),people:[person],personReferences:storyPersonReferences(state,privatePersonId),partyConversation:personPartyConversation(state,privatePersonId,query),personalKnowledge:personHeardStatements(state,privatePersonId,query),personalContacts:personAddresses(state,privatePersonId,query),huntingDestinations:facts.huntingDestinations,
+ return {personContracts:personContractFacts(state,privatePersonId).filter((r:any)=>rules.personContracts.get(state,r.id).parties.includes(state.角色.主控单位ID)),residentContext:residentNarrativeContext(state,privatePersonId,state.角色.主控单位ID),communication,location:jsonFacts(storyLocation(state,position,position?.locationId??state.地图?.当前地点ID)),time:facts.time,calendar:facts.calendar,custody:conversationCustodyFacts(state,privatePersonId),captivity:jsonFacts(captivityFacts(state)),releaseResponses:releaseFacts(state,privatePersonId).slice(-8),npcRequests:rules.world.npcRequestFacts(state,state.角色.主控单位ID,privatePersonId),npcCollaborations:npcCollaborationFacts(state,privatePersonId,privatePersonId),npcGoals:npcConversationGoals(state,privatePersonId),autonomousPlans:rules.world.npcPlanFacts(state,privatePersonId,privatePersonId),player:storyConversationIdentity(state.人物.列表[playerId],canSeePlayer),people:[person],personReferences:storyPersonReferences(state,privatePersonId),partyConversation:personPartyConversation(state,privatePersonId,query),personalKnowledge:personHeardStatements(state,privatePersonId,query),personalContacts:personAddresses(state,privatePersonId,query),huntingDestinations:facts.huntingDestinations,
   pendingCompanions:facts.pendingCompanions,narrativeObjects:storyObjectContext(state,privatePersonId,query)};
 }
 
@@ -335,7 +340,7 @@ function conversationCustodyFacts(state:any,personId:string,remote=false){
  facts.responses=custodyResponseFacts(state,facts);return narrativeCustodyFacts(facts);
 }
 
-const RING_GENERATION_FIELDS=["presetId","exchangeContracts","requestedEffects","requestedBranches","requestedSkills","requestedEffectIds","requirements","resourceCosts","maintenanceCosts","castModes","defaultCastMode","usageRules","cooldownTurns"];
+const RING_GENERATION_FIELDS=['evolutionTarget',"presetId","exchangeContracts","requestedEffects","requestedBranches","requestedSkills","requestedEffectIds","requirements","resourceCosts","maintenanceCosts","castModes","defaultCastMode","usageRules","cooldownTurns"];
 /** Read-only input contract shared with the native controls.limitSpec validator. */
 export const CONTROL_LIMIT_PARAMETERS=Object.freeze({
  type:'object',additionalProperties:false,minProperties:1,
@@ -388,6 +393,7 @@ const ACTION_FIELDS:Record<string,string[]>={...RESIDENT_ACTION_FIELDS,...PERSON
  'register-competition':['venueId'],'competition-match':[],'competition-withdraw':[],
  'inspect-workshop':[],'recommend-research':['category','concept','presetId','hostDesign','confirmedDesign'],'preview-research':['category','concept','materials','presetId','hostDesign','confirmedDesign'],
  'begin-research':['category','concept','materials','confirmed','presetId','hostDesign','confirmedDesign','expectedMechanicsHash'],'inspect-research':['pendingId'],'choose-research':['pendingId','candidateIndex'],
+ 'learn-preset-blueprint':['itemId'],
  'preview-craft':['blueprintId','quantity','materials'],'craft-blueprint':['blueprintId','quantity','materials'],
  'quote-material-sale':['fingerprint','quantity'],'sell-material':['fingerprint','quantity'],'quote-item-sale':['itemId','quantity'],'sell-item':['itemId','quantity'],
  'city-history':['locationId','before'],'ask-release':['characterId','text'],'consider-person-goal':['characterId','intent'],'answer-person-plan':['goalId','accept'],
@@ -430,7 +436,7 @@ const ACTION_FIELDS:Record<string,string[]>={...RESIDENT_ACTION_FIELDS,...PERSON
  'propose-person-cooperation':['characterId','basis','membership','dungeonId','allowTravel','allowCombat','durationMinutes'],'respond-person-cooperation':['cooperationId','accept','reason'],'impose-person-cooperation':['characterId','membership','dungeonId','allowTravel','allowCombat','durationMinutes'],'end-person-cooperation':['cooperationId','reason'],'resume-person-cooperation':['cooperationId'],
  'observe-custody-person':['characterId'],'tell-custody-news':['characterId','factIds'],'send-custody-letter':['characterId','factIds','destinationId'],
  'acquire-custody-facility':['templateId','mode'],
- 'visit-custody-cell':['facilityId','cellId'],'set-custody-cell-door':['facilityId','cellId','locked'],'repair-custody-facility':['facilityId'],'place-captive':['facilityId','cellId','characterId'],'admit-captive':['facilityId','cellId','characterId'],'withdraw-captive':['facilityId','characterId'],
+ 'visit-custody-cell':['facilityId','cellId'],'set-custody-cell-door':['facilityId','cellId','locked'],'break-custody-cell-door':['facilityId','cellId'],'repair-custody-facility':['facilityId'],'place-captive':['facilityId','cellId','characterId'],'admit-captive':['facilityId','cellId','characterId'],'withdraw-captive':['facilityId','characterId'],
  'permit-custody-duty':['characterId','mode'],'assign-custody-guard':['facilityId','characterId'],'end-custody-duty':['dutyId'],
  'start-custody-escort':['targetIds','destinationId','guardIds'],'pause-custody-escort':['escortId'],'resume-custody-escort':['escortId'],'cancel-custody-escort':['escortId'],'captive-daily':['minutes'],
  'exchange-contact':['characterId'],
@@ -445,7 +451,7 @@ const ACTION_FIELDS:Record<string,string[]>={...RESIDENT_ACTION_FIELDS,...PERSON
  'free-action':['intent','actorId','objective','minutes','check','onSuccess','onFailure'],
  'opposed-check':['characterId','attribute','defenderAttribute','reason'],
  'introduce-person':['objectId','objectStep','identity','occupation','archetypeId','name','age','gender','appearance','personality','profile','level','martialSoulTemplateId','martialSoulDescription','martialSoulDraft','presetId'],
- 'inspect-inventory':['view','selectedItemId'],'inspect-growth':[],'allocate-growth':['attribute','steps'],
+ 'inspect-inventory':['view','selectedItemId'],'inspect-growth':[],...EVOLUTION_ACTION_FIELDS,'allocate-growth':['attribute','steps'],
  'inspect-ring':['beastUnitId','martialSoulId'],'prepare-ring':['beastUnitId','martialSoulId',...RING_GENERATION_FIELDS],
  'inspect-ring-item':['itemId','martialSoulId'],'prepare-ring-item':['itemId','martialSoulId',...RING_GENERATION_FIELDS],
  'inspect-ring-choices':['pendingId'],'choose-ring':['pendingId','candidateId'],
@@ -483,6 +489,7 @@ function commerceReferenceParameters(kind:string):Record<string,any>{
 export const STORY_ACTION_SCHEMA=Object.entries(ACTION_FIELDS).map(([kind,parameters])=>({...residentActionMetadata(kind),...personContractActionMetadata(kind),
  ...(kind==='propose-relationship'?{optionalParameters:['roles'],objectParameters:{roles:{fields:['self','other'],meaning:'关系双方身份；self为提出者，other为受邀者，例如{self:徒弟,other:师父}。省略采用该关系默认方向。'}}}:{}),
  ...(kind==='recover-party'?{optionalParameters:['memberId']} :{}),
+ ...evolutionActionSchema(kind),
  ...(kind==='inspect-inventory'?{optionalParameters:['view','selectedItemId'],valueOptions:{view:['summary','details','equipment-comparison']}}:{}),
  ...(kind==='describe'?{optionalParameters:['mode','characterId'],valueOptions:{mode:['scene','daily','explanation']},parameterMeanings:{mode:'daily写当场享用的日常小事，characterId可指定一名在场参与者。scene表达其他文学场景；explanation仅解释同轮正式行动的条件，不另写小说，也不作为数值或行动结果'}}:{}),
   ...(COMMERCE_LOT_ACTIONS.has(kind)||['start-curated-auction','start-asset-auction'].includes(kind)?{referenceParameters:commerceReferenceParameters(kind)}:{}),
@@ -496,7 +503,7 @@ export const STORY_ACTION_SCHEMA=Object.entries(ACTION_FIELDS).map(([kind,parame
  ...(kind==='host.set-form'?{requiredParameters:['slot','formId'],optionalParameters:['level'],ranges:{level:[0,5]},parameterMeanings:{slot:'正式登记且未被占用的部位',formId:'正式登记的形态ID；空字符串仅清空所选部位',level:'省略为0；最终上限由原形态登记决定，不能增加原宿主能力'}}:{}),
  ...(kind==='host.set-appearance'?{requiredParameters:['preset'],parameterMeanings:{preset:'所选宿主已经登记的原外观预设，不生成新预设'}}:{}),
  ...(kind==='battle-action'?{objectParameters:{intent:{fields:[...BATTLE_ACTION_FIELDS],typeValues:[...BATTLE_ACTION_TYPES],meaning:'type取索引actionType原值；普通攻击和魂技均为“技能”，skillId取能力id，targetIds填真实参战单位id。只能操作本人，目标、移动、费用和限制交正式战斗预览与执行。开战前安排点名魂技也使用同一结构。'}}}:{}),
- ...(['prepare-ring','prepare-ring-item'].includes(kind)?{optionalParameters:RING_GENERATION_FIELDS,arrayParameters:Object.fromEntries(RING_GENERATION_FIELDS.filter(k=>!['presetId','defaultCastMode','usageRules','cooldownTurns'].includes(k)).map(k=>[k,{items:'正式规则结构化提案',minItems:0,maxItems:k==='exchangeContracts'?8:32}])),objectParameters:{usageRules:{meaning:'每日/本场/共享次数及世界冷却'}},integerParameters:['cooldownTurns']}:{}),
+ ...(['prepare-ring','prepare-ring-item'].includes(kind)?{optionalParameters:RING_GENERATION_FIELDS,arrayParameters:Object.fromEntries(RING_GENERATION_FIELDS.filter(k=>!['evolutionTarget','presetId','defaultCastMode','usageRules','cooldownTurns'].includes(k)).map(k=>[k,{items:'正式规则结构化提案',minItems:0,maxItems:k==='exchangeContracts'?8:32}])),objectParameters:{evolutionTarget:{meaning:'本次新环牵引的完整目标武魂，结构费用与魂技共用变化前冻结额度'},usageRules:{meaning:'每日/本场/共享次数及世界冷却'}},integerParameters:['cooldownTurns']}:{}),
  ...(['recommend-research','preview-research','begin-research'].includes(kind)?{optionalParameters:['presetId','hostDesign','confirmedDesign',...(kind==='begin-research'?['expectedMechanicsHash']:[])],objectParameters:{confirmedDesign:{fields:['version','category','name','description','appearance','definition','carrierTemplateId'],meaning:'玩家审阅确认的当前五类完整固定设计；与presetId/hostDesign互斥。定义、能力、费用及材料桥梁均由正式规则报价，不能凭名称补造。'},hostDesign:{fields:['version','carrierTemplateId','definition'],meaning:'已确认的宿主提案；version=1，carrierTemplateId为实际载体制式，definition包含正式host与原效果。不与精品presetId同时使用，具体成本、材料和可执行性由正式研发报价判断。'}},parameterMeanings:{presetId:'玩家点名的正式精品预设ID；省略则使用普通生成',hostDesign:'仅传递玩家已明确确认的能力组合，不替玩家补选、增删或降低强度；先查看正式报价再投入',confirmedDesign:'从玩家已审阅的实际提案完整传递，不改变品类、载体、节点或参数；先预览再确认实际hash投入',expectedMechanicsHash:'仅begin-research使用，对应当前完整设计与实际材料的正式预览mechanicsHash；不得猜测或沿用旧hash'}}:{}),
  ...(rules.sealing.INTENTS.includes(kind)?{optionalParameters:parameters.filter(p=>['permissionId','defeatId','mode'].includes(p)),integerParameters:parameters.filter(p=>['releaseAfterMinutes','minutes'].includes(p)),ranges:{releaseAfterMinutes:[1,525600],minutes:[1,1440]},...(parameters.includes('mode')?{valueOptions:{mode:['awake','stasis']}}:{}),parameterMeanings:{permissionId:'已授予、尚未使用的本人封存许可',operatorId:'实际持有空封神台且有控制权的同场操作者',targetId:'实际同场人物；开罩释放与解除其他拘束分别执行',mode:'awake为闭罩清醒囚禁；stasis或省略为个人时间暂停的静滞封存'}}:{}),
  ...(kind==='start-asset-auction'?{optionalParameters:['itemId','targetId','fingerprint','reserveGold','auctionClass','accountId','deviceTerms','materials'],valueOptions:{assetKind:['item','loaded-seal','person','material','materials'],auctionClass:['regular','rare']},parameterMeanings:{quantity:'同一实物堆栈或来源材料的实际数量；人物和载人器组合仅为1',reserveGold:'明确指定的保留价；省略按机制估值70%',auctionClass:'省略按实际总机制估值选择；常规至少1000，珍品至少50000'},arrayParameters:{materials:{items:'{fingerprint:本人永久材料原指纹,quantity:实际选入组的数量}',minItems:1,maxItems:24,uniqueItems:true},deviceTerms:{items:'{itemId:本人实际拥有或有控制权的器具ID,transferOwnership:boolean,transferControl:boolean}',minItems:0,maxItems:6,uniqueItems:true}}}:{}),
@@ -626,6 +633,7 @@ export function validateStoryPlan(value:unknown,input:string):StoryPlan {
   if(s.action.kind==='intimate-craft')assertNeutralWearableStoryAction(null,s.action);
   if(s.action.kind==='device.unlock'&&s.action.keyItemId!==undefined&&s.action.skillId!==undefined)throw Error('解锁请选择实体钥匙或正式技能之一');
   for(const key of ACTION_FIELDS[s.action.kind]){
+   if(validateEvolutionParameter(s.action,key))continue;
    if(validateResidentActionParameter(s.action,key)||validatePersonContractActionParameter(s.action,key))continue;
    if(s.action.kind==='break-restraint'&&key==='method'&&s.action.method===undefined)continue;
    if(FIELD_ABILITY_OPTIONAL[s.action.kind]?.includes(key)&&s.action[key]===undefined)continue;
@@ -640,7 +648,7 @@ export function validateStoryPlan(value:unknown,input:string):StoryPlan {
    if(s.action.kind==='describe'&&['mode','characterId'].includes(key)&&s.action[key]===undefined)continue;
    if(s.action.kind==='inspect-commerce'&&['auctionId','itemName'].includes(key)&&s.action[key]===undefined)continue;
    if(s.action.kind==='battle-action'&&key==='intent'){assertBattleActionInput(s.action.intent);continue;}
-   if(['prepare-ring','prepare-ring-item'].includes(s.action.kind)&&RING_GENERATION_FIELDS.includes(key)){const v=s.action[key];if(v===undefined)continue;if(['presetId','defaultCastMode'].includes(key))text(v,key);else if(key==='cooldownTurns')count(v,0,10080);else if(key==='usageRules'){if(!v||typeof v!=='object'||Array.isArray(v))throw Error('次数必须是结构化对象');}else if(!Array.isArray(v)||v.length>32)throw Error('魂技提案必须是有界结构化数组');continue;}
+   if(['prepare-ring','prepare-ring-item'].includes(s.action.kind)&&RING_GENERATION_FIELDS.includes(key)){const v=s.action[key];if(v===undefined)continue;if(['presetId','defaultCastMode'].includes(key))text(v,key);else if(key==='cooldownTurns')count(v,0,10080);else if(key==='evolutionTarget'){if(!v||typeof v!=='object'||Array.isArray(v))throw Error('进化目标必须是完整武魂对象');}else if(key==='usageRules'){if(!v||typeof v!=='object'||Array.isArray(v))throw Error('次数必须是结构化对象');}else if(!Array.isArray(v)||v.length>32)throw Error('魂技提案必须是有界结构化数组');continue;}
    if(key==='presetId'&&['recommend-research','preview-research','begin-research'].includes(s.action.kind)){if(s.action[key]!==undefined)text(s.action[key],key);continue;}
    if(key==='expectedMechanicsHash'&&s.action.kind==='begin-research'){if(s.action[key]!==undefined)text(s.action[key],key);continue;}
    if(key==='confirmedDesign'&&['recommend-research','preview-research','begin-research'].includes(s.action.kind)){
@@ -765,7 +773,7 @@ export function validateStoryPlan(value:unknown,input:string):StoryPlan {
   }
   if(s.action.kind==='travel'&&!Object.hasOwn(rules.world.PATH_MODES,s.action.mode))throw Error('旅行方式不存在');
   if(s.action.kind==='opening-guidance'&&(!['claim','defer','skip'].includes(s.action.action)||s.action.giftId!==undefined&&!Object.hasOwn(rules.talents.MASTER_GIFTS,s.action.giftId)))throw Error('请选择已有赠环或暂缓交谈');
-  if(['wait-until-date','invite-date'].includes(s.action.kind))rules.world.storyWorldTimeAtDate(s.action);
+  if(['wait-until-date','invite-date'].includes(s.action.kind)&&s.action.day>30)throw Error('斗罗历日期无效，每月只有30日');
   if(s.action.kind==='attribute-check')validateStoryCheck(s.action);
   if(s.action.kind==='free-action')validateFreeAction(s.action,`/segments/${i}/action`);
   if(s.action.kind==='opposed-check')validateStoryOpposedCheck({...s.action,characterId:s.action.characterStep===undefined?s.action.characterId:'prior-created-person'});
@@ -826,7 +834,7 @@ function readStoryFacts(state:any,readActions?:StoryActionsReader):Record<string
  const parentService=position?.sceneId?rules.expedition.serviceAtLocation(state,locationId):null;
  const currentFacilities=position?.sceneId?(rules.logistics.facts(state,id,{includeDestinations:false})?.facilities??[]).filter((f:any)=>f.cells.some((c:any)=>c.spaceId===position.sceneId)):[];
  const personFacts=createScenePersonReader(state,readActions);
- return jsonFacts({deviceOperations:rules.deviceOperations.facts(state,id),location:actualLocation,time:state.世界?.时间,calendar:rules.world.storyCalendarDate(state),
+ return jsonFacts({evolution:evolutionStoryFacts(state),deviceOperations:rules.deviceOperations.facts(state,id),location:actualLocation,time:state.世界?.时间,calendar:rules.world.storyCalendarDate(state),
   lootTemplates:rules.expedition.loot.templates(),lootPriorities:rules.expedition.loot.priorityFacts(state),
   lootAgreements:rules.expedition.loot.visibleRecords(state).filter((r:any)=>!r.expeditionId).slice(-3),
   lootRoster:rules.expedition.loot.roster(state,rules.expedition.DUNGEON_ID),
@@ -837,8 +845,8 @@ function readStoryFacts(state:any,readActions?:StoryActionsReader):Record<string
   narrativeObjects:storyObjectContext(state),
   commerce:storyCommerceFacts(state),
   parentServices:parentService?[{id:parentService.id,name:parentService.name,locationId,workshopId:parentService.workshopId,workshopName:parentService.workshopName,requiresPublicAccess:true}]:[],
-  currentFacility:currentFacilities[0]?{id:currentFacilities[0].id,name:currentFacilities[0].name,locationId,canManage:currentFacilities[0].canManage,cells:currentFacilities[0].cells,occupants:currentFacilities[0].occupants,exitSteps:['set-custody-cell-door解锁当前房门','visit-custody-cell省略cellId让本人回公共通道','withdraw-captive将人物领到本人所在公共通道'],sameCityServices:'到公共区域后读取当前商店；同城访问服务不使用跨城押送'}:null,
-  personCreationOptions:storyPersonCreationOptions(),
+  currentFacility:currentFacilities[0]?{id:currentFacilities[0].id,name:currentFacilities[0].name,locationId,canManage:currentFacilities[0].canManage,cells:currentFacilities[0].cells,occupants:currentFacilities[0].occupants,exitSteps:['有门禁权限的在场人物可用set-custody-cell-door实际开门；有有效物品控制权时可用issue-field-control让该人物执行此命令','自由行动者破坏当前锁门用break-custody-cell-door，仍被关押时用escape-captivity中的破坏牢门选项','visit-custody-cell省略cellId让本人回公共通道','withdraw-captive将人物领到本人所在公共通道'],sameCityServices:'到公共区域后读取当前商店；同城访问服务不使用跨城押送'}:null,
+  personCreationOptions:storyPersonCreationOptions(state.世界.npcGender),
   recentChecks:storyCheckHistory(state),
   freeActions:freeActionFacts(state),
   fieldResources:storyFieldResources(state),
@@ -898,17 +906,18 @@ function storyMarketStatus(state:any,result:StoryStepResult|undefined):string|un
  return c?.type==='custody-trade'?rules.custodyMarket.facts(state,viewer).find((r:any)=>r.id===c.offerId)?.status:c?.type==='asset-auction'?rules.commerceAuction.facts(state,viewer).lots.find((r:any)=>r.id===c.auctionId)?.status:undefined;
 }
 
-function commandFor(action:StoryAction,id:string):{type:string;payload:Record<string,any>} {
+function commandFor(action:StoryAction,id:string,state:any):{type:string;payload:Record<string,any>} {
  const {kind,...params}=action;
  if(['device.lock','device.unlock','device.suppress-lock','device.break-rule','device.analyze-lock','device.create-key','device.arcane-lock','intimate-craft','intimate-equip','intimate-detach','host.set-suppression','host.set-form','host.set-appearance'].includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
  if(kind==='battle-action')return {type:'battle.action',payload:params.intent as Record<string,any>};
  if(kind==='inspect-commerce')return {type:'commerce.inspect-story',payload:params};
  if(rules.commerceAuction.INTENTS.includes(kind)||rules.commerceAssets.INTENTS.includes(kind)||rules.commerceMessages.INTENTS.includes(kind)||rules.stock.INTENTS.includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
  if(kind==='issue-field-control')return {type:'world.intent',payload:{type:kind,characterId:params.characterId,action:params.command}};
+ if(kind==='break-custody-cell-door')return {type:'world.intent',payload:{type:kind,...params}};
  if(rules.poison.INTENTS.includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
  if(rules.personContracts.INTENTS.includes(kind)||rules.residentRealms.INTENTS.includes(kind)||rules.performanceAgreements.INTENTS.includes(kind)||rules.combatDeployments.INTENTS.includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
  if(rules.sealing.INTENTS.includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
- if(['use-field-ability','stop-maintenance','dismiss-disguise','inspect-disguise','disclose-identity','request-ability-use','respond-ability-use','retract-martial-soul','restrain-desire','break-restraint'].includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
+ if(['learn-preset-blueprint','use-field-ability','stop-maintenance','dismiss-disguise','inspect-disguise','disclose-identity','request-ability-use','respond-ability-use','retract-martial-soul','restrain-desire','break-restraint'].includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
  if(rules.custodyMarket.INTENTS.includes(kind)||rules.custodyAuction.INTENTS.includes(kind)||rules.preparations.INTENTS.includes(kind)||rules.cooperation.INTENTS.includes(kind)||rules.rescue.INTENTS.includes(kind)||rules.social.INTENTS.includes(kind)||rules.logistics.INTENTS.includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
  if(['propose-person-contract','form-controlled-contract','set-realm-arrangement','arrange-realm-resident','end-realm-visit','move-realm-guest','set-resident-permissions','reward-resident','punish-resident','propose-performance-agreement','deploy-resident','recall-resident','discuss-resident-tactics','propose-custody-transfer','start-custody-auction','person-duel','capture-person','spare-person','execute-person','search-captive','release-captive','set-restraint-mode','detach-restraint','attach-restraint','permit-restraint','request-restraint-permission','revoke-restraint-permission','respond-restraint-permission-request'].includes(kind))return {type:'world.intent',payload:{type:kind,...params}};
  if(kind==='register-competition')return {type:'arena.competition.begin',payload:params};
@@ -940,7 +949,7 @@ function commandFor(action:StoryAction,id:string):{type:string;payload:Record<st
  if(kind==='inspect-person')return {type:'character.inspect',payload:params};
  if(['promise-gold','promise-item','fulfill-promise','cancel-promise'].includes(kind))return {type:`character.${kind}`,payload:params};
  if(kind==='invite'||kind==='attend-invitation')return {type:`character.${kind}`,payload:params};
- if(kind==='invite-date'){const {year,month,day,hour,minute,...target}=params;return {type:'character.invite',payload:{...target,...rules.world.storyWorldTimeAtDate({year,month,day,hour,minute})}};}
+ if(kind==='invite-date'){const {year,month,day,hour,minute,...target}=params;return {type:'character.invite',payload:{...target,...rules.world.storyWorldTimeAtDate({year,month,day,hour,minute},state)}};}
  if(kind==='exchange-contact')return {type:'character.exchange-contact',payload:params};
  if(kind==='propose-loot-resolution')return {type:'character.propose-loot-resolution',payload:params};
  if(kind==='collect-loot')return {type:'expedition.collect-loot',payload:params};
@@ -967,13 +976,14 @@ function commandFor(action:StoryAction,id:string):{type:string;payload:Record<st
  if(kind==='wait-until')return {type:'world.wait-until',payload:params};
  if(kind==='resume-long-action')return {type:'world.resume-long-action',payload:params};
  if(kind==='abandon-long-action')return {type:'world.abandon-long-action',payload:params};
- if(kind==='wait-until-date')return {type:'world.wait-until',payload:rules.world.storyWorldTimeAtDate(params)};
+ if(kind==='wait-until-date')return {type:'world.wait-until',payload:rules.world.storyWorldTimeAtDate(params,state)};
  if(kind==='spar')return {type:'character.start-spar',payload:params};
  if(kind==='battle-report')return {type:'battle.report',payload:params};
  if(kind==='battle-strategy')return {type:'battle.set-strategy',payload:params};
  if(kind==='enter-room')return {type:'expedition.enter',payload:params};
  if(kind==='extract-expedition')return {type:'expedition.request-story-extract',payload:{}};
  if(kind==='use-camp'||kind==='open-chest')return {type:`expedition.${kind}`,payload:{}};
+ const evolutionCommand=evolutionStoryCommand(kind,params);if(evolutionCommand)return evolutionCommand;
  if(kind==='inspect-growth')return {type:'growth.inspect-story',payload:{}};
  if(kind==='allocate-growth')return {type:'growth.allocate',payload:{attribute:params.attribute,steps:count(params.steps,1,99)}};
  if(kind==='inspect-ring')return {type:'ring.inspect-story-source',payload:params};
@@ -1212,7 +1222,7 @@ export function settleStoryCommand(state:any,command:GameCommand,execute:(state:
    }
    if(turn.privatePersonId){
     const person=before.people[0],a=segment.action;
-    if(before.communication?.mode==='soul-device'&&!(REMOTE_STORY_ACTIONS as readonly string[]).includes(a.kind)){result.status='failed';result.reason='魂导通讯不能代替现场行动或交付，请实际到场后进行';results.push(result);continue;}
+    const channelMode=communicationAvailability(current,person.id).mode;
     const reference=a.characterStep===undefined?a.characterId:results[Number(a.characterStep)]?.receipt?.personId;
     if(rules.custodyMarket.INTENTS.includes(a.kind)){const offerId=a.offerStep===undefined?a.offerId:results[Number(a.offerStep)]?.receipt?.offerId,offer=rules.custodyMarket.offer(current,offerId);if(a.kind==='propose-custody-transfer'?a.buyerId!==person.id:!offer||![offer.sellerId,offer.buyerId].includes(person.id)){result.status='failed';result.reason='请与这笔交易的买主或卖方商谈';results.push(result);continue;}}
     if(a.kind==='issue-field-control'&&(a.command as any)?.targetId!==undefined&&![person.id,current.角色.主控单位ID].includes((a.command as any).targetId)){result.status='failed';result.reason='私聊控制命令不能涉及当前交谈之外的第三人';results.push(result);continue;}
@@ -1225,7 +1235,7 @@ export function settleStoryCommand(state:any,command:GameCommand,execute:(state:
     if(scopeReason){result.status='failed';result.reason=scopeReason;results.push(result);continue;}
     if(a.kind==='respond-npc-request'&&(current.世界.npcRequests??[]).find((r:any)=>r.id===a.requestId)?.ownerId!==turn.privatePersonId){result.status='failed';result.reason='私聊只能处理当前人物的委托';results.push(result);continue;}
     if(a.kind==='answer-person-plan'&&(current.世界.npcGoals??[]).find((g:any)=>g.id===a.goalId)?.ownerId!==turn.privatePersonId){result.status='failed';result.reason='私聊只能答复当前人物的邀约';results.push(result);continue;}
-    const referenceReason=a.characterStep!==undefined&&results[Number(a.characterStep)]?.action.kind!=='resolve-person'?'私聊只能引用本次交谈中已确认的人物':privateStoryActionReferenceReason(current,person.id,a,before.communication?.mode==='soul-device',reference);
+    const referenceReason=a.characterStep!==undefined&&results[Number(a.characterStep)]?.action.kind!=='resolve-person'?'私聊只能引用本次交谈中已确认的人物':privateStoryActionReferenceReason(current,person.id,a,channelMode,reference);
     if(referenceReason){
      result.status='failed';result.reason=referenceReason;results.push(result);continue;
     }
@@ -1298,7 +1308,7 @@ export function settleStoryCommand(state:any,command:GameCommand,execute:(state:
     results.push(result);if(result.status==='succeeded'&&plan.segments.slice(index+1).some(s=>s.when?.belief&&s.when.step===index))break;continue;
    }
    try{
-    const actionId=`story:${ledger.branchId}:${turn.number}:${index}`,mapped=commandFor(segment.action,actionId);
+    const actionId=`story:${ledger.branchId}:${turn.number}:${index}`,mapped=commandFor(segment.action,actionId,current);
     if(segment.action.kind==='start-expedition')mapped.payload.seed=`${command.id}:departure:${index}`;
     if(segment.action.kind==='escape-captivity')result.executionSourceId=actionId;
     if(segment.action.kind==='enter-room'&&segment.action.routeIndex!==undefined){
@@ -1380,6 +1390,7 @@ export function settleStoryCommand(state:any,command:GameCommand,execute:(state:
      const journal=storyLedger(current);(journal.checks??=[]).push({branchId:ledger.branchId,turn:turn.number,step:index,receipt:structuredClone(receipt)});
     }
     if(receipt.type==='captivity-escape'&&!['escaped','restraint-broken','restraint-layer-broken','door-broken'].includes(receipt.result)){result.status='failed';result.reason=receipt.summary;}
+    if(receipt.type==='custody-door-break'&&!receipt.broken){result.status='failed';result.reason=receipt.summary;}
     if(receipt.type==='story-attribute-check'&&!receipt.passed){result.status='failed';result.reason='本次检定未达到难度，按失败条件继续';}
     if(receipt.type==='story-opposed-check'&&!receipt.passed){result.status='failed';result.reason='本次对抗未胜过对方，按失败条件继续';}
     if(result.receipt.type==='story-extraction-confirmation'){result.status='failed';result.reason='等待玩家确认损失清单，尚未撤离';}

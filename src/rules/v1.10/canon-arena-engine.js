@@ -88,7 +88,7 @@
   ]);
   add('loc-notting-city','诺丁城',[
     ['su-yuntao','素云涛',26,'独狼','agility','独狼附体','','武魂殿执事制服','圣魂村觉醒仪式'],
-    ['si-si','丝丝',20,'蛇','poison','','','武魂殿制服','诺丁武魂殿'],
+    ['si-si','丝丝',20,'银梭绫','control','','','武魂殿制服','诺丁武魂殿'],
     ['ma-xiunuo','马修诺',29,'机制补全·光杖','support','','','武魂殿长袍','诺丁武魂殿'],
     ['yu-xiaogang-notting','玉小刚·诺丁',29,'罗三炮','control','放屁如打雷|放屁如烟雾','','魂导器腰带','诺丁学院'],
     ['xiao-wu-notting','小舞·诺丁',12,'柔骨兔','agility','腰弓','','','诺丁学院'],
@@ -1037,8 +1037,9 @@
           const sourceAttributes=node.sourceAttributes??authored.sourceAttributes;
           if(sourceAttributes)source.属性谱={主属性:clone(sourceAttributes),副属性:[],强度:Object.fromEntries(sourceAttributes.map(a=>[a,30]))};
           source.种族特征=list([...(source.种族特征??[]),...node.effects.flatMap(([id])=>effects.EFFECT_REGISTRY[id]?.sourceTags??[])]);
-          const skill={name:node.name,evidence:'authored-canonical-women',strictEffects:true,presetId:`canonical:${raw.id}:${soulIndex+1}:${ordinal}`,description:node.description,artId:node.artId,artPath:node.artPath,requirements:['gesture','martial-soul'],cooldownTurns:node.name==='无敌金身'?4:ordinal===7?4:ordinal>=8?2:ordinal>=4?1:0,...(node.name==='无敌金身'?{usageRules:{perBattleLimit:2}}:{}),requestedBranches:clone(node.requestedBranches??[{id:'primary',label:node.subtitle,activation:'active',optional:false,targetPolicy:node.targetPolicy,requestedEffects:node.effects}])};
+          const skill={name:node.name,evidence:'authored-canonical-women',strictEffects:true,presetId:canonicalGrowth.presetId(raw.id,soulIndex+1,ordinal),description:node.description,artId:node.artId,artPath:node.artPath,requirements:['gesture','martial-soul'],cooldownTurns:node.name==='无敌金身'?4:ordinal===7?4:ordinal>=8?2:ordinal>=4?1:0,...(node.name==='无敌金身'?{usageRules:{perBattleLimit:2}}:{}),requestedBranches:clone(node.requestedBranches??[{id:'primary',label:node.subtitle,activation:'active',optional:false,targetPolicy:node.targetPolicy,requestedEffects:node.effects}])};
           if(node.usageRules)skill.usageRules=clone(node.usageRules);
+          if(node.requirements)skill.requirements=clone(node.requirements);
           if(soulName==='纤舞雪缀')skill.requirements.push('movement');
           if(node.effects.some(([id])=>id==='summon.entity')){skill.resourceCosts=[{kind:'soulPower',amount:12}];skill.cooldownTurns=2;}
           else if(ordinal===7||node.name==='无敌金身')skill.resourceCosts=[{kind:'soulPower',amount:4}];
@@ -2390,6 +2391,7 @@
     })])
   ));
   function worldCharacterRecord(characterId,context,purpose='world') {
+    const scenario=globalThis.SoulEvolutionContent?.record(characterId,context,CHARACTER_CATALOG);if(scenario)return scenario;
     const record=WORLD_STORY_PROFILES[characterId]??CHARACTER_CATALOG[characterId],placement=WORLD_CHARACTER_PLACEMENTS[characterId];
     if(!record)return record;
     const reason=worldCharacterUnavailableReason(characterId,context,purpose);
@@ -2571,7 +2573,7 @@
   }
 
   function attributePriority(record) {
-    const authored=women.forRecord(record.id,split(record.soul)[0]);
+    const authored=women.forRecord(record.sourceRecordId??record.id,split(record.soul)[0]);
     if(authored?.growthPriority)return clone(authored.growthPriority);
     const preferred = {
       power:['力量','体魄','意志','身法','感知','悟性'],weapon:['力量','身法','感知','体魄','悟性','意志'],agility:['身法','感知','力量','意志','体魄','悟性'],
@@ -2681,7 +2683,7 @@
   }
 
   function soulDraft(record, soulName, soulIndex, qualityTarget) {
-    const refined=women.forRecord(record.id,soulName);if(refined)return {...clone(refined.SOUL.draft),presetId:refined.SOUL.id,sourceDescription:refined.SOUL.description};
+    const refined=women.forRecord(record.sourceRecordId??record.id,soulName);if(refined)return {...clone(refined.SOUL.draft),presetId:refined.SOUL.id,sourceDescription:refined.SOUL.description};
     if(swan.isRecord(record.id)&&soulName==='天鹅')return {...clone(swan.SOUL.draft),presetId:swan.SOUL.id,sourceDescription:swan.SOUL.description};
     if(record.id==='ye-lingling'&&soulName==='九心海棠')return {...clone(begonia.SOUL.draft),presetId:begonia.SOUL.id,sourceDescription:begonia.SOUL.description};
     if(record.id===guProfile.ID)return guProfile.soulDefinition(record);
@@ -4628,7 +4630,7 @@
   }
 
   return Object.freeze({
-    VERSION,CANON_MECHANICS_VERSION,ARCHETYPES,CHARACTER_CATALOG,LOCATION_INDEX,CANONICAL_IDENTITY_OVERRIDES,LEVEL_99_RECORD_IDS,ENDGAME_IDS,canonicalIdentityId,CANON_EXPLICIT_SKILL_BLUEPRINTS,CORE_MECHANISM_CATALOG,validateNativeOrigins,assertNativeOriginSkill,selfCondensationSpec,registeredRingColor,
+    VERSION,CANON_MECHANICS_VERSION,YU_XIAOGANG_CANON_PROFILE,ARCHETYPES,CHARACTER_CATALOG,LOCATION_INDEX,CANONICAL_IDENTITY_OVERRIDES,LEVEL_99_RECORD_IDS,ENDGAME_IDS,canonicalIdentityId,CANON_EXPLICIT_SKILL_BLUEPRINTS,CORE_MECHANISM_CATALOG,validateNativeOrigins,assertNativeOriginSkill,selfCondensationSpec,registeredRingColor,
     COMPETITION_LEVELS,COMPETITION_VENUES,LOCATION_COMPETITION_INDEX,COMPETITION_ROUNDS,COMPETITION_REWARD_RULES,SLAUGHTER_ARENA,
     normalizeState,listAtLocation,completeCatalogueLoadout,instantiateCharacter,instantiateCompetitionParticipant,removeGenerated,persistentCharacterId,ensurePersistentCharacter,configureOpeningCharacter,
     WORLD_IDENTITY_GROUPS,worldCharacterIdentityId,persistentCharacterConflict,persistentCharacterBlockReason,

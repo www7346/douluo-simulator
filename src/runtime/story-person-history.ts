@@ -1,5 +1,6 @@
 import {releaseFacts} from './story-captivity';
 import {rules} from '../rules';
+import {sharedBattleEncounters} from './battle-reports';
 import {visibleNpcGoals,npcCollaborationFacts} from '../shared/npc-autonomy';
 import {commitmentView,personCommitments,personRelationship,RELATIONSHIP_LABELS} from './story-commitments';
 
@@ -18,7 +19,9 @@ export function readStoryRelationship(state:any,input:Record<string,any>){
  const score=state.人物?.列表?.[personId]?.relationship?.player;
  const backgroundContext=rules.backgroundOpening.personContext(state,personId);
  const context=backgroundContext?Object.fromEntries(Object.entries(backgroundContext).filter(([key])=>key!=='motive')):null;
- return {personId,party:rules.world.partyMembers(state).find((member:any)=>member.personId===personId)??null,registered:!!state.人物?.列表?.[personId],score:Number.isFinite(score)?score:null,current:personRelationship(state,personId),context,total:records.length,nextBefore:start>0?start:null,
+ return {personId,party:rules.world.partyMembers(state).find((member:any)=>member.personId===personId)??null,registered:!!state.人物?.列表?.[personId],score:state.人物?.列表?.[personId]?(Number.isFinite(score)?score:0):null,
+  attitudeChanges:(state.人物?.列表?.[personId]?.扩展?.善意往来??[]).filter((e:any)=>e.playerId===state.角色.主控单位ID).slice(-4).reverse().map((e:any)=>({sourceId:e.sourceId,day:e.day,label:e.name,delta:e.after-e.before})),current:personRelationship(state,personId),context,total:records.length,nextBefore:start>0?start:null,
+  sparring:sharedBattleEncounters(state,personId).filter(record=>record.settledSpar),
   records:records.slice(start,end).reverse().map((r:any)=>({id:r.id,label:RELATIONSHIP_LABELS[r.relationship as keyof typeof RELATIONSHIP_LABELS],status:statuses[r.status],events:r.events.map((e:any)=>({status:statuses[e.status],sourceId:e.sourceId,time:structuredClone(e.time),reason:e.reason??''}))}))};
 }
 

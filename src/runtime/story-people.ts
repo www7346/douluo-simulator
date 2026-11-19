@@ -17,7 +17,9 @@ export function storyMeetingAvailability(state:any,characterId:unknown){
  if(!record&&!person)return result('没有找到这位人物');
  if(personId===playerId)return result('不能把自己当作相遇人物');
  const position=rules.actions.positionOf(state,playerId);
- if(person?!globalThis.SoulScenePosition.communicationColocated(state,playerId,personId):position.kind!=='location'||position.sceneId!==''||position.locationId!==rules.arena.worldCharacterLocation(state,record.id))return result('这位人物不在当前地点');
+ const sameMeeting=person&&globalThis.SoulScenePosition.sameScene(positionForVoice(playerId),positionForVoice(personId))&&(globalThis.SoulConsciousness?.unitId(state,personId)??personId)===personId;
+ function positionForVoice(id:string){return globalThis.SoulScenePosition.communicationPosition(state,id);}
+ if(person?!sameMeeting:position.kind!=='location'||position.sceneId!==''||position.locationId!==rules.arena.worldCharacterLocation(state,record.id))return result('这位人物不在当前地点');
  const unit=state.战斗单位.列表[personId];
  if(person?.status==='dead'||unit?.存活状态==='死亡'||(unit&&unit.资源.生命.当前<=0))return result('这位人物目前无法回应');
  if(record?.kind==='soul-beast')return result('当前人物不支持此相遇入口');

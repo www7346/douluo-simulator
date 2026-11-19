@@ -3,7 +3,8 @@ import {abilityPage,abilitySourceResolver,castReceiptLabel, type AbilitySource} 
 import {battleActionArtwork} from '../../runtime/generated-art';
 import {playerText,skillName} from '../../runtime/player-text';
 import {Modal,SoulRing} from '../components';
-import {PortraitImage} from './PortraitArt';
+import {PortraitImage,type PortraitOverride} from './PortraitArt';
+import {ringSkillImageSlot} from '../../runtime/soul-images';
 import UiIcon,{type UiIconName} from './UiIcon';
 import AbilityDetails from './AbilityDetails';
 
@@ -33,7 +34,7 @@ function actionIcon(action:any):UiIconName|null {
   return action.sourceKind==='tactic'?({'防御':'shield','移动':'move','逃跑':'escape','协助撤退':'escape','放弃行动':'wait','认输':'flag','挣脱':'reroll'} as Record<string,UiIconName>)[action.actionType]??'battle':null;
 }
 
-export default function BattleConsole({state,worldId,unitId,actions,locked,pending,castReceipt,playing,onChoose,onCancel}:{state:any;worldId:string;unitId:string;actions:any[];locked:boolean;pending:any;castReceipt:any;playing:boolean;onChoose:(action:any)=>void;onCancel:()=>void}) {
+export default function BattleConsole({state,worldId,unitId,actions,locked,pending,castReceipt,playing,onChoose,onCancel,soulImages}:{state:any;worldId:string;unitId:string;actions:any[];locked:boolean;pending:any;castReceipt:any;playing:boolean;onChoose:(action:any)=>void;onCancel:()=>void;soulImages?:Record<string,PortraitOverride>}) {
   const active=state.成长?.列表?.[unitId]?.激活武魂ID;
   const souls=(state.成长?.列表?.[unitId]?.武魂ID列表??[]).map((id:string)=>state.武魂?.列表?.[id]).filter(Boolean);
   const storageKey=favoriteStorageKey(worldId,unitId);
@@ -65,7 +66,7 @@ export default function BattleConsole({state,worldId,unitId,actions,locked,pendi
       const reason=source.issue?'暂时无法读取这项能力，请重新打开。':!action.available?playerText(action.reason,state,'当前不可用'):'';
       return <article key={action.id} data-action-id={action.id} data-source-ring={source.ringId} className={pending?.action.id===action.id?'is-selected':''}>
         <button className="battle-console__choose" disabled={locked||Boolean(reason)} onClick={()=>onChoose({...action,sourceMartialSoulId:source.soulId,sourceMartialSoulName:source.soulName,sourceRingId:source.ringId,sourceRingOrdinal:source.ordinal,sourceRingYears:source.years})} aria-label={action.name+'，'+source.label}>
-          {actionIcon(action)?<UiIcon name={actionIcon(action)!}/>:<PortraitImage art={battleActionArtwork(skill,state)} name={action.name}/>}
+          {actionIcon(action)?<UiIcon name={actionIcon(action)!}/>:<PortraitImage art={battleActionArtwork(skill,state)} name={action.name} custom={source.group==='ring'?soulImages?.[ringSkillImageSlot(action.id)]:undefined}/>}
           <span><b>{action.name}</b><small>{source.label}</small><em>{reason||((action.sourceKind==='martial-switch'?'消耗主行动':action.sourceKind==='tactic'?action.description:'魂力 '+action.soulPowerCost)+(action.nativeCastRank?' · 当前'+action.currentCastRank+'环强度 / 原生'+action.nativeCastRank+'环强度':''))}</em></span>
         </button>{action.resourceSummary&&<small>{action.resourceSummary}</small>}<footer><button aria-label={(favorites.includes(action.id)?'取消收藏':'收藏')+action.name} aria-pressed={favorites.includes(action.id)} onClick={()=>favorite(action.id)}>★</button><button onClick={()=>setDetails({skill,source,action})}>详情</button>{action.perBattleRemaining!=null&&<small>本场余{action.perBattleRemaining}次</small>}</footer>
       </article>;

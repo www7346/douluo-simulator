@@ -11,6 +11,11 @@ export type SoulImageInputs = Record<string,SoulImageInput>;
 export function assertSoulImageSlot(slot:string):void {
   if(!/^[123]$/.test(slot))throw new Error('请选择第一、第二或第三武魂');
 }
+export const ringSkillImageSlot=(id:string)=>'skill:'+id;
+export function assertCharacterImageSlot(slot:string):void{
+  if(/^skill:[^\u0000-\u001f\u007f]{1,600}$/u.test(slot))return;
+  assertSoulImageSlot(slot);
+}
 export function playerSoulImageSlot(state:any,soulId:string):string {
   const ids=state?.成长?.列表?.[state?.角色?.主控单位ID]?.武魂ID列表??[];
   const index=ids.indexOf(soulId);
@@ -21,7 +26,7 @@ export function normalizeSoulImageRefs(input:unknown):SoulImageRefs {
   if(typeof input!=='object'||Array.isArray(input))throw new Error('武魂图片配置不完整');
   const output:SoulImageRefs={};
   for(const [slot,entry] of Object.entries(input)){
-    assertSoulImageSlot(slot);
+    assertCharacterImageSlot(slot);
     if(entry?.kind==='preset'&&typeof entry.key==='string'&&artwork(entry.key).key!=='unknown')output[slot]={kind:'preset',key:entry.key};
     else if(entry?.kind==='upload'&&typeof entry.assetId==='string'&&/^(portrait-[a-f0-9]{64}|soul-image-[A-F0-9]{8}-\d{1,7})$/.test(entry.assetId))output[slot]={kind:'upload',assetId:entry.assetId};
     else throw new Error('武魂图片已失效，请重新选择图片');

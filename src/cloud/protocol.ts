@@ -30,6 +30,7 @@ export interface PendingOperation {
   worldId:string;
   command:GameCommand;
   phase:'command'|'awaiting-generation';
+  rejection?:'stale-workflow'|'invalid-workflow';
   battleTakeover?:true;
   options?:{avatar?:AvatarRecord|null};
   createdAt:string;

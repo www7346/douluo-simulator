@@ -1,8 +1,11 @@
 import {rules} from '../rules';
+import {effectProse} from '../runtime/effect-prose';
 
 /** The authoring view includes executable dependency metadata, not just nodes. */
 export function effectDesignEntry(id:string,entry:any){
- return {id,name:entry.displayName,family:entry.family,baseCost:entry.baseCost,minimumAgeTier:entry.minimumAgeTier,mechanismLevel:entry.mechanismLevel,
+ const params=rules.effects.normalizeEffectParams(id,entry.parameterDefaults??{});
+ const description=effectProse(id,params,'',{}).join('；')||[entry.displayName,entry.duration,entry.stacking,entry.cleanup].filter(Boolean).join('；');
+ return {id,name:entry.displayName,description,exampleParameters:params,family:entry.family,baseCost:entry.baseCost,minimumAgeTier:entry.minimumAgeTier,mechanismLevel:entry.mechanismLevel,
   parameterDefaults:entry.parameterDefaults,parameterBounds:entry.parameterBounds,
   ...Object.fromEntries(['optionalParameterBounds','structuredParameterBounds','placement','hitRule','requires','conflicts','requiresExplicitParameters','allowedContexts','authorable'].filter(key=>entry[key]!==undefined).map(key=>[key,entry[key]]))};
 }
@@ -41,6 +44,9 @@ function shareEffectParameters(rows:Record<string,any>[]){
 /** Keep effect names and IDs on every row. Frequent fields have one named default
  * in the model packet, with every exception still attached to its own effect. */
 export function designPromptCatalogue(catalogue:{effects:Record<string,any>[];compositionRules:{contracts:unknown};contractDesign?:unknown;templates?:Record<string,any>[]},customPrompt:boolean){
+ // Player-facing examples repeat parameter data; the model already receives
+ // the full authoritative bounds and defaults below.
+ catalogue={...catalogue,effects:catalogue.effects.map(({description,exampleParameters,...effect})=>effect)};
  if(customPrompt||catalogue.effects.length<2)return catalogue;
  const defaults:Record<string,unknown>={}, {effects,commonParameters}=shareEffectParameters(catalogue.effects);
  for(const key of Object.keys(effects[0])){
@@ -70,6 +76,7 @@ export function designPromptCatalogue(catalogue:{effects:Record<string,any>[];co
 /** Cross-node conditions describe the same graph contracts used by the compiler. */
 export function effectCompositionRules(){
  return {
+  balance:{maximumSustainedReduction:rules.effects.DESIGN_BALANCE_POLICY.maximumSustainedReduction,directDeathRequiresSave:true,reusableDeathRequiresBothCostAndLimit:true,freeUnlimitedDefenseForbidden:true,unspentBudgetAllowed:true},
   graphLimits:{linearNodes:12,branches:4,nodesPerBranch:12,totalNodes:40},
   sameBranchDependencies:true,
   registeredDependencies:Object.entries(rules.effects.EFFECT_REGISTRY).flatMap(([id,e]:[string,any])=>(e.requires??[]).map((required:string)=>({effectId:id,requires:required}))),

@@ -15,6 +15,7 @@ import {dossierEventAccount} from './story-person-writing-facts';
 import {equipmentEventAccount} from './story-growth-equipment-writing-facts';
 import {SEALING_RECEIPT_TYPES,sealingEventAccount} from './story-sealing-writing-facts';
 export function storyEventAccount(action:string,type:string,f:any,names:StoryEventNames,playerFacing=false):string|null{
+ if(['soul-evolution','soul-evolution-query','soul-manifestation'].includes(type))return f.stage;
  if(CONTRACT_RECEIPT_TYPES.includes(type))return contractEventAccount(type,f,names);
  if(['reward-resident','punish-resident'].includes(type))return `${names.person(f.actorId)}对${names.person(f.targetId)}执行${f.result.name}，实际支付${f.result.payment.totals.soulPower}点魂力；待遇与许可已按实际结果落实。${f.obedience?`对该管理者的服从由${f.obedience.before}变为${f.obedience.after}。`:''}`;
  if(type==='reshape-realm')return `${names.person(f.actorId)}改变了指定房间或公共区的环境：${f.result.description}；仅场景发生变化，不自动改变人物情绪。`;
@@ -95,6 +96,7 @@ export function storyEventAccount(action:string,type:string,f:any,names:StoryEve
   `${actor}已完成本次安全点休整；实际清除${f.clearedStatusCount}项状态。`,
   ...f.resources.map((r:any)=>`${r.resource}：${r.before===null?'原值未记录':r.before} → ${r.after}`)
  ].join('\n');
+ if(type==='preset-blueprint-learned')return `${actor}学习了“${f.name}”的制作图纸，可准备材料后按图制作。`;
  if(type==='research-materials-consumed')return `${actor}已为“${f.concept}”投入${f.investedUnits}份材料（制作价值${f.investedCraftValue}），现有${f.candidateCount}套方案待选。`;
  if(type==='research-blueprint-created')return `${actor}已选定“${f.blueprint?.name??f.blueprintId}”的研发方案，取得图纸及${f.prototypeQuantity}件样品。`;
  if(type==='blueprint-crafted')return [

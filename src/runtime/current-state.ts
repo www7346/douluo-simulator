@@ -1,3 +1,4 @@
+import {upgradeSisiContent} from './sisi-content-upgrade';
 import {validateCaptivity} from './story-captivity';
 import {validateNpcAutonomy} from './npc-autonomy';
 import {validatePersonChangeReactions} from './person-change-reaction';
@@ -11,14 +12,15 @@ import {validateStoryObjects} from './story-objects';
 import {validateFreeActions} from './story-free-actions';
 import {validateStoryAddresses} from './story-addresses';
 
-/** Player saves accept the current format; loading never migrates or rewrites data. */
+/** Validate and return a detached current-format world, including compatible content revisions. */
 import {validateCharacterProfiles} from './character-profile';
 export class SavedStateValidationError extends Error {
  constructor(message:string){super(message);this.name='SavedStateValidationError';}
 }
 export function validateCurrentState(input:unknown):Record<string,any>{
- const state=input as Record<string,any>;
+ let state=input as Record<string,any>;
  if(!state||state.系统?.schema_version!==rules.foundation.VERSION||state.系统.ruleset_version!==rules.foundation.VERSION)throw new Error('这份存档格式不受支持，请使用当前版本的存档');
+ state=upgradeSisiContent(state);
  validateBattlePreferences(state.扩展?.battlePreferences);
  const narration=state.扩展?.battleNarration;
  if(narration!==undefined&&(!narration||typeof narration!=='object'||Array.isArray(narration)))throw Error('战报撰写记录无效');

@@ -7,6 +7,7 @@ import '../shared/skill-copy-data.js';
 import '../shared/begonia-content-core.js';
 import '../shared/royal-swan-content-core.js';
 import '../shared/yuehua-cat-content.js';
+import '../shared/meng-yiran-content.js';
 import '../shared/canonical-women-support-content.js';
 import '../shared/canonical-women-elements-content.js';
 import '../shared/canonical-women-beasts-content.js';
@@ -40,12 +41,14 @@ import './v1.10/ability-contract-core.js';
 import './v1.10/influence-core.js';
 import './v1.10/person-change-knowledge-core.js';
 import './v1.10/person-rewrite-core.js';
+import './v1.10/player-appearance-core.js';
 import './v1.10/disguise-core.js';
 import './v1.10/person-tools-core.js';
 import './v1.10/custody-core.js';
 import './v1.10/interior-space-core.js';
 import './v1.10/attribute-link-core.js';
 import './v1.10/resident-realm-core.js';
+import '../shared/realm-equipment-visuals.js';
 import './v1.10/realm-arrangements-core.js';
 import './v1.10/obedience-core.js';
 import './v1.10/practice-core.js';
@@ -71,6 +74,7 @@ import './v1.10/narrative-core.js';
 import './v1.10/candidate-diversity.js';
 import './v1.10/effect-phase-core.js';
 import './v1.10/effects-core.js';
+import '../shared/tangmen-item-art.js';
 import './v1.10/preset-art-core.js';
 import './v1.10/preset-authoring-core.js';
 import './v1.10/preset-souls-core.js';
@@ -78,10 +82,13 @@ import './v1.10/preset-skills-core.js';
 import './v1.10/preset-items-core.js';
 import './v1.10/preset-beasts-core.js';
 import './v1.10/preset-catalog-core.js';
+import '../shared/ordinary-npc-personas.js';
+import '../shared/canonical-npc-personas.js';
 import './v1.10/npc-loadouts-core.js';
 import './v1.10/creation-core.js';
 import './v1.10/battle-mechanics-core.js';
 import './v1.10/combat-projection-core.js';
+import './v1.10/summon-orders-core.js';
 import './v1.10/combat-engine.js';
 import './v1.10/rescue-evacuation-core.js';
 import './v1.10/rescue-core.js';
@@ -112,6 +119,9 @@ import './v1.10/background-opening-core.js';
 import './v1.10/opening-workshop-core.js';
 import './v1.10/host-pricing-core.js';
 import './v1.10/paid-design-core.js';
+import './v1.10/evolution-content.js';
+import './v1.10/soul-evolution-core.js';
+import './v1.10/soul-manifestation-core.js';
 import './v1.10/world-engine.js';
 import './v1.10/canonical-growth-core.js';
 import './v1.10/gu-yuena-profile.js';
@@ -123,6 +133,9 @@ import './v1.10/expedition-engine.js';
 import './v1.10/save-transfer-core.js';
 
 export const rules = Object.freeze({
+  evolution:globalThis.SoulEvolution,
+  evolutionContent:globalThis.SoulEvolutionContent,
+  manifestation:globalThis.SoulManifestation,
   interiorSpaces: globalThis.SoulInteriorSpaces,
   obedience: globalThis.SoulObedience,
   experiences: globalThis.SoulExperiences,
@@ -137,6 +150,7 @@ export const rules = Object.freeze({
   realmArrangements:globalThis.SoulRealmArrangements,
   personShame:globalThis.SoulPersonShame,
   targetConditions:globalThis.SoulTargetConditions,
+  summonOrders:globalThis.SoulSummonOrders,
   creation:globalThis.SoulCreationCore,
   openingWorkshop:globalThis.SoulOpeningWorkshop,
   paidDesign:globalThis.SoulPaidDesign,
@@ -176,6 +190,7 @@ export const rules = Object.freeze({
   exchange: globalThis.SoulAbilityExchange,
   influence: globalThis.SoulInfluenceCore,
   personRewrite: globalThis.SoulPersonRewrite,
+  playerAppearance: globalThis.SoulPlayerAppearance,
   disguise: globalThis.SoulDisguise,
   personChangeKnowledge: globalThis.SoulPersonChangeKnowledge,
   personTools: globalThis.SoulPersonTools,

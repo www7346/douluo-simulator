@@ -1,4 +1,8 @@
 declare global {
+  var SoulEvolution:any;
+  var SoulEvolutionContent:any;
+  var SoulManifestation:any;
+  var SoulSummonOrders:any;
   var SoulConsciousness:any;
   var SoulExperiences: any;
   var SoulCombatDeployments: any;
@@ -9,6 +13,7 @@ declare global {
   var SoulConversations: any;
   var SoulPersonShame:any;
   var SoulRealmArrangements:any;
+  var SoulRealmEquipmentVisuals:any;
   var SoulInteriorSpaces: any;
   var SoulObedience: any;
   var SoulResidentRealms: any;
@@ -28,6 +33,7 @@ declare global {
   var SoulBackgroundCatalog:any;
   var SoulBackgroundHistory:any;
   var SoulBackgroundOpening:any;
+  var SoulTangmenItemArt:any;
   var SoulPresetArt: any;
   var SoulPresetCatalog:any;
   var SoulPresetAuthoring:any;
@@ -60,6 +66,7 @@ declare global {
   var SoulAbilityExchange: any;
   var SoulInfluenceCore: any;
   var SoulPersonRewrite: any;
+  var SoulPlayerAppearance: any;
   var SoulDisguise: any;
   var SoulPersonChangeKnowledge: any;
   var SoulPersonaArt: any;

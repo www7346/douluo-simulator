@@ -29,6 +29,6 @@ export function candidateCardPresentation(skills:any[],state:any,kind='魂技',i
   const tags=[...new Set(skills.flatMap(skill=>{const info=abilityPresentation({...skill,category:skill.category??kind},state);return info.restraint?['拘束器','佩戴器具']:[info.activationLabel,...(info.host?['宿主能力']:[]),...info.primary.map(effect=>effect.name),...(kind==='魂导器'&&Object.keys(skill.modifiers?.attributes??{}).length?['属性强化']:[])];}))];
   const form=({sword:'blade',dagger:'blade',robe:'breastplate',helm:'crown',bracelet:'bracer'} as Record<string,string>)[identity?.fixedForm?.id??'']??identity?.fixedForm?.id;
   const motif:ChoiceMotif=kind==='丹药'?'vial':kind==='暗器'?'blade':kind==='魂导器'&&form&&['blade','bracer','breastplate','pendant','boots','crown','necklace','staff','gloves'].includes(form)?form as ChoiceMotif:kind==='魂导器'?'device':effectMotif;
-  const art=kind==='魂技'?skillArtwork({effectGraph:{nodes}}):itemArtwork({...identity,skills},kind);
+  const art=kind==='魂技'?skillArtwork({effectGraph:{nodes}}):itemArtwork({...skills[0],...identity,skills},kind);
   return {art,motif,effectMotif,attribute,rows,tags};
 }

@@ -35,8 +35,11 @@ export function restraintPresentation(contract:any,item?:any){
   // Preview and the real item share the current authored definition. Registered
   // catalogue references remain a separate, verified source.
   const authored=item?.payload?.backgroundRestraint??(contract?.version===2?contract:null);
+  const realm=rules.realmArrangements.presentation(item);
   let actual=item;
-  if(authored){
+  if(realm){
+    actual=item;
+  }else if(authored){
     const compiled=rules.backgroundRestraints.compile(authored.definition);
     if(rules.abilities.hash(compiled.contract)!==rules.abilities.hash(authored))throw Error('拘束器的制作设定与实际器具不一致');
     if(item&&item.templateId!==compiled.definition.templateId)throw Error('拘束器的制式与实际器具不一致');
@@ -47,8 +50,9 @@ export function restraintPresentation(contract:any,item?:any){
     actual=item??{templateId:contract.templateId};
   }
   const device=rules.custody.resolveDevice(actual),binding=actual.payload?.backgroundRestraint?.definition?.binding;
+  const bindingPhrase=realm?.group==='fixture'?({cage:'笼门锁定，无法自行离开金属笼',cross:'四肢固定于十字架，无法做手部动作或自行行走',suspended:'四肢由悬链固定，无法做手部动作或自行行走'} as Record<string,string>)[realm.choice]:realm?.group==='legs'?'双腿被固定，无法自行行走':null;
   const labels:Record<string,string>={locked:'锁定',escort:'押送',released:'解放',limited:'受限活动'};
-  return {name:device.name,maxLevel:device.maxLevel,breakDifficulty:device.breakDifficulty+(binding?.difficultyBonus??0),capture:device.capture,autoRelock:!!device.autoRelock,
+  return {name:device.name,maxLevel:device.maxLevel,breakDifficulty:device.breakDifficulty+(binding?.difficultyBonus??0),capture:device.capture,autoRelock:!!device.autoRelock,realm:realm?{permanent:realm.permanent}:null,
     modes:Object.keys(device.modes).map(id=>{
       const modeItem={...actual,attachment:{...actual.attachment,mode:id,...(id==='limited'?{limits:actual.attachment?.limits??authored?.definition?.limits}:{} )}};
       let specs=rules.custody.effectSpecs(modeItem,id);
@@ -56,7 +60,7 @@ export function restraintPresentation(contract:any,item?:any){
         specs=specs.filter(([effectId]:any)=>effectId!=='status.power_seal');
         specs.push(['status.power_seal',{封印对象:'精细',范围:'全部',限制:rules.host.suppressionLimits(modeItem),持续方式:'来源有效',来源依赖:'道具有效'}]);
       }
-      return {id,name:labels[id]??id,effects:[...new Set<string>(specs.map(([effectId,params]:any)=>restraintEffectLines(effectId,{...rules.effects.EFFECT_REGISTRY[effectId].parameterDefaults,...params}).join('；')))]};
+      return {id,name:labels[id]??id,effects:[...new Set<string>(specs.map(([effectId,params]:any)=>{const lines=restraintEffectLines(effectId,{...rules.effects.EFFECT_REGISTRY[effectId].parameterDefaults,...params});if(bindingPhrase&&effectId==='status.limb_bind')lines[0]=bindingPhrase;return lines.join('；');}))]};
     }),
-    conditions:'佩戴且器具有效时，以下限制按当前模式生效。控制者靠近佩戴者后，可以调节模式。'};
+    conditions:realm?(realm.permanent?'项圈与该人物的永久魂环席位绑定，由画主管理。':'画境器具有效期间，按当前安排限制相应动作。画主可在九美图的画境安排中调整。'):'佩戴且器具有效时，以下限制按当前模式生效。控制者靠近佩戴者后，可以调节模式。'};
 }

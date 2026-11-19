@@ -11,7 +11,7 @@ import TravelQuote from '../components/TravelQuote';
 import {useActionFeedback} from '../use-action-feedback';
 
 
-export default function AdventurePage({onNavigate,onSelectPerson,mapOpen=false,practiceOpen=false,dailyOpen=false,slaughterLocationId,onCloseMap=()=>{},onClosePractice=()=>{},onCloseDaily=()=>{}}:{onNavigate:(page:PageId)=>void;onSelectPerson?:(id:string,dungeonId?:string)=>void;mapOpen?:boolean;practiceOpen?:boolean;dailyOpen?:boolean;slaughterLocationId?:string;onCloseMap?:()=>void;onClosePractice?:()=>void;onCloseDaily?:()=>void}) {
+export default function AdventurePage({onNavigate,onSelectPerson,mapOpen=false,practiceOpen=false,workOpen=false,onCloseWork=()=>{},dailyOpen=false,slaughterLocationId,onCloseMap=()=>{},onClosePractice=()=>{},onCloseDaily=()=>{}}:{onNavigate:(page:PageId)=>void;onSelectPerson?:(id:string,dungeonId?:string)=>void;mapOpen?:boolean;practiceOpen?:boolean;workOpen?:boolean;onCloseWork?:()=>void;dailyOpen?:boolean;slaughterLocationId?:string;onCloseMap?:()=>void;onClosePractice?:()=>void;onCloseDaily?:()=>void}) {
   const {controller,state,view}=useGame();
   const [travelMode,setTravelMode]=useState('balanced');
   const [inspecting,setInspecting]=useState(false),inspection=useRef(0);
@@ -40,6 +40,7 @@ export default function AdventurePage({onNavigate,onSelectPerson,mapOpen=false,p
   return <div className="adventure-page">
     <Modal open={dailyOpen} keepMounted title="日常与安排" className="play-practice-dialog" onClose={onCloseDaily}><LongActionPlans mode="notices" active={dailyOpen}/></Modal>
     <Modal open={Boolean(entryFeedback.error)} title="未能进入探索" onClose={entryFeedback.dismiss} actions={<Button onClick={entryFeedback.dismiss}>知道了</Button>}><p role="alert">{entryFeedback.error}</p><p>处理提示中的问题后，可重新选择地图入口。已经走过的路程会保留。</p></Modal>
+    <Modal open={workOpen} keepMounted title="打工" className="play-practice-dialog" onClose={onCloseWork}><LongActionPlans mode="work" active={workOpen}/></Modal>
     <Modal open={practiceOpen} keepMounted title="安排修炼" className="play-practice-dialog" onClose={onClosePractice}><LongActionPlans mode="cultivation" active={practiceOpen}/></Modal>
     <Modal open={mapOpen} keepMounted title="大陆地图" className="play-map-dialog" onClose={onCloseMap}><WorldAtlas active={mapOpen} travelMode={travelMode} onTravelMode={setTravelMode} onDungeon={setDungeon} onPlan={plan} slaughterLocationId={slaughterLocationId} onSlaughter={()=>{onCloseMap();onNavigate('slaughter');}}/></Modal>
     <Modal open={Boolean(travelPlan)} title={`前往${travelPlan?.destination?.name??''}`} onClose={()=>setTravelPlan(null)} actions={<Button disabled={view.busy||!travelPlan?.affordable} onClick={async()=>{if(await travelFeedback.run(()=>controller.dispatch(travelPlan.resumeActionId?'world.resume-long-action':'world.intent',travelPlan.resumeActionId?{actionId:travelPlan.resumeActionId}:{type:'travel',destinationId:travelPlan.destinationId,mode:travelMode,stayBehind:travelPlan.stayBehind})))setTravelPlan(null);}}>{travelPlan?.resumeActionId?'继续原行程':'确认出发'}</Button>}><TravelQuote quote={travelPlan}/>{travelFeedback.error&&<p role="alert">{playerText(travelFeedback.error,state)}</p>}</Modal>

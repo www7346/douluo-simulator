@@ -34,7 +34,7 @@ export function sceneQuery(state:any,name:string,input:Record<string,any>):unkno
   const currentId=state?.地图?.当前地点ID,playerId=state?.角色?.主控单位ID;
   switch(name) {
     case 'scene.opening':return openingSceneFacts(state);
-    case 'scene.daily':return {captivity:captivityFacts(state),npcRequests:rules.world.npcRequestOptions(state),cultivation:rules.world.cultivationFacts(state),longActions:rules.world.longActionFacts(state)};
+    case 'scene.daily':return {work:rules.world.workFacts(state),captivity:captivityFacts(state),npcRequests:rules.world.npcRequestOptions(state),cultivation:rules.world.cultivationFacts(state),longActions:rules.world.longActionFacts(state)};
     case 'scene.control-options':{
       if(typeof input.executorId!=='string'||!input.executorId||typeof input.actionType!=='string')throw new CloudError('invalid-query','请选择执行者与行动');
       return rules.world.fieldControlOptions(state,playerId,{selectedExecutorId:input.executorId,includeDestinations:input.actionType==='travel'});

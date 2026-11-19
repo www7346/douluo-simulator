@@ -16,9 +16,12 @@
   if(['catalog','preview'].includes(purpose))return '';
   return enabled(context,record.sourcePolicy.sourceId)?'':record.sourcePolicy.unavailableReason??'此人物来自后续时代，请在开局启用跨时代登场';
  }
- const presetId=(recordId,slot,ordinal)=>`canonical:${recordId}:${slot}:${ordinal}`;
+ const presetId=(recordId,slot,ordinal)=>{
+  const content=root.SoulCanonicalWomenContent?.PROFILES.find(p=>p.slot===slot&&p.presetNamespace&&p.isRecord(recordId));
+  return `canonical:${content?.presetNamespace??recordId}:${slot}:${ordinal}`;
+ };
  const soulPreset=(record,slot)=>record?.mechanics?.martialSoulPresetIds?.[slot-1]??(slot===1?record?.mechanics?.martialSoulPresetId:undefined);
- function boundSourceName(soul,recordId){const d=soul.扩展?.expressionBase?.definition??soul.扩展?.结构化武魂?.definition;return root.SoulCanonicalWomenContent?.PROFILES.find(p=>p.isRecord(recordId)&&p.SOUL.id===d?.presetId)?.SOUL.name;}
+ function boundSourceName(soul,recordId){const d=soul.扩展?.structureTimeline?.base??soul.扩展?.expressionBase?.definition??soul.扩展?.结构化武魂?.definition;return root.SoulCanonicalWomenContent?.PROFILES.find(p=>p.isRecord(recordId)&&p.SOUL.id===d?.presetId)?.SOUL.name;}
  function catalogSkillRecipe(skills){
   const result=clone(skills);
   // Candidate recipes describe the authored reach. Keep historical native loadouts unchanged.
@@ -48,7 +51,7 @@
   }
   const expanded=[];
   for(const entry of entries){
-   const recordId=entry.id.split(':')[1],content=root.SoulCanonicalWomenContent?.forRecord(recordId,entry.sourceSoulName)??(root.SoulRoyalSwanContent?.isRecord(recordId)&&entry.sourceSoulName==='天鹅'?root.SoulRoyalSwanContent:recordId==='ye-lingling'&&entry.sourceSoulName==='九心海棠'?root.SoulBegoniaContent:null),node=entry.category==='魂技'&&content?.get(entry.gates.minimumRingOrdinal);
+   const ns=entry.id.split(':')[1],recordId=root.SoulCanonicalWomenContent?.PROFILES.find(p=>p.presetNamespace===ns&&p.SOUL.name===entry.sourceSoulName)?.recordIds[0]??ns,content=root.SoulCanonicalWomenContent?.forRecord(recordId,entry.sourceSoulName)??(root.SoulRoyalSwanContent?.isRecord(recordId)&&entry.sourceSoulName==='天鹅'?root.SoulRoyalSwanContent:recordId==='ye-lingling'&&entry.sourceSoulName==='九心海棠'?root.SoulBegoniaContent:null),node=entry.category==='魂技'&&content?.get(entry.gates.minimumRingOrdinal);
    if(!node?.ageVariants?.length){expanded.push(entry);continue;}
    entry.ageVariantGroup=entry.id;Object.assign(entry.gates,{minimumYears:node.minimumYears??1,...(node.maximumYears?{maximumYears:node.maximumYears}:{})});expanded.push(entry);
    for(const variant of node.ageVariants){const extra=clone(entry);extra.id=entry.id+':'+variant.presetSuffix;extra.appearance=variant.summary??entry.appearance;extra.gates.minimumYears=variant.minimumYears;delete extra.gates.maximumYears;if(variant.maximumYears!==undefined)extra.gates.maximumYears=variant.maximumYears;
@@ -75,6 +78,8 @@
   return soul;
  }
  function trainingGate(state,unitId,practiceMinutes=0){
+  const limit=state.成长?.列表?.[unitId]?.扩展?.evolutionLimit;
+  if(limit&&state.成长.列表[unitId].魂力等级>=limit.level)return {pass:false,reason:limit.reason,level:limit.level,sourceId:limit.id};
   const growth=state.成长?.列表?.[unitId];if(!growth)return null;
   for(const soulId of growth.武魂ID列表){const soul=state.武魂.列表[soulId],requirement=soul?.扩展?.canonicalGrowth?.cultivationRequirement;if(!requirement||growth.魂力等级>requirement.level)continue;
    const completed=(root.SoulPractice?.history(state,unitId)??[]).reduce((n,r)=>n+r.progress.minutes,0)+practiceMinutes;
@@ -87,7 +92,7 @@
   const person=state.人物?.列表?.[soul.持有者单位ID],growth=state.成长?.列表?.[soul.持有者单位ID];
   const route=routeFor(b.recordId,b.slot,boundSourceName(soul,b.recordId)),errors=[];
   if(b.mode==='martial-preset'){
-   const record=records[b.recordId],presetId=soulPreset(record,b.slot),definition=soul.扩展?.expressionBase?.definition??soul.扩展?.结构化武魂?.definition;
+   const record=records[b.recordId],presetId=soulPreset(record,b.slot),definition=soul.扩展?.structureTimeline?.base??soul.扩展?.expressionBase?.definition??soul.扩展?.结构化武魂?.definition;
    if(!presetId)return ['武魂传承与实际范本或本人不符'];
    const expected=root.SoulPresetCatalog.request(presetId);
    const shape=d=>Object.fromEntries(['presetId','categories','attributes','channels','traits','weaknesses','exchangeContracts','baseAction'].map(k=>[k,d?.[k]]));
@@ -167,12 +172,13 @@
   const growth={version:1,presetId:preset.id,beforeDefinitionHash:hash(definition),afterDefinitionHash:hash(compiled.definition),attributes,channels,creationPoints,conversion:EXPRESSION_CONVERSION,cost:creationPoints*EXPRESSION_CONVERSION};
   return {soul:{...clone(soul),品级:compiled.quality.value,品级标签:compiled.quality.name,结构化武魂:compiled,扩展:{...clone(soul.扩展),结构化武魂:compiled}},growth};
  }
- function replayExpression(soul,growth,profile){
+ function replayExpression(soul,growth,profile,verifiedGates){
+  if(growth?.kind==='free-evolution')return root.SoulEvolution.replayRingExpression(soul,growth,profile);
   const core=root.SoulMartialSoulCore,hash=root.SoulAbilityContract.hash,definition=soul.扩展?.结构化武魂?.definition??soul.结构化武魂?.definition;
   if(!growth||growth.version!==1||growth.conversion!==EXPRESSION_CONVERSION||growth.beforeDefinitionHash!==hash(definition)||!root.SoulPresetCatalog.get(growth.presetId))throw Error('武魂成长初始合同或传承来源无效');
   const next=clone(definition),sourceAttributes=new Set([...(profile.属性谱?.主属性??[]),...(profile.属性谱?.副属性??[])]),seen=new Set();let creationPoints=0;
   for(const row of growth.attributes??[]){const attribute=core.ATTRIBUTE_REGISTRY[row.id];if(!attribute||seen.has(row.id)||next.attributes.some(a=>a.id===row.id)||row.fromInvestment!==0||row.toInvestment!==attribute.minimumInvestment||!sourceAttributes.has(attribute.name))throw Error('武魂成长属性缺少实际来源或投入');seen.add(row.id);next.attributes.push({id:row.id,investment:row.toInvestment});creationPoints+=row.toInvestment;}
-  const lineage=root.SoulCombatFoundation.BEAST_VALUE.validateLineage(profile.血脉).compiled,requirements=missingExpressionRequirements(core,definition,root.SoulPresetCatalog.gates(growth.presetId));
+  const lineage=root.SoulCombatFoundation.BEAST_VALUE.validateLineage(profile.血脉).compiled,requirements=missingExpressionRequirements(core,definition,verifiedGates??root.SoulPresetCatalog.gates(growth.presetId));
   for(const id of growth.channels??[]){const channel=core.CHANNEL_REGISTRY[id],theme=core.channelThemeAttributeIds(id);if(!channel||seen.has(id)||next.channels.includes(id)||!sourceBacksExpressionChannel(core,lineage,channel,requirements)||theme.length&&!theme.some(a=>next.attributes.some(v=>v.id===a)&&sourceAttributes.has(core.ATTRIBUTE_REGISTRY[a].name)))throw Error('武魂成长方向缺少实际来源、未用于本次魂技或重复购买');seen.add(id);next.channels.push(id);creationPoints+=channel.cost;}
   if(!creationPoints||growth.creationPoints!==creationPoints||growth.cost!==creationPoints*EXPRESSION_CONVERSION)throw Error('武魂成长与实际投入点数不符');
   delete next.presetId;const compiled=core.finalizeDraft({...next,playerConfirmed:true},{budget:9999,id:soul.id});
@@ -183,11 +189,15 @@
   if(!growth)return soul;
   const expected=replayExpression(soul,growth,profile),hash=root.SoulAbilityContract.hash;
   if(hash(expected.growth)!==hash(growth))throw Error('武魂成长内容已改变，请重新选择魂技');
+  if(growth.kind==='free-evolution')for(const ringId of soul.魂环ID列表){const ring=state.魂环.列表[ringId];if(!ring.扩展?.evolutionSealed&&ring.魂技ID列表.some(id=>!root.SoulEvolution.compatible(state.技能.列表[id],expected.soul)))throw Error('新魂环变化与旧魂技不兼容，请先重构或封存对应魂环');}
   const next=root.SoulCombatFoundation.normalizeMartialSoul(expected.soul,soul.持有者单位ID);next.扩展.expressionBase??={definition:clone(soul.扩展.结构化武魂.definition),sourceId};
   next.扩展.expressionHistory=[...(soul.扩展.expressionHistory??[]),{...clone(growth),profileId:profile.id,sourceId}];
+  if(growth.kind==='free-evolution'&&!soul.扩展.structureTimeline)soul.扩展.structureTimeline={base:clone(soul.扩展.expressionBase?.definition??soul.扩展.结构化武魂.definition),events:(soul.扩展.expressionHistory??[]).map(g=>({kind:'expression',growth:clone(g)}))};
+  if(soul.扩展.structureTimeline)next.扩展.structureTimeline={...clone(soul.扩展.structureTimeline),events:[...clone(soul.扩展.structureTimeline.events),{kind:'expression',growth:{...clone(growth),profileId:profile.id,sourceId}}]};
   state.武魂.列表[soul.id]=next;return next;
  }
  function validateExpression(state,soul){
+  const evolved=root.SoulEvolution?.validateSoul(state,soul);if(evolved)return evolved;
   const rows=soul.扩展?.expressionHistory??[],base=soul.扩展?.expressionBase;if(!rows.length&&!base)return [];
   try{
    if(!rows.length||!base?.definition)throw Error('武魂成长的初始来源缺失');
@@ -197,7 +207,7 @@
    for(const row of rows){
     const operation=state.魂环.operations?.[row.sourceId],ring=state.魂环.列表[operation?.receipt?.ringId],profile=state.魂兽档案.列表[row.profileId];
     if(seen.has(row.sourceId)||operation?.kind!=='absorb'||ring?.武魂ID!==soul.id||root.SoulAbilityContract.hash(ring?.扩展?.expressionGrowth)!==root.SoulAbilityContract.hash(row))throw Error('武魂成长缺少实际魂环支出');seen.add(row.sourceId);
-    const saved=clone(row);delete saved.profileId;delete saved.sourceId;const expected=replayExpression(current,saved,profile);
+    const saved=clone(row);delete saved.profileId;delete saved.sourceId;const actual=state.技能.列表[ring.魂技ID列表[0]],verifiedGates=root.SoulPresetCatalog.verifiedRingGates(saved.presetId,actual),expected=replayExpression(current,saved,profile,verifiedGates);
     if(root.SoulAbilityContract.hash(saved)!==root.SoulAbilityContract.hash(expected.growth)||!ring.魂技ID列表.every(id=>state.技能.列表[id]?.presetId===row.presetId))throw Error('武魂成长内容与实际来源不符');
     const B=root.SoulEffectCompiler.calculateRingBudget(profile,current,operation.receipt.compatibility.ratio).usable,budget=operation.receipt.budget;
     if(budget.available!==B||budget.expressionCost!==row.cost||budget.totalSpent!==row.cost+budget.spent||budget.totalSpent>B||ring.价值.表达成长!==row.cost||ring.价值.总支出!==budget.totalSpent)throw Error('武魂成长缺少实际预算支出');

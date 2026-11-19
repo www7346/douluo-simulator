@@ -1,4 +1,7 @@
 (function attachSoulWorldEngine(root, factory) {
+  if(!root?.SoulEvolutionContent&&typeof require==='function')require('./evolution-content.js');
+  if(!root?.SoulEvolution&&typeof require==='function')require('./soul-evolution-core.js');
+  if(!root?.SoulManifestation&&typeof require==='function')require('./soul-manifestation-core.js');
   if(!root?.SoulPartyQuota&&typeof require==='function')require('./party-quota-core.js');
   const foundation = root?.SoulCombatFoundation ?? (typeof require === 'function' ? require('./foundation-core.js') : null);
   const effects = root?.SoulEffectCompiler ?? (typeof require === 'function' ? require('./effects-core.js') : null);
@@ -85,15 +88,15 @@
   function storyCalendarDate(state) {
     const time=state?.世界?.时间;
     if(!time||!Number.isSafeInteger(time.day)||time.day<1||!Number.isSafeInteger(time.hour)||time.hour<0||time.hour>23||!Number.isSafeInteger(time.minute)||time.minute<0||time.minute>59)throw new Error('世界时间无效，无法读取故事日期');
-    const {epoch,monthsPerYear,daysPerMonth}=STORY_CALENDAR;
+    const {monthsPerYear,daysPerMonth}=STORY_CALENDAR,epoch=state?.世界?.scenarioId===globalThis.SoulEvolutionContent.SCENARIO?globalThis.SoulEvolutionContent.EPOCH:STORY_CALENDAR.epoch;
     const daysPerYear=monthsPerYear*daysPerMonth,offset=(epoch.month-1)*daysPerMonth+epoch.day-1+time.day-1;
     if(!Number.isSafeInteger(offset)||!Number.isSafeInteger(epoch.year+Math.floor(offset/daysPerYear)))throw new Error('故事日期超出可表示范围');
     const year=epoch.year+Math.floor(offset/daysPerYear),month=Math.floor((offset%daysPerYear)/daysPerMonth)+1,day=offset%daysPerMonth+1;
     const label=`${STORY_CALENDAR.name}${year}年${month}月${day}日 ${String(time.hour).padStart(2,'0')}:${String(time.minute).padStart(2,'0')}`;
     return {...STORY_CALENDAR,epoch:{...epoch},date:{year,month,day,hour:time.hour,minute:time.minute},worldDay:time.day,label};
   }
-  function storyWorldTimeAtDate(date) {
-    const {year,month,day,hour,minute}=date??{}, {epoch,monthsPerYear,daysPerMonth}=STORY_CALENDAR;
+  function storyWorldTimeAtDate(date,state) {
+    const {year,month,day,hour,minute}=date??{}, {monthsPerYear,daysPerMonth}=STORY_CALENDAR,epoch=state?.世界?.scenarioId===globalThis.SoulEvolutionContent.SCENARIO?globalThis.SoulEvolutionContent.EPOCH:STORY_CALENDAR.epoch;
     if(!Number.isSafeInteger(year)||year<epoch.year||year>999999||!Number.isSafeInteger(month)||month<1||month>monthsPerYear||!Number.isSafeInteger(day)||day<1||day>daysPerMonth||!Number.isSafeInteger(hour)||hour<0||hour>23||!Number.isSafeInteger(minute)||minute<0||minute>59)throw new Error('斗罗历日期或时分无效');
     const worldDay=(year-epoch.year)*monthsPerYear*daysPerMonth+(month-epoch.month)*daysPerMonth+day-epoch.day+1;
     if(worldDay<1)throw new Error('所选日期早于故事开局');
@@ -115,6 +118,8 @@
   }
   function itemGrade(item) {
     if (!item) return null;
+    const book=item.payload?.blueprintBook??ITEM_TEMPLATES[item.templateId]?.payload?.blueprintBook;
+    if(book){const entry=presets.get(book.presetId);return entry?itemGradeFromValue(calculateItemValue(entry.recipe.templateId)):null;}
     const type = item.type ?? ITEM_TEMPLATES[item.templateId]?.type;
     // Material integrity affects crafting; ring ages have their own colors. Neither is an item value grade.
     if (!['魂导器','丹药','毒药','暗器','消耗品','辅助食品','工具','道具','魂骨'].includes(type)) return null;
@@ -458,6 +463,9 @@
   const MARTIAL_SOUL_TEMPLATES = Object.freeze(Object.fromEntries(Object.entries(TEMPLATE_DRAFTS).map(([id,draft])=>[id,compileTemplate(id,draft)])));
 
   const ITEM_TEMPLATES = Object.freeze(Object.fromEntries(Object.entries({
+    'martial-inheritance':{id:'martial-inheritance',name:'传承晶核',type:'杂物',basePrice:320,stackable:false,tags:['成长物品'],description:'登记的一次性成长力量，实际交付后可参与武魂进化。'},
+    'evolution-elixir':{name:'凝源丹',type:'丹药',basePrice:0,stackable:false,tags:['成长物品'],description:'在武魂进化修习中服用，以炼化其中保留的魂质。'},
+    'martial-research-notes':{name:'武魂研究笔记',type:'杂物',basePrice:20,stackable:false,tags:['书籍'],description:'多年来观察武魂表现与魂力运转的手写笔记。'},
     ...designs.TEMPLATES,
     'gu-yuena-silver-spear':{name:'白银龙枪',type:'魂导器',deviceCategory:'攻击',equipmentKind:'武器',fixedForm:foundation.EQUIPMENT_AFFIXES.FORMS.find(f=>f.id==='spear'),rank:9,basePrice:0,stackable:false,maxDurability:1000,modifiers:{attributes:{}},description:'银白长枪驾驭元素锋芒，展开旋涡吞纳来袭的元素能量。',appearance:'通体银白的长枪，枪锋狭长，细鳞纹沿枪身收束。',lore:'古月娜持有的神器。银色旋涡可以吞没来袭能量，与她的元素掌控相辅相成。',tags:['原著持有物','神器','银龙王'],passiveEffectGraph:effects.makeBranchedGraph([{activation:'passive',nodes:[['passive.equipment_stat',{属性:'普通攻击伤害',数值:40}],...['水','火','风','土','空间','光','暗'].map(类型=>['passive.element_amplify',{类型,数值:30}])]}]),activeSkill:{name:'白银龙枪',soulPowerCost:90,cooldownTurns:5,durabilityCost:1,requirements:['gesture'],effectGraph:effects.makeBranchedGraph([{id:'strike',label:'白银贯空',activation:'active',optional:true,nodes:[['release.melee',{}],['target.single',{阵营规则:'敌方'}],['check.physical_attack',{}],['payload.damage',{类型:'空间',骰数:8,骰面:12,加值:120,穿透档:1}]]},{id:'vortex',label:'白银旋涡',activation:'active',optional:true,targetPolicy:'self',nodes:[['target.self',{}],...['水','火','风','土','空间','光','暗'].map(类型=>['status.resistance_shift',{类型,模式:'吸收',持续回合:2}])]}])}},
     'gu-yuena-silver-armor':{name:'银龙舞麟',type:'魂导器',deviceCategory:'防御',equipmentKind:'防具',fixedForm:foundation.EQUIPMENT_AFFIXES.FORMS.find(f=>f.id==='armor'),rank:9,basePrice:0,stackable:false,maxDurability:1000,modifiers:{attributes:{}},description:'四字斗铠护住全身，银色龙翼赋予高空飞行与机动防护。',appearance:'冷紫光纹游走于银白轻甲，背部龙翼可随魂力展开。',lore:'古月娜的四字斗铠银龙舞麟，银白甲片与龙翼相接，随她的力量明亮舒展。',tags:['原著持有物','四字斗铠','银龙王'],passiveEffectGraph:effects.makeBranchedGraph([{activation:'passive',nodes:[['passive.equipment_stat',{属性:'生命上限',数值:400}],['passive.equipment_stat',{属性:'魂力上限',数值:300}],['passive.equipment_stat',{属性:'物理防御',数值:6}],['passive.equipment_stat',{属性:'魂技防御',数值:6}],['passive.equipment_stat',{属性:'固定减伤',数值:12}]]}]),activeSkill:{name:'银龙翼守',soulPowerCost:60,cooldownTurns:4,durabilityCost:1,requirements:['gesture'],effectSpecs:[['target.self',{}],['move.flight',{持续回合:6,高度:'高空'}],['payload.shield',{骰数:12,骰面:12,加值:200}]]}},
@@ -515,7 +523,13 @@
     'canon-soul-device': {name: '原著登记魂导器', type: '魂导器', deviceCategory: '辅助', rank: 1, stackable: false, maxDurability: 100, modifiers: {attributes: {意志: 1}}, tags: ['原著角色库'],equipmentKind:'饰品',fixedForm:foundation.EQUIPMENT_AFFIXES.FORMS.find(f=>f.id==='pendant'),passiveEffectGraph:effects.makeBranchedGraph([{activation:'passive',nodes:[['passive.element_amplify',{类型:'灵魂',数值:5}]]}])},
     'slaughter-blood-pill': {name: '血息丸', type: '丹药', basePrice: 950, stackable: true, activeSkill: {name: '服用·血息丸', soulPowerCost: 0, cooldownTurns: 0, durabilityCost: 0, effectSpecs: [['target.self', {阵营规则: '友方'}], ['payload.heal', {骰数: 2, 骰面: 8, 加值: 4}]]}, tags: ['杀戮场奖励', '丹药', '生命恢复']},
     ...(presets?.itemTemplates?.()??{})
-  }).map(([id,template])=>[id,{...(designs.SHOP_METADATA?.[id]??{}),...template}])));
+  }).flatMap(([id,template])=>{
+    const product={...(designs.SHOP_METADATA?.[id]??{}),...template},entry=presets?.get(id);
+    const presetId=entry&&['丹药','毒药','暗器','魂导器','拘束器'].includes(entry.category)?entry.id:designs.SHOP_IDS.includes(id)&&!product.tags?.includes('灵魂契约')?`shop:${id}`:null;
+    if(!presetId)return [[id,product]];
+    const art=globalThis.SoulPresetArt.get(presetId),bookId=`blueprint-book:${presetId}`;
+    return [[id,product],[bookId,{name:`${product.name}设计图`,type:'图纸',basePrice:100,stackable:true,tags:['预设设计图'],artId:art?.artId??'item.blueprint',payload:{blueprintBook:{version:1,presetId},artId:art?.artId??'item.blueprint'},description:`${product.name}的完整制作图纸。学习后可按图准备材料制作，图纸不附赠成品。`}]];
+  })));
 
   const SUPPORT_CONSUMABLE_RECIPES = Object.freeze({
     'vitality-sausage': {name: '恢复香肠', templateId: 'support-vitality-sausage', soulPowerCost: 5, shelfLifeDays: 1, activeSkill: {name: '食用·恢复香肠', effectSpecs: [['target.self', {阵营规则: '友方'}], ['payload.heal', {骰数: 2, 骰面: 6, 加值: 2}]]}},
@@ -926,6 +940,10 @@
     state.战利品.列表 = plain(state.战利品.列表) ? state.战利品.列表 : {};
     state.战利品.遗骸列表 = plain(state.战利品.遗骸列表) ? state.战利品.遗骸列表 : {};
     state.地图.地点 = clone(LOCATION_TEMPLATES);
+    if(state.世界.scenarioId===globalThis.SoulEvolutionContent?.SCENARIO){
+      Object.assign(state.地图.地点['loc-lanba-academy'],{name:'蓝霸学院',summary:'蓝霸学院重聚初期，旧友与史莱克师生在此安顿，学院尚未更名。'});
+      state.地图.地点['loc-lanba-campus'].name='蓝霸学院校区';
+    }
     state.地图.路线 = clone(ROUTE_TEMPLATES);
     if (!LOCATION_TEMPLATES[state.地图.当前地点ID]) state.地图.当前地点ID = 'loc-holy-soul-village';
     state.地图.已知地点ID列表 = list(state.地图.已知地点ID列表).filter(id => Boolean(LOCATION_TEMPLATES[id]));
@@ -949,6 +967,8 @@
   }
 
   function makeInitialState(seed = 'soul-cycle-world-1') {
+    // Direct rule consumers must load the same preset growth catalogue as the bundled game.
+    if(!globalThis.SoulCanonArenaEngine&&typeof require==='function')require('./canon-arena-engine.js');
     const state = normalizeWorldCollections(foundation.makeDefaultState());
     state.世界.seed = clean(seed, 'soul-cycle-world-1');
     sealing.initialize(state);poison.initialize(state);
@@ -973,6 +993,7 @@
   }
 
   function commit(state, transactionId, type, receipt) {
+    globalThis.SoulManifestation.reconcile(state);
     globalThis.SoulResidentRealms.reconcile(state);globalThis.SoulCombatDeployments.reconcile(state);globalThis.SoulPerformanceAgreements.advanceAt(state);poison.syncResidents(state);refreshTravelsAt(state,people.now(state),{});
     combat.pruneMaintenance(state);
     custody.reconcileDeaths(state);globalThis.SoulRealmArrangements?.reconcile?.(state);globalThis.SoulPersonShame?.advanceAt?.(state);
@@ -1014,6 +1035,8 @@
   function calculateItemValue(itemOrTemplate) {
     const template = typeof itemOrTemplate === 'string' ? itemTemplate(itemOrTemplate) : itemTemplate(itemOrTemplate.templateId);
     const payload = typeof itemOrTemplate === 'string' ? {} : itemOrTemplate.payload ?? {};
+    const book=template.payload?.blueprintBook;
+    if(book){const entry=presets.get(book.presetId);if(!entry)throw Error('预设图纸目录不存在');return Math.max(100,Math.ceil(calculateItemValue(entry.recipe.templateId)*.4));}
     if(payload.host!==undefined)return globalThis.SoulHostPricing.quotePayload(template.id??(typeof itemOrTemplate==='string'?itemOrTemplate:itemOrTemplate.templateId),payload).valueGold;
     if(payload.backgroundRestraint){let value=backgroundItems.compile(payload.backgroundRestraint.definition).priceGold;if(payload.activeSkill){const c=effects.validateGraph(payload.activeSkill.effectGraph,{ageTier:payload.activeSkill.ageTier??'十万年',mechanismCap:payload.activeSkill.mechanismCap??'规则'});if(!c.pass)throw Error(c.errors.join('；'));value+=c.spent*20;}return value;}
     if(template.type==='魂环'&&payload.ringSource)return assets.ringValue(itemOrTemplate);
@@ -1564,9 +1587,9 @@
       try {
         if(martialSoul.扩展?.generatedBy==='npc-custom-creation'&&!requestedSkills.length&&!options.canonicalSkillPreference){
           const archetype=state.人物.列表[entityId]?.扩展?.archetypeId,preferred=npcLoadouts.skillRoles(archetype),legal=effects.ringCandidateRoles(martialSoul,profile,beastSkills),roles=[...new Set([...preferred.filter(r=>legal.includes(r)),...legal])];
-          let failure;
-          for(const candidateRole of roles){try{compiled=effects.compileRingSkills({martialSoul,beastProfile:profile,beastSkills,ringOrdinal:ordinal,options:{...compileOptions,candidateRole,candidateSecondaryRoles:roles.filter(r=>r!==candidateRole),preferAllyTargets:['commerce-ally','commerce-healer','auction-host'].includes(archetype)}});break;}catch(error){failure=error;}}
-          if(!compiled)throw failure??Error('当前武魂与来源无法配置符合人物定位的魂技');
+          // The role pass may have no complete release even when an effect matches.
+          // In that case the ordinary compiler still checks the source and age budget.
+          for(const candidateRole of roles){try{compiled=effects.compileRingSkills({martialSoul,beastProfile:profile,beastSkills,ringOrdinal:ordinal,options:{...compileOptions,candidateRole,candidateSecondaryRoles:roles.filter(r=>r!==candidateRole),preferAllyTargets:['commerce-ally','commerce-healer','auction-host'].includes(archetype)}});break;}catch{}}
         }
         if(options.selfCondensation){
           const spec=globalThis.SoulCanonArenaEngine.selfCondensationSpec(state,entityId,martialSoul,ordinal);
@@ -1719,6 +1742,8 @@
     if (!validation.pass) throw new Error(validation.errors.join('；'));
     const config = validation.normalized;
     const storedLedger = compactCreationLedger(validation.ledger);
+    if(config.background?.scenarioId)state.世界.scenarioId=config.background.scenarioId;
+    if(config.background?.npcGender)state.世界.npcGender=config.background.npcGender;
     state.世界.characterSources=globalThis.SoulCanonicalGrowth.selectedSources(config);
     const backgroundPolicy=config.background?backgrounds.policy(config.background,config.difficulty):null;
     const frozenPrince=backgroundPolicy?.canonical;
@@ -1733,7 +1758,7 @@
       unitExtensions: {openingTalents:talents.grant(config.opening,playerId),...(config.avatar?{头像资产:clone(config.avatar)}:{}),头像接口:'unit.扩展.头像资产'},
       dossier: {姓名: config.name, 年龄: config.age, 性别: config.gender, 出身: config.origin, 身份: identity.name, 外貌: config.appearance, 创建模式: config.mode, 造化点账本: storedLedger}
     }, `cycle-${transactionId}`);
-    if (config.mode === 'awakening'&&(!backgroundPolicy||backgroundPolicy.ordinary)&&!(config.background?.id==='jiumeitu-heir'&&config.level>10)) {
+    if (config.mode === 'awakening'&&(!backgroundPolicy||backgroundPolicy.ordinary)&&config.level===10) {
       const growth = created.state.成长.列表[playerId];
       growth.当前经验 = growth.当前等级需求;
     }
@@ -1750,7 +1775,7 @@
     if(!frozenPrince)next.钱包.列表[shell.walletId].gold = identity.wallet;
     const itemIds = grantKit(next, playerId, identity.kit, 'starting-identity-kit');
     itemIds.push(...grantOpeningRingItems(next,config.opening,playerId));
-    const registeredRings = frozenPrince?[]:backgroundPolicy&&(config.background.id==='sealed-titled'&&!backgroundPolicy.ordinary||config.background.id==='jiumeitu-heir'&&config.level>10)?globalThis.SoulBackgroundHistory.install(next,playerId,config,{manual:true,selectedIds:config.background.ringChoices,designs:config.background.ringDesigns,sourceId:transactionId}).records:generateRegisteredRings(next, playerId, config.level, `${next.世界.seed}:opening:${playerId}`,{openingCompatibility:true});
+    const registeredRings = frozenPrince?[]:backgroundPolicy&&(config.background.id==='sealed-titled'&&!backgroundPolicy.ordinary||['custom','jiumeitu-heir'].includes(config.background.id)&&config.level>10)?globalThis.SoulBackgroundHistory.install(next,playerId,config,{manual:true,selectedIds:config.background.ringChoices,designs:config.background.ringDesigns,sourceId:transactionId}).records:generateRegisteredRings(next, playerId, config.level, `${next.世界.seed}:opening:${playerId}`,{openingCompatibility:true});
     next.世界.opening = {status: 'committed', committedTransactionId: transactionId};
     if(config.mode==='awakening'&&!config.background){
       next.世界.opening.guidance={status:'pending',giftStatus:'available',giftId:'',itemId:'',tutorialSkipped:false};
@@ -1771,6 +1796,7 @@
     for(const source of globalThis.SoulCanonicalGrowth.sources())if(next.世界.characterSources.includes(source.id)){
       const made=globalThis.SoulCanonArenaEngine.ensurePersistentCharacter(next,source.characterId);Object.assign(next,made.state);
     }
+    globalThis.SoulEvolutionContent.install(next,config,transactionId);
     globalThis.SoulPersonTools?.grant(next,config,transactionId);
     itemIds.push(...(globalThis.SoulOpeningWorkshop?.install(next,config,transactionId)??[]));
     globalThis.SoulResidentRealms.installActor(next,playerId,transactionId);
@@ -1937,7 +1963,7 @@
       }
       const item=createItem(state,'ring-source',playerId,containerId,{
         id:`opening-${playerId}-${source.kind}`,name:talents.ringItemName(source),quality:foundation.getAgeTier(definition.years).名称,
-        
+
         provenance:{type:'opening-selection'},payload:{ringSource:{version:1,...clone(source),years:definition.years,seed:state.世界.seed+':opening-'+playerId+'-'+source.kind}}
       });
       return item.id;
@@ -1964,7 +1990,9 @@
     if (state.人物.列表[id]) return state.人物.列表[id];
     // Keep the demographic/resource draw positions independent of name vocabulary.
     rng.next();rng.next();
-    const age=integer(options.age??rng.int(18,55),1,999),gender=clean(options.gender,rng.pick(['男','女']));
+    const age=integer(options.age??rng.int(18,55),1,999),randomGender=rng.pick(['男','女']),forcedGender=state.世界.npcGender;
+    const fixed=/^(authored-|registered-|regional-world-opening)/.test(options.generatedBy??'');
+    const gender=clean(options.gender,!fixed&&forcedGender==='male'?'男':!fixed&&forcedGender==='female'?'女':randomGender);
     const usedNames=[...Object.values(state.人物.列表).map(person=>person.name),...Object.values(globalThis.SoulCanonArenaEngine?.CHARACTER_CATALOG??{}).flatMap(person=>[person.name,person.name.split('·')[0]])];
     const name=clean(options.name)||personalNames.generatePersonalName({seed:seed+':name',gender,usedNames});
     const person = {
@@ -1980,11 +2008,10 @@
       person.faction=location?.type?.includes('宗门')?location.name:parent?.type?.includes('宗门')?parent.name:location?.type?.includes('宗族')?location.name:'当地宗门驻外事务所';
     }
     const locationName=LOCATION_TEMPLATES[locationId]?.name ?? '当地';
-    person.扩展.characterProfile={version:1,status:'draft',source:'rules-draft',data:options.profile??{
-      biography:`${person.name}在${locationName}以${person.occupation}为生，属于${person.faction}。具体出身和经历待人物创建完成。`,
-      values:person.personality,speech:`结合${person.personality}与${person.occupation}的生活经验表达`,
-      shortTermGoal:`完成${locationName}当前的${person.occupation}工作`,longTermGoal:'在自己的职业中获得稳定生活与认可'
-    }};
+    const presetProfile=isPresetLocationCastSource(person.generatedBy);
+    const profile=npcLoadouts.profile(person,locationName,options.profile??(options.personality?{values:person.personality}:undefined));
+    person.扩展.characterProfile={version:1,status:presetProfile?'complete':'draft',source:presetProfile?'preset':'rules-draft',data:profile};
+    if(!options.personality)person.personality=profile.values;
     person.扩展.creationBudget={version:1,limits:npcCreationBudget(archetypeId),source:person.generatedBy};
     const shell = ensurePossessionShell(state, id);
     if (options.deferDetails === true) {
@@ -2002,15 +2029,17 @@
     people.initialize(state,id,{level:options.level??0});
     if (person.tier === 'full') promoteNpcInternal(state, id, {level: options.level, martialSoulTemplateId: options.martialSoulTemplateId, martialSoulDraft: options.martialSoulDraft, supportCapabilities: options.supportCapabilities,soulLoadouts:options.soulLoadouts,presetId:options.presetId});
     if (archetype.shop && !person.扩展.deferredNpc) createShopInternal(state, id, archetype.shop, locationId);
-    if(isPresetLocationCastSource(person.generatedBy)&&!person.扩展.deferredNpc){
-      if(!options.profile)person.扩展.characterProfile.data=npcLoadouts.profile(person,locationName);
-      person.扩展.characterProfile.status='complete';person.扩展.characterProfile.source='preset';
-      if(person.扩展.npcLoadoutId){for(const soulId of state.成长.列表[id]?.武魂ID列表??[]){const soul=state.武魂.列表[soulId],base=soul.扩展.结构化武魂.baseAction;base.name=`${soul.名称}·基础运用`;soul.扩展.专属基础动作=clone(base);soul.扩展.baseActionNaming={source:'preset'};for(const ringId of soul.魂环ID列表)for(const skillId of state.魂环.列表[ringId].魂技ID列表){const skill=state.技能.列表[skillId];skill.namingSource='preset';skill.扩展.命名来源='preset';}state.战斗单位.列表[id]=foundation.applyMartialSoulCombatModifiers(state.战斗单位.列表[id],soul,state);}}
-    }
     if(!options.deferDetails||options.age!==undefined&&options.gender!==undefined)genericVisuals.assign(state,person);
     return person;
   }
 
+  function setNpcGender(rawState,{mode},transactionId) {
+    const guard=transactionStart(rawState,transactionId,'设置随机人物性别');
+    if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
+    if(!guard.state.角色.已建立||!['random','male','female'].includes(mode))throw Error('请在已开始的旅程中选择随机人物性别');
+    guard.state.世界.npcGender=mode;
+    return commit(guard.state,transactionId,'设置随机人物性别',{type:'npc-gender-setting',mode,summary:'已保存之后随机生成的人物性别偏好。'});
+  }
   function spawnNpc(rawState, options, transactionId) {
     const guard = transactionStart(rawState, transactionId, '生成人物');
     if (guard.duplicate) return {state: guard.state, receipt: guard.receipt, idempotent: true};
@@ -2093,7 +2122,7 @@
     if(options.presetId||options.martialSoulDraft||options.martialSoulTemplateId||state.扩展?.npcCreationDrafts?.[person.seed])delete person.扩展.npcLoadoutId;
     if(options.presetId){const preset=presets.compile(options.presetId,{budget:npcMartialSoulBudget(person.扩展.archetypeId)});if(!preset.pass||preset.category!=='武魂')throw Error(preset.reason||'人物需要合法武魂预设');options={...options,martialSoulTemplateId:'',martialSoulDraft:presets.request(options.presetId)};person.扩展.presetSoulId=preset.presetId;}
     else if(isPresetLocationCastSource(person.generatedBy)&&!person.扩展.deferredNpc&&!options.martialSoulDraft&&!options.martialSoulTemplateId&&!state.扩展?.npcCreationDrafts?.[person.seed]){
-      const loadout=npcLoadouts.select(person.扩展.archetypeId,`${state.世界.seed}:${person.seed}`,npcMartialSoulDesignBudget(person.扩展.archetypeId));
+      const loadout=npcLoadouts.select(person.扩展.archetypeId,`${state.世界.seed}:${person.seed}`,npcMartialSoulDesignBudget(person.扩展.archetypeId),npcMartialSoulBudget(person.扩展.archetypeId));
       options={...options,martialSoulTemplateId:'',martialSoulDraft:loadout.draft};person.扩展.npcLoadoutId=loadout.id;
     }
     const preparedDraft=state.扩展?.npcCreationDrafts?.[person.seed];
@@ -2117,8 +2146,20 @@
     state.成长.列表[personId] = {id: `growth-${personId}`, 单位ID: personId, 魂力等级: level, 当前经验: 0, 当前等级需求: 100 + level * 25, 瓶颈等级: Math.min(100, Math.ceil(level / 10) * 10), 瓶颈状态: level % 10 === 0 ? '积累经验' : '未到瓶颈', 溢出经验: 0, 可用属性点: 0, 已投入属性点: 0, 每级属性点: 0, 属性投入: Object.fromEntries(foundation.ATTRIBUTE_KEYS.map(key => [key, 0])), 武魂ID列表: [soul.id], 激活武魂ID:soul.id, 扩展: {generated: true}};
     state.战斗单位.列表[personId] = foundation.applyMartialSoulCombatModifiers(foundation.normalizeCombatant({id: personId, 名称: person.name, 阵营: person.faction, 单位种类: '魂师NPC', 标签: [person.identity, person.occupation], 六维: {基础: attributes}, 成长: {类型: '魂师', 魂力等级: level, 成长记录ID: personId}, 位置: {距离区: '近距', 站位簇: 'npc'}}, {id: personId, kind: '魂师NPC', level}), state.武魂.列表[soul.id],state);
     if (plain(options.supportCapabilities)) state.战斗单位.列表[personId].扩展.辅助能力 = merge(state.战斗单位.列表[personId].扩展?.辅助能力 ?? {}, options.supportCapabilities);
-    if(person.扩展.npcLoadoutId)options={...options,soulLoadouts:[npcLoadouts.loadout(person.扩展.npcLoadoutId,level)]};
-    generateRegisteredRings(state, personId, level, person.seed,options.soulLoadouts?{soulLoadouts:options.soulLoadouts,allowInferenceFallback:false}:{});
+    const loadoutId=person.扩展.npcLoadoutId??state.武魂.列表[soul.id].扩展?.canonicalGrowth?.presetId;
+    const inherited=Boolean(npcLoadouts.get(loadoutId)?.routeId);
+    if(person.扩展.npcLoadoutId||inherited&&!options.soulLoadouts)options={...options,soulLoadouts:[npcLoadouts.loadout(loadoutId,level)]};
+    generateRegisteredRings(state, personId, level, person.seed,options.soulLoadouts?{soulLoadouts:options.soulLoadouts,allowInferenceFallback:false,canonicalSkillPreference:inherited,strictCanonicalPreference:inherited,allowCanonicalExpressionGrowth:inherited}:{});
+    if(person.扩展.npcLoadoutId){
+      const registeredSoul=state.武魂.列表[soul.id],base=registeredSoul.扩展.结构化武魂.baseAction;
+      base.name=`${registeredSoul.名称}·基础运用`;
+      registeredSoul.扩展.专属基础动作=clone(base);
+      registeredSoul.扩展.baseActionNaming={source:'preset'};
+      for(const ringId of registeredSoul.魂环ID列表)for(const skillId of state.魂环.列表[ringId].魂技ID列表){
+        const skill=state.技能.列表[skillId];skill.namingSource='preset';skill.扩展.命名来源='preset';
+      }
+      state.战斗单位.列表[personId]=foundation.applyMartialSoulCombatModifiers(state.战斗单位.列表[personId],registeredSoul,state);
+    }
     resolveDeferredNpcResources(state,person,archetype);
     const initialSoul=state.武魂.列表[soul.id].扩展?.结构化武魂??state.武魂.列表[soul.id].结构化武魂;
     if(initialSoul?.exchangeContracts?.some(c=>c.mode!=='condition')){state.成长.列表[personId].激活武魂ID='';foundation.switchActiveMartialSoul(state,personId,soul.id,{operationId:`npc-initial-soul:${personId}:${person.seed}`});}
@@ -2236,7 +2277,6 @@
       ...(preset?{id:`opening-cast-${preset.id}`,name:preset.name,age:preset.age,gender:preset.gender,appearance:preset.appearance,personality:preset.personality,wallet:preset.wallet,profile:clone(preset.profile),identity:preset.identity,occupation:preset.occupation,level:preset.level,martialSoulTemplateId:preset.martialSoulTemplateId}:{})});
     person.扩展.slotKey=slotKey;
     if(!preset)return person;
-    person.扩展.characterProfile={version:1,status:'complete',source:'preset',data:clone(preset.profile)};
     if(preset.baseAction){
       const soul=state.武魂.列表[state.成长.列表[person.id].武魂ID列表[0]],base=soul.扩展.结构化武魂.baseAction;
       Object.assign(base,preset.baseAction);soul.扩展.专属基础动作=clone(base);soul.扩展.baseActionNaming={source:'preset'};
@@ -2264,7 +2304,7 @@
     return people;
   }
 
-  function stockHooks(){return {LOCATION_TEMPLATES,ITEM_TEMPLATES,createItem,transferItem,calculateItemValue,quotePrice,itemGrade,findPath:findPathInState,personalActionBlockReason};}
+  function stockHooks(){return {LOCATION_TEMPLATES,ITEM_TEMPLATES,createItem,transferItem,calculateItemValue,quotePrice,itemGrade,findFreightPath:findFreightPathInState,personalActionBlockReason};}
   function initializeAuctionVenue(state){
     const presets=[
       {id:'auction-owner-gu',name:'顾廷章',archetypeId:'auction-owner',level:62,age:51,martialSoulTemplateId:'patrol-shield',appearance:'深褐长袍衣襟别着旧金扣，鬓边有灰，手中的账册边角磨得发亮。',personality:'沉稳精明，愿承担有清楚边界的委托，重视商号声誉。',profile:{biography:'顾廷章从替商行押运货箱起家，后来与旧伙伴经营天斗拍卖场。他在一次交接争执中赔掉过整年的利润，此后坚持把器物所有权、看管权限和控制来源分别写明。三百万金币是他多年经营所得的个人储备，拍卖价款另以托管账本保管。',values:'委托的实物必须在场，承诺只到能够实际履行的地方。',speech:'语气平缓，谈风险时逐项说明，不借名头许诺。',shortTermGoal:'核清本场稀有器物的来源，让仓库交接平稳完成。',longTermGoal:'让商号在两大帝国间维持独立和信誉。'}},
@@ -2312,7 +2352,7 @@
 
   function initializeRareCommerce(state,sourceId,config={}){
     const titledTargetId=config.background?.id==='sealed-titled'?backgrounds.targetId(config.background):'captive-title-jiang';
-    const registerOpeningLot=d=>{if(d.personId!==backgrounds.targetId(config.background))commerceSource.registerLot(state,d);};
+    const registerOpeningLot=d=>{if(d.personId!==backgrounds.targetId(config.background)){const quote=publicAuction.catalogQuote(state,{...d,sellerId:d.sellerId??'commerce-consignor-ruan'});commerceSource.registerLot(state,{...d,reserveGold:quote.reserveGold});}};
     globalThis.SoulBackgroundOpening?.prepareRare(state,config,sourceId,globalThis.SoulWorldEngine);
     commerceSource.begin(state,sourceId);const place=auction.VENUE,ownerId='commerce-consignor-ruan';
     const authored=[
@@ -2487,7 +2527,7 @@
       : item.type === '暗器' ? 'hidden-weapon' : 'consumable';
     return {
       itemId:item.id, name:item.name, type:item.type, quality:item.quality, grade:itemGrade(item), quantity:item.quantity,
-      description:item.payload?.description || item.扩展?.描述 || template.description || '',
+      description:globalThis.SoulRealmArrangements?.presentation(item)?.description || item.payload?.description || item.扩展?.描述 || template.description || '',
       form:item.payload?.form || item.扩展?.形态 || '',
       fixedForm:clone(item.payload?.fixedForm ?? template.fixedForm ?? null),
       modifiers:merge(template.modifiers ?? {},item.payload?.modifiers ?? {}),
@@ -2688,10 +2728,15 @@
     return commit(state, transactionId, '卸下物品', {type: 'item-unequipped', entityId, itemId, slot, modifiers: clone(config.appliedModifiers),...(releaseProof?{releaseProof}:{}), summary: `${state.人物.列表[entityId]?.name ?? entityId}卸下了${state.物品.实例[itemId]?.name ?? itemId}`});
   }
 
+  // Route templates keep historical fares for validating older journey records.
+  function routeSnapshotMatches(route,template){
+    return !!template&&[0,template.costGold].includes(route.costGold)&&
+      backgrounds.stable({...route,costGold:template.costGold})===backgrounds.stable(template);
+  }
   const PATH_MODES = Object.freeze({
-    balanced: {name: '均衡', description: '综合时间与路费'},
+    balanced: {name: '均衡', description: '兼顾耗时与安全'},
     fastest: {name: '最快', description: '优先总耗时最短'},
-    cheapest: {name: '最省钱', description: '优先降低预计路费'}
+    cheapest: {name: '稳妥', description: '优先避开危险路段'}
   });
 
   function playerLevel(state,actorId=state.角色.主控单位ID) {
@@ -2844,8 +2889,8 @@
 
   function pathWeight(route, mode) {
     if (mode === 'fastest') return route.minutes;
-    if (mode === 'cheapest') return route.minutes + route.costGold * 40;
-    return route.minutes + route.costGold * 3;
+    if (mode === 'cheapest') return route.minutes + route.danger * 180;
+    return route.minutes + route.danger * 20;
   }
 
   // Share a private snapshot only while enumerating alternatives for one query.
@@ -2861,8 +2906,15 @@
     return findPathInState(normalizeState(rawState),destinationIdInput,modeInput,fromLocationIdInput,actorId);
   }
 
+  function findFreightPathInState(state,destinationId,from,actorId){
+    return findPathInState(state,destinationId,'cheapest',from,actorId,true);
+  }
+  function findFreightPath(rawState,destinationId,from,actorId){
+    return findFreightPathInState(normalizeState(rawState),destinationId,from,actorId);
+  }
+
   // Read-only path calculation after the public boundary has normalized once.
-  function findPathInState(state, destinationIdInput, modeInput = 'balanced', fromLocationIdInput = '',actorId=state.角色.主控单位ID) {
+  function findPathInState(state, destinationIdInput, modeInput = 'balanced', fromLocationIdInput = '',actorId=state.角色.主控单位ID,freight=false) {
     const from = clean(fromLocationIdInput,state.人物.列表[actorId]?.locationId);
     if (!LOCATION_TEMPLATES[from]) throw new Error('规划的出发地点不存在');
     const destinationId = clean(destinationIdInput);
@@ -2894,7 +2946,7 @@
         if (route.from === current) neighbor = route.to;
         else if (route.bidirectional !== false && route.to === current) neighbor = route.from;
         if (!neighbor || !routeAccess(state, route, neighbor,actorId).pass) continue;
-        const candidate = currentDistance + pathWeight(route, mode);
+        const candidate = currentDistance + (freight?route.minutes+route.costGold*40:pathWeight(route,mode));
         const known = distances.get(neighbor) ?? Infinity;
         if (candidate < known || (candidate === known && route.id < (previous.get(neighbor)?.routeId ?? '\uffff'))) {
           distances.set(neighbor, candidate);
@@ -2914,7 +2966,7 @@
       locationIds.unshift(step.nodeId);
       cursor = step.nodeId;
     }
-    const selectedRoutes = routeIds.map(id => clone(state.地图.路线[id]));
+    const selectedRoutes = routeIds.map(id => ({...clone(state.地图.路线[id]),costGold:freight?state.地图.路线[id].costGold:0}));
     return {
       from, to: destinationId, mode, locationIds, routeIds, routes: selectedRoutes,
       totalMinutes: selectedRoutes.reduce((sum, route) => sum + route.minutes, 0),
@@ -2948,7 +3000,7 @@
       const position=actions.positionOf(state,person.id);if(position.kind!=='location'||position.sceneId)throw Error('对方须先实际回到公共通道再安排赴约');
       const path=npcRoute(state,person.id,record.locationId),start=npcMinute(record.startsAt)-path.totalMinutes,now=npcMinute(state.世界.时间);
       if(start<now)throw new Error('按实际路线已来不及在约定时刻抵达');
-      if((state.钱包.列表[person.walletId]?.gold??0)<path.totalCostGold)throw new Error('对方自己的盘缠不足以支付这段行程');
+
       if(path.routeIds.length&&(state.远征?.companionContracts??[]).some(c=>c.unitId===person.id))throw new Error('对方已有同行合同，不能同时另行出发');
       if((state.世界.npcPlans??[]).some(p=>p.ownerId===person.id&&!['succeeded','missed','cancelled','blocked'].includes(p.status)&&p.sourceId!==record.id&&npcPlanSource(state,p)?.status==='accepted'&&p.departAt<=record.endsAt&&p.deadline>=start))throw new Error('对方已有包含路途在内的行程，时间冲突');
       return {available:true,reason:'',path,departAt:Math.max(now,start)};
@@ -2969,7 +3021,7 @@
     const person=state.人物.列表[personId];if(!person)return [];
     const ids=new Set([person.locationId,...Object.values(state.地图.路线).filter(r=>[r.from,r.to].includes(person.locationId)).map(r=>r.from===person.locationId?r.to:r.from)]);
     return [...ids].filter(id=>LOCATION_TEMPLATES[id]&&LOCATION_TEMPLATES[id].discovery!=='hidden').flatMap(id=>{
-      try{const path=npcRoute(state,personId,id);if(path.totalCostGold>state.钱包.列表[person.walletId].gold)return [];
+      try{const path=npcRoute(state,personId,id);
         return [{id,name:LOCATION_TEMPLATES[id].name,minutes:path.totalMinutes,costGold:path.totalCostGold,earliestArrival:npcTime(npcMinute(state.世界.时间)+path.totalMinutes+60)}];}catch{return [];}
     });
   }
@@ -2987,7 +3039,7 @@
   function createNpcSupplyRequest(state,goal,templateId,fallback){
     const option=npcSupplyOptions(state,goal.ownerId).find(o=>o.templateId===templateId),plan=state.世界.npcPlans.find(p=>p.id===goal.planId),person=state.人物.列表[goal.ownerId];
     if(!option||!plan||!plan.path.routeIds.length||!['go-without','cancel-trip'].includes(fallback))throw new Error('补给委托须有真实缺少物资、出行路线与本人后续选择');
-    if(state.钱包.列表[person.walletId].gold<option.priceGold+plan.path.totalCostGold)throw new Error('本人资金不足以同时支付约定收购价与行程');
+    if(state.钱包.列表[person.walletId].gold<option.priceGold)throw new Error('本人资金不足以支付约定收购价');
     const now=npcMinute(state.世界.时间);if(plan.departAt<=now+60)throw new Error('补给准备须留至少一小时');
     const r={id:`npc-request:${goal.id}`,goalId:goal.id,ownerId:person.id,branchId:goal.branchId,sourceId:goal.decisionSourceId,locationId:person.locationId,templateId,quantity:1,priceGold:option.priceGold,
       createdAt:clone(state.世界.时间),askAt:Math.max(now,plan.departAt-1440),deadline:plan.departAt,fallback,status:'scheduled',nextAt:Math.max(now,plan.departAt-1440),events:[]};
@@ -3005,7 +3057,7 @@
       }
       if(carriedTemplateCount(state,r.ownerId,r.templateId)>=r.quantity){requestEvent(state,r,'already-supplied','not-needed',`${r.id}:already-supplied`,absentIds);r.nextAt=null;continue;}
       if(at>=r.deadline){requestEvent(state,r,'expired','expired',`${r.id}:expired`,absentIds);r.nextAt=null;if(r.fallback==='cancel-trip')goal.status='cancelled';continue;}
-      if(state.钱包.列表[person.walletId].gold<r.priceGold+plan.path.totalCostGold){requestEvent(state,r,'unaffordable','cancelled',`${r.id}:unaffordable`,absentIds);r.nextAt=null;if(r.fallback==='cancel-trip')goal.status='cancelled';continue;}
+      if(state.钱包.列表[person.walletId].gold<r.priceGold){requestEvent(state,r,'unaffordable','cancelled',`${r.id}:unaffordable`,absentIds);r.nextAt=null;if(r.fallback==='cancel-trip')goal.status='cancelled';continue;}
       requestEvent(state,r,'opened','open',`${r.id}:opened`,absentIds);r.nextAt=r.deadline;
     }
     observeNpcRequests(state,`observe:${at}`,absentIds);
@@ -3124,11 +3176,11 @@
         if((state.远征?.companionContracts??[]).some(c=>c.unitId===person.id))throw new Error('已加入同行，独立行程停止');
         const access=routeAccess(state,route,to,person.id);
         if(!access.pass)throw new Error(`原路线已不可通行：${access.reasons.join('；')}`);
-        const wallet=state.钱包.列表[person.walletId];if(wallet.gold<route.costGold)throw new Error('人物自己的盘缠不足');
+
         state.钱包.列表['wallet-world-transit']??={id:'wallet-world-transit',ownerEntityId:'world-transit',gold:0,扩展:{type:'travel-sink'}};
-        wallet.gold-=route.costGold;state.钱包.列表['wallet-world-transit'].gold+=route.costGold;p.paidGold+=route.costGold;
-        p.legFrom=person.locationId;write(p,'departed',at,{locationId:person.locationId,to,routeId:route.id,paidGold:route.costGold});
-        const run={sourceId:`${p.id}:leg:${p.runs.length}`,routeId:route.id,from:p.legFrom,to,totalMinutes:route.minutes,startOffset:0,endOffset:0,startedAt:at,beganAt:at,progressedAt:at,endedAt:null,costGold:route.costGold,personIds:[person.id],arrived:false};p.runs.push(run);travelCore.initialize(state,run,p.id,route.mode==='sea'?[]:[person.id],route.mode==='sea'?[person.id]:[]);p.status='travelling';p.nextAt=travelCore.nextAt(run);
+
+        p.legFrom=person.locationId;write(p,'departed',at,{locationId:person.locationId,to,routeId:route.id,paidGold:0});
+        const run={sourceId:`${p.id}:leg:${p.runs.length}`,routeId:route.id,from:p.legFrom,to,totalMinutes:route.minutes,startOffset:0,endOffset:0,startedAt:at,beganAt:at,progressedAt:at,endedAt:null,costGold:0,personIds:[person.id],arrived:false};p.runs.push(run);travelCore.initialize(state,run,p.id,route.mode==='sea'?[]:[person.id],route.mode==='sea'?[person.id]:[]);p.status='travelling';p.nextAt=travelCore.nextAt(run);
       }catch(error){finish(p,'blocked',at,error.message);}
     }
   }
@@ -3150,10 +3202,10 @@
       if(!Number.isSafeInteger(p.departAt)||p.departAt<npcMinute(p.createdAt)||p.arrivalAt!==npcMinute(record.startsAt)||p.deadline!==record.endsAt||p.destinationId!==record.locationId||p.departAt>p.arrivalAt)throw new Error('时点');
       if(!p.path||!Array.isArray(p.path.routes)||p.path.to!==p.destinationId||p.path.totalMinutes!==p.arrivalAt-p.departAt||!Number.isSafeInteger(p.legIndex)||p.legIndex<0||p.legIndex>p.path.routes.length)throw new Error('路线');
       let location=p.path.from,total=0;
-      for(const route of p.path.routes){if(JSON.stringify(route)!==JSON.stringify(ROUTE_TEMPLATES[route.id])||![route.from,route.to].includes(location))throw new Error('路段');location=route.from===location?route.to:route.from;total+=route.minutes;}
+      for(const route of p.path.routes){if(!routeSnapshotMatches(route,ROUTE_TEMPLATES[route.id])||![route.from,route.to].includes(location))throw new Error('路段');location=route.from===location?route.to:route.from;total+=route.minutes;}
       if(location!==p.destinationId||total!==p.path.totalMinutes||!Array.isArray(p.events))throw new Error('终点');
       let last=npcMinute(p.createdAt),paid=0;
-      for(let i=0;i<p.events.length;i++){const e=p.events[i],time=npcMinute(e.time);if(e.id!==`${p.id}:${i}`||e.sourceId!==p.sourceId||!['departed','arrived','waiting','succeeded','missed','cancelled','blocked'].includes(e.kind)||!Number.isSafeInteger(time)||time<last||time>now||!Array.isArray(e.knownBy)||!e.knownBy.includes(p.ownerId)||new Set(e.knownBy).size!==e.knownBy.length||e.knownBy.some(id=>!state.人物.列表[id]))throw new Error('事件');last=time;if(e.kind==='departed'){const route=ROUTE_TEMPLATES[e.routeId];if(!route||e.paidGold!==route.costGold)throw new Error('旅费');paid+=e.paidGold;}}
+      for(let i=0;i<p.events.length;i++){const e=p.events[i],time=npcMinute(e.time);if(e.id!==`${p.id}:${i}`||e.sourceId!==p.sourceId||!['departed','arrived','waiting','succeeded','missed','cancelled','blocked'].includes(e.kind)||!Number.isSafeInteger(time)||time<last||time>now||!Array.isArray(e.knownBy)||!e.knownBy.includes(p.ownerId)||new Set(e.knownBy).size!==e.knownBy.length||e.knownBy.some(id=>!state.人物.列表[id]))throw new Error('事件');last=time;if(e.kind==='departed'){const route=ROUTE_TEMPLATES[e.routeId];if(!route||![0,route.costGold].includes(e.paidGold))throw new Error('旅费');paid+=e.paidGold;}}
       if(p.paidGold!==paid||!Array.isArray(p.runs)||p.runs.length!==p.events.filter(e=>e.kind==='departed').length)throw new Error('重复旅费或路程来源');for(const run of p.runs){const r=ROUTE_TEMPLATES[run.routeId];travelCore.validate(state,run,r.mode==='sea'?[]:[p.ownerId],r.mode==='sea'?[p.ownerId]:[]);if(run.travel.actionId!==p.id||run.totalMinutes!==r.minutes||!p.events.some(e=>e.kind==='departed'&&e.routeId===r.id&&npcMinute(e.time)===run.beganAt)||run.arrived&&run.endOffset!==r.minutes)throw Error('人物真实路程');}
       const terminal=['succeeded','missed','cancelled','blocked'].includes(p.status);
       if(terminal?p.nextAt!==null:!Number.isSafeInteger(p.nextAt)||p.nextAt<now)throw new Error('下个节点');
@@ -3226,7 +3278,6 @@
       try{
         const path=npcRoute(state,city.ownerId,destinationId),wallet=state.钱包.列表[owner.walletId];
         if(!path.routeIds.length){city.phase='ready';city.nextAt=at+7*1440;continue;}
-        if(wallet.gold<path.totalCostGold*(returning?1:2))throw new Error('自己的往返盘缠不足，保留现有地点和服务状态');
         const id=`${city.id}:trip:${city.trips.length}`,arrival=at+path.totalMinutes;
         const trip={id,kind:'meeting',personId:city.ownerId,locationId:destinationId,startsAt:npcTime(arrival),endsAt:arrival+(returning?0:120),status:'accepted',
           direction:returning?'return':'outward',branchId:state.扩展?.story?.branchId??'initial',events:[{status:'accepted',sourceId:id,time:npcTime(at)}]};
@@ -3252,7 +3303,7 @@
       }
     }catch(error){errors.push(`城市阶段${error.message}无效`);}
   }
-  function logisticsHooks(){return {ensureBody:promoteNpcInternal,locations:LOCATION_TEMPLATES,routes:ROUTE_TEMPLATES,route:(s,id,to,from)=>findPathInState(s,to,'balanced',from,id),assertRoute:(s,id,route,to)=>{const access=routeAccess(s,route,to,id);if(!access.pass)throw Error(access.reasons.join("；"));},transferItem,movePeopleTo,advanceActionTime,canSwallow:poison.canSwallow,ingestServing:poison.ingestServing};}
+  function logisticsHooks(){return {ensureBody:promoteNpcInternal,locations:LOCATION_TEMPLATES,routes:ROUTE_TEMPLATES,routeSnapshotMatches,route:(s,id,to,from)=>findPathInState(s,to,'balanced',from,id),assertRoute:(s,id,route,to)=>{const access=routeAccess(s,route,to,id);if(!access.pass)throw Error(access.reasons.join("；"));},transferItem,movePeopleTo,advanceActionTime,canSwallow:poison.canSwallow,ingestServing:poison.ingestServing};}
   function cooperationHooks(){return {ensureBody:promoteNpcInternal,occupied:occupiedCompanionIds,joinReason:partyOwnershipReason,dungeons:()=>globalThis.SoulExpeditionEngine?.DUNGEON_PROFILES??{},busy:(s,id)=>logistics.busyReason(s,id)||rescue.busyReason(s,id)||combat.occupiedBattle(s,id)||(s.世界.npcPlans??[]).some(p=>p.ownerId===id&&['scheduled','travelling','waiting'].includes(p.status))};}
   function fieldControlOptions(state,viewerId=state.角色.主控单位ID,options={}){return fieldControl.options(state,viewerId,{...options,locationKnown:(id,locationId)=>isLocationKnown(state,locationId,id),destinations:id=>Object.values(LOCATION_TEMPLATES).filter(l=>isLocationKnown(state,l.id,viewerId)&&locationAccess(state,l.id,id).pass&&l.id!==state.人物.列表[id].locationId).filter(l=>{try{remainingTravelPath(state,l.id,'balanced',id);return true;}catch{return false;}}).map(l=>({id:l.id,name:l.name})),locationName:id=>LOCATION_TEMPLATES[id]?.name});}
   function custodyFacts(state,viewerId=state.角色.主控单位ID,options={}){
@@ -3390,7 +3441,7 @@
       const boundary=options.nextBoundaryAt?.(total);if(boundary!==null&&boundary!==undefined)due.push(boundary);
       if(!due.length)break;const at=Math.min(...due),crossings=rescue.crossings(state,at,logisticsHooks(),options.onAdvance?options.absentIds:[]);state.世界.时间=npcTime(at);globalThis.SoulPersonShame?.advanceAt?.(state,at);globalThis.SoulDeviceLocks.advanceAt(state,at);progressTravelsAt(state,at,options);
       globalThis.SoulResidentRealms.reconcile(state);creation.advanceAt(state,at);people.settleAt(state,at);poison.advanceAt(state,at,options.statusEvents?{statusEvents:options.statusEvents}:null);combat.advanceWorldPoisonAt(state,at,options.statusEvents?{statusEvents:options.statusEvents}:null);combat.advanceWorldRegenerationAt(state,at,options.statusEvents?{statusEvents:options.statusEvents}:null);influence.advanceAt(state,at);combat.settleWorldStatusesAt(state,at);globalThis.SoulAbilityExchange.advanceDesireAt(state,at);combat.advanceMaintenanceAt(state,at,'',maintenanceReceipt);people.settleAt(state,at);combat.settleWorldStatusesAt(state,at);globalThis.SoulAbilityExchange.reconcile(state);custody.advanceAt(state,at,custodyHooks());cooperation.reconcile(state);preparations.reconcile(state);rescue.enterEncounters(state,crossings,logisticsHooks());rescue.advanceAt(state,at,logisticsHooks());logistics.advanceAt(state,at,logisticsHooks());combat.advanceBackgroundBattlesAt(state,at);for(const battleId of Object.keys(state.世界.backgroundBattles??{}))cycle.reconcileEncounterBattle(state,battleId);rescue.advanceAt(state,at,logisticsHooks());
-      advanceNpcRequests(state,at,options.absentIds??[]);advanceNpcPlans(state,at,options.absentIds??[]);cooperation.reconcile(state);preparations.reconcile(state);expeditionSchedule.advanceAt(state,at);advanceNpcCollaborations(state,at,options.absentIds??[]);advanceCityStages(state,at);observeNpcRequests(state,`observe:${at}`,options.absentIds??[]);globalThis.SoulCombatDeployments.reconcile(state);globalThis.SoulPerformanceAgreements.advanceAt(state);social.advanceAt(state,at);gifts.advanceAt(state);globalThis.SoulPersonContracts.advanceAt(state);market.advanceAt(state);sealing.advanceAt(state);auction.advanceAt(state);publicAuction.advanceAt(state);stock.advanceAt(state,stockHooks());globalThis.SoulCommerceAuctionSupply.advanceAt(state,{findPath:findPathInState});rescue.discover(state);
+      advanceNpcRequests(state,at,options.absentIds??[]);advanceNpcPlans(state,at,options.absentIds??[]);cooperation.reconcile(state);preparations.reconcile(state);expeditionSchedule.advanceAt(state,at);advanceNpcCollaborations(state,at,options.absentIds??[]);advanceCityStages(state,at);observeNpcRequests(state,`observe:${at}`,options.absentIds??[]);globalThis.SoulCombatDeployments.reconcile(state);globalThis.SoulPerformanceAgreements.advanceAt(state);social.advanceAt(state,at);gifts.advanceAt(state);globalThis.SoulPersonContracts.advanceAt(state);market.advanceAt(state);sealing.advanceAt(state);auction.advanceAt(state);publicAuction.advanceAt(state);stock.advanceAt(state,stockHooks());globalThis.SoulCommerceAuctionSupply.advanceAt(state,{findFreightPath:findFreightPathInState});rescue.discover(state);
       if(!options.stopActorId||!people.isDead(state,options.stopActorId))interruption=actionInterruption(state,options.actionGuard);refreshTravelsAt(state,at,options);commerceMessages.advanceAt(state);globalThis.SoulPersonShame?.advanceAt?.(state,at);
       // All subsystems due at this timestamp, including messages and travel
       // rebasing, have completed. Resume at the next due scan with the original
@@ -3398,7 +3449,7 @@
       options.calculationBoundary?.({before,total,interruption});
     }
     if(!stopped()){state.世界.时间=npcTime(total);globalThis.SoulPersonShame?.advanceAt?.(state,total);globalThis.SoulDeviceLocks.advanceAt(state,total);progressTravelsAt(state,total,options);logistics.advanceAt(state,total,logisticsHooks());social.advanceAt(state,total);gifts.advanceAt(state);market.advanceAt(state);sealing.advanceAt(state);auction.advanceAt(state);publicAuction.advanceAt(state);rescue.advanceAt(state,total,logisticsHooks());cooperation.reconcile(state);preparations.reconcile(state);logistics.advanceAt(state,total,logisticsHooks());interruption=actionInterruption(state,options.actionGuard);refreshTravelsAt(state,total,options);commerceMessages.advanceAt(state);}
-    globalThis.SoulPerformanceAgreements.advanceAt(state);globalThis.SoulPersonContracts.advanceAt(state);creation.advanceAt(state);poison.syncResidents(state);stock.advanceAt(state,stockHooks());globalThis.SoulCommerceAuctionSupply.advanceAt(state,{findPath:findPathInState});people.settleAt(state);social.ingest(state);combat.pruneMaintenance(state,maintenanceReceipt);globalThis.SoulAbilityExchange.reconcile(state);refreshTravelsAt(state,people.now(state),options);state.场景.时间=storyCalendarDate(state).label;
+    globalThis.SoulPerformanceAgreements.advanceAt(state);globalThis.SoulPersonContracts.advanceAt(state);creation.advanceAt(state);poison.syncResidents(state);stock.advanceAt(state,stockHooks());globalThis.SoulCommerceAuctionSupply.advanceAt(state,{findFreightPath:findFreightPathInState});people.settleAt(state);social.ingest(state);combat.pruneMaintenance(state,maintenanceReceipt);globalThis.SoulAbilityExchange.reconcile(state);refreshTravelsAt(state,people.now(state),options);state.场景.时间=storyCalendarDate(state).label;
     progressOpeningSituations(state);
     advanceIntimateAt(state,before,npcMinute(state.世界.时间),options.statusEvents);globalThis.SoulPersonShame?.advanceAt?.(state,people.now(state));
     return {minutes:npcMinute(state.世界.时间)-before,...(interruption?{interruption}:{})};
@@ -3450,6 +3501,24 @@
     if(partyLeadersOf(state,memberId).some(id=>id!==leaderId)||occupiedCompanionIds(state,memberId).length)return '人物已有其他实际队伍关系，请先结束原队伍安排';
     return '';
   }
+  const ATTITUDE_EVENTS=Object.freeze({
+    gift:{delta:2,name:'收下赠礼'},promise:{delta:2,name:'兑现承诺'},
+    escort:{delta:5,name:'完成护送'},attack:{delta:-15,name:'遭到主动攻击'}
+  });
+  function recordPlayerAttitude(state,targetId,sourceId,kind){
+    const person=state.人物.列表[targetId],playerId=state.角色.主控单位ID,event=ATTITUDE_EVENTS[kind];
+    if(!event||!playerId||!person||targetId===playerId)return 0;
+    const day=state.世界.时间.day,history=(person.扩展.善意往来??=[]);
+    if(history.some(e=>e.sourceId===sourceId||['gift','promise'].includes(kind)&&e.playerId===playerId&&e.day===day&&e.kind===kind))return 0;
+    const before=person.relationship?.player??0,after=Math.max(-100,Math.min(100,before+event.delta));
+    (person.relationship??={}).player=after;
+    history.push({day,playerId,sourceId,kind,before,after,name:event.name,turn:state.扩展?.story?.active?.number});
+    return after-before;
+  }
+  function playerAttitudeReason(state,leaderId,personId){
+    if(leaderId===state.角色.主控单位ID&&personId!==leaderId&&(state.人物.列表[personId]?.relationship?.player??0)<=-20)return '对方目前对你有敌意，不愿自愿同行或合作';
+    return '';
+  }
   function partyJoinAvailability(state,personId,membership,remote=false,leaderId=state.角色.主控单位ID) {
     const person=state.人物.列表[personId],unit=state.战斗单位.列表[personId];
     const existing=partyMembers(state,leaderId).find(p=>p.personId===personId),upgrade=existing?.membership==='temporary'&&membership==='long-term'&&!existing.cooperationId;
@@ -3458,7 +3527,7 @@
       person.status==='dead'||unit&&(unit.存活状态!=='存活'||unit.资源.生命.当前<=0)?'这位人物目前无法同行':
       occupiedCompanionIds(state,leaderId).includes(personId)&&!upgrade&&!globalThis.SoulCombatDeployments?.bodyOuting(state,leaderId,personId)?'这位人物已占用队伍名额':
       occupiedCompanionIds(state,leaderId).length>=3&&!upgrade&&!occupiedCompanionIds(state,leaderId).includes(personId)?'队伍已满（玩家和三名同伴共四人，离场成员仍占一席）':
-      (state.世界.npcPlans??[]).some(p=>p.ownerId===personId&&['scheduled','travelling','waiting'].includes(p.status))?'对方已有未结束的行程，请先处理原安排':'');
+      (state.世界.npcPlans??[]).some(p=>p.ownerId===personId&&['scheduled','travelling','waiting'].includes(p.status))?'对方已有未结束的行程，请先处理原安排':playerAttitudeReason(state,leaderId,personId));
     return {available:!reason,reason};
   }
   function endPartyMembership(state,personId,membershipId,sourceId,endedBy,reason,leaderId=state.角色.主控单位ID) {
@@ -3502,7 +3571,7 @@
     if(!r||!message||e.id!==`request:${r.id}`||!message.knownBy.includes(a.ownerId)||message.status!=='open'||e.personId!==r.ownerId||e.locationId!==message.locationId||e.receivedAt!==npcMinute(message.time)||e.at<e.receivedAt||e.at>=r.deadline||npcMinute(e.time)!==e.at||typeof e.reason!=='string'||!a.steps.some(s=>s.sourceId===e.decisionSourceId&&s.status==='interrupted'&&npcMinute(s.after)===e.at))throw Error('委托打断来源');
   }
   function advanceLongTime(state,action,target,maintenanceEvents){
-    const before=npcMinute(state.世界.时间),actionGuard={actionId:action.id,personIds:[action.ownerId],requirement:action.kind==='cultivation'?'soul-power':'',requirements:action.kind==='cultivation'?['focus']:[]},initial=advanceTime(state,0,{stopActorId:action.ownerId,actionGuard,maintenanceEvents});
+    const before=npcMinute(state.世界.时间),actionGuard={actionId:action.id,personIds:[action.ownerId],requirement:['cultivation','evolution'].includes(action.kind)?'soul-power':'',requirements:['cultivation','evolution'].includes(action.kind)?['focus']:[]},initial=advanceTime(state,0,{stopActorId:action.ownerId,actionGuard,maintenanceEvents});
     if(initial.interruption)return {minutes:0,interruption:initial.interruption};
     let stop=waitInterruption(state,action,target),limit=stop?stop.at:target;
     while(npcMinute(state.世界.时间)<limit){
@@ -3541,6 +3610,8 @@
     if(!step||![action.ownerId,...(step.companionIds??[])].includes(event.personId)||!death||event.kind!==(death.cause==='寿命耗尽'?'life-exhausted':'person-death')||event.sourceId!==death.id||event.id!==`lifespan:${event.personId}:${death.at}`||event.at!==death.at||npcMinute(event.time)!==death.at)throw Error('寿命打断来源');
   }
   function longActionResumeReason(state,action){
+    if(action.kind==='evolution'&&action.status==='interrupted')try{if(!globalThis.SoulEvolution.progressPreview(state,{planId:action.planId}).ready)return '请先到武魂进化面板补齐材料并核对当前结构';}catch(error){return error.message;}
+    if(action.kind==='work')return workFacts(state,action).reason;
     if(action.kind==='cultivation')return cultivationFacts(state,action.ownerId)?.reason??'';
     const blocked=personalActionBlockReason(state,{actorId:action.ownerId});if(blocked)return blocked;
     if(action.kind==='travel')try{for(const id of [action.ownerId,...(action.solo?[]:travelCompanionIds(state,action.ownerId,action.stayBehind))]){const reason=controls.actionReason(state,id,'move');if(reason)return reason;}}catch(error){return error.message;}
@@ -3550,9 +3621,10 @@
     const records=(state.世界.longActions??[]).filter(a=>a.ownerId===ownerId),recent=records.slice(-8);
     return records.filter(a=>a.status==='interrupted'||recent.includes(a)).map(a=>({id:a.id,kind:a.kind,status:a.status,startedAt:a.startedAt,targetAt:npcTime(a.targetAt),progressedTo:a.progressedTo,
       minutesExecuted:a.minutesExecuted,remainingMinutes:a.kind==='wait'?Math.max(0,a.targetAt-npcMinute(state.世界.时间)):a.remainingMinutes,paidGold:a.paidGold,interruptions:clone(a.interruptions),
+      ...(a.kind==='work'?{earnedGold:workEarnings(a.minutesExecuted,a.goldPerDay)}:{}),
       ...(a.kind==='cultivation'?{experienceGained:a.experienceGained,cultivationMeaning:'只计实际修炼时长；处理打断所花时间不抵扣剩余练习，不自动治疗、生成魂环或分配属性。'}:{}),
       ...(a.kind==='travel'?{position:actions.positionOf(state,a.ownerId),transit:clone(state.人物.列表[a.ownerId].transit??null),destinationId:a.destinationId,destinationName:LOCATION_TEMPLATES[a.destinationId].name,mode:a.mode,lastLocationId:a.currentLocationId,remainingGold:a.remainingGold,estimateFrom:a.currentLocationId}:{}),
-      canResume:a.status==='interrupted'&&!longActionResumeReason(state,a),resumeReason:longActionResumeReason(state,a),meaning:a.kind==='cultivation'?'修炼只按实际练习时长获得经验，余时保留；处理打断时间不计修炼，魂环瓶颈仍有效，不自动治疗或取得魂环。':a.kind==='travel'?'约见可在出发前暂停旅行；途中失去移动能力时停在实际进度。续行先走完当前路段，已付路费不重收；到达落脚点后可改走其他路线。阅读不计时。':'等待只推进世界时间，不恢复体力或修炼升级。打断来自本人已接受的约定或当面收到的补给请求，不证明未获知的远方结果。阅读不计时；可继续原等待或放弃，继续后不重复提醒同一约见。'}));
+      canResume:a.status==='interrupted'&&!longActionResumeReason(state,a),resumeReason:longActionResumeReason(state,a),meaning:a.kind==='evolution'?'保留已经完成的修习时间；当前阶段完成时统一结算材料与能力变化。':a.kind==='work'?'工钱按实际完成的工时结算。':a.kind==='cultivation'?'修炼只按实际练习时长获得经验，余时保留；处理打断时间不计修炼，魂环瓶颈仍有效，不自动治疗或取得魂环。':a.kind==='travel'?'约见可在出发前暂停旅行；途中失去移动能力时停在实际进度。续行先走完当前路段；到达落脚点后可改走其他路线。阅读不计时。':'等待只推进世界时间，不恢复体力或修炼升级。打断来自本人已接受的约定或当面收到的补给请求，不证明未获知的远方结果。阅读不计时；可继续原等待或放弃，继续后不重复提醒同一约见。'}));
   }
   function settleLongWait(state,action,transactionId) {
     const effectCursor=creation.eventCursor(state);
@@ -3571,6 +3643,51 @@
     return commit(state,transactionId,'等待时间',{type:'world-waited',...creation.eventsSince(state,effectCursor,action.ownerId),before,after:clone(state.世界.时间),minutes,longActionId:action.id,interrupted:!!interruption,
       remainingMinutes:action.remainingMinutes,...(abilitySettlements.length?{abilitySettlements}:{}),...(dutySettlements.length?{dutySettlements}:{}),...(interruption?{interruption:clone(interruption)}:{}),summary:interruption?`${interruption.reason}；时间已停下，原等待剩余${action.remainingMinutes}分钟，可处理后继续或放弃。`:`已等到${state.场景.时间}。`});
   }
+  const WORK_GOLD_PER_DAY=720;
+  const MAX_WORK_DAYS=31;
+  const workEarnings=(minutes,goldPerDay=360)=>Math.floor(minutes*goldPerDay/1440);
+  function workFacts(state,action) {
+    const actorId=state.角色.主控单位ID,position=actorId?actions.positionOf(state,actorId):{};
+    const location=LOCATION_TEMPLATES[position.locationId];
+    const pending=(state.世界.longActions??[]).find(a=>a.kind==='work'&&a.status==='interrupted');
+    const reason=worldActionBlockReason(state,{actorId})||
+      (!actorId||state.远征?.当前?'请回到世界场景打工':
+      position.kind!=='location'||position.sceneId||!location||!['城市','帝都','城镇','村庄','村落','驿路','驿站','港口'].some(v=>location.type===v||location.tags?.includes(v))?'到村庄、城镇或驿站可以接零工':
+      action&&action.locationId!==location.id?'回到接工的地点才能继续':
+      !action&&pending?'请先继续或放弃上一份零工':'');
+    return {available:!reason,reason,pendingActionId:pending?.id??null,goldPerDay:WORK_GOLD_PER_DAY,maxDays:MAX_WORK_DAYS};
+  }
+  function settleWork(state,action,transactionId) {
+    const facts=workFacts(state,action);
+    if(!facts.available)throw Error(facts.reason);
+    const before=clone(state.世界.时间),earned=workEarnings(action.minutesExecuted,action.goldPerDay);
+    action.targetAt=npcMinute(before)+action.remainingMinutes;
+    const {minutes,interruption}=advanceLongTime(state,action,action.targetAt,[]);
+    action.minutesExecuted+=minutes;
+    action.remainingMinutes=action.requestedMinutes-action.minutesExecuted;
+    action.progressedTo=clone(state.世界.时间);
+    action.status=interruption&&action.remainingMinutes?'interrupted':'completed';
+    if(action.status==='interrupted')action.interruptions.push({...interruption,time:action.progressedTo,decisionSourceId:transactionId});
+    action.steps.push({sourceId:transactionId,before,after:action.progressedTo,minutes,status:action.status});
+    const gold=workEarnings(action.minutesExecuted,action.goldPerDay)-earned;
+    travelWallet(state,action.ownerId).gold+=gold;
+    return commit(state,transactionId,'打工',{type:'world-worked',before,after:action.progressedTo,minutes,gold,remainingMinutes:action.remainingMinutes,
+      interrupted:action.status==='interrupted',...(action.status==='interrupted'?{interruption}:{}),
+      longActionId:action.id,summary:action.status==='interrupted'?`${interruption.reason}，本次工钱 ${gold} 金魂币。`:`零工已完成，本次获得 ${gold} 金魂币。`});
+  }
+  function work(rawState,options={},transactionId='work') {
+    const guard=transactionStart(rawState,transactionId,'打工');
+    if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
+    const state=guard.state,facts=workFacts(state);
+    if(!facts.available)throw Error(facts.reason);
+    if(!Number.isSafeInteger(options.days)||options.days<1||options.days>MAX_WORK_DAYS)throw Error('打工须选择1至31整天');
+    const ownerId=state.角色.主控单位ID,before=clone(state.世界.时间),minutes=options.days*1440;
+    const action={id:`work:${transactionId}`,kind:'work',ownerId,sourceId:transactionId,branchId:state.扩展?.story?.branchId??'initial',
+      locationId:state.人物.列表[ownerId].locationId,startedAt:before,targetAt:npcMinute(before)+minutes,progressedTo:before,
+      requestedMinutes:minutes,remainingMinutes:minutes,minutesExecuted:0,paidGold:0,goldPerDay:WORK_GOLD_PER_DAY,status:'interrupted',interruptions:[],steps:[]};
+    (state.世界.longActions??=[]).push(action);
+    return settleWork(state,action,transactionId);
+  }
   function waitUntil(rawState,options={},transactionId='wait-until') {
     const guard=transactionStart(rawState,transactionId,'等待时间');
     if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
@@ -3588,38 +3705,49 @@
     return settleLongWait(state,action,transactionId);
   }
   function resumeLongAction(rawState,options={},transactionId='resume-long-action',executionContext) {
+    const evolving=(rawState.世界.longActions??[]).find(a=>a.id===options.actionId&&a.kind==='evolution'&&a.status==='interrupted');
+    if(evolving)return globalThis.SoulEvolution.progress(rawState,{planId:evolving.planId},transactionId);
     const guard=transactionStart(rawState,transactionId,'继续等待');if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
     const state=guard.state,actorId=executionContext?.executorId??clean(options.actorId,state.角色.主控单位ID),action=(state.世界.longActions??[]).find(a=>a.id===options.actionId&&a.ownerId===actorId&&a.status==='interrupted');
     const allowCaptivity=fieldControl.allowed(state,executionContext,actorId)||action?.kind==='cultivation'&&interiorTrainingAllowed(state,actorId),block=actorId===state.角色.主控单位ID?worldActionBlockReason(state,{allowCaptivity,allowArrangements:action?.kind==='wait'}):personalActionBlockReason(state,{actorId,allowCaptivity});if(block)throw new Error(block);
     if(actorId===state.角色.主控单位ID&&state.远征?.当前)throw new Error('请回到世界场景后继续原安排');
     if(executionContext&&action?.kind!=='travel')throw Error('控制命令只能继续所选人物的真实旅行');
     if(!action)throw new Error('没有这项待继续的安排');
-    return action.kind==='travel'?settleLongTravel(state,action,transactionId,executionContext):action.kind==='cultivation'?settleCultivation(state,action,transactionId):settleLongWait(state,action,transactionId);
+    return action.kind==='work'?settleWork(state,action,transactionId):action.kind==='travel'?settleLongTravel(state,action,transactionId,executionContext):action.kind==='cultivation'?settleCultivation(state,action,transactionId):settleLongWait(state,action,transactionId);
   }
   function abandonLongAction(rawState,options={},transactionId='abandon-long-action') {
+    const evolving=(rawState.世界.longActions??[]).find(a=>a.id===options.actionId&&a.kind==='evolution'&&a.status==='interrupted');
+    if(evolving)return globalThis.SoulEvolution.cancel(rawState,{planId:evolving.planId},transactionId);
     const guard=transactionStart(rawState,transactionId,'放弃剩余等待');if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
     const state=guard.state,action=(state.世界.longActions??[]).find(a=>a.id===options.actionId&&a.ownerId===clean(options.actorId,state.角色.主控单位ID)&&a.status==='interrupted');
     if(!action)throw new Error('没有这项待放弃的安排');
     action.status='cancelled';action.cancelledAt=clone(state.世界.时间);action.cancelledSourceId=transactionId;
     return commit(state,transactionId,'放弃剩余等待',{type:'long-action-abandoned',longActionId:action.id,kind:action.kind,ownerId:action.ownerId,cancelledAt:clone(action.cancelledAt),minutesExecuted:action.minutesExecuted,remainingMinutes:action.remainingMinutes,paidGold:action.paidGold,locationId:state.人物.列表[action.ownerId].locationId,position:actions.positionOf(state,action.ownerId),transit:clone(state.人物.列表[action.ownerId].transit??null),summary:'已放弃剩余安排；已用时间、已付费用、当前位置与发生事件保留，不取消人物或约定。'});
   }
+  function validWorkDuration(action){
+    if(action.goldPerDay===undefined)return [120,240,480].includes(action.requestedMinutes);
+    return action.goldPerDay===WORK_GOLD_PER_DAY&&Number.isSafeInteger(action.requestedMinutes)&&
+      action.requestedMinutes%1440===0&&action.requestedMinutes>=1440&&action.requestedMinutes<=MAX_WORK_DAYS*1440;
+  }
   function validateLongActions(state,errors) {
     if(state.世界.longActions===undefined)return;
     try{
       if(!Array.isArray(state.世界.longActions))throw Error('记录');
-      const seen=new Set();let pending=0;const now=npcMinute(state.世界.时间);
+      const seen=new Set(),pending=new Set();const now=npcMinute(state.世界.时间);
       for(const a of state.世界.longActions){
+        if(a?.kind==='evolution'){globalThis.SoulEvolution.validateLongAction(state,a,seen);continue;}
         if(a?.kind==='cultivation'){validateCultivation(state,a,seen);continue;}
         if(a?.kind==='travel'){validateLongTravel(state,a,seen);continue;}
-        if(!a||a.kind!=='wait'||a.ownerId!==state.角色.主控单位ID||a.id!==`wait:${a.sourceId}`||typeof a.sourceId!=='string'||!a.sourceId||typeof a.branchId!=='string'||!a.branchId||seen.has(a.id)||!['interrupted','completed','cancelled'].includes(a.status)||a.paidGold!==0)throw Error('来源');seen.add(a.id);
+        if(!a||!['wait','work'].includes(a.kind)||a.ownerId!==state.角色.主控单位ID||a.id!==`${a.kind}:${a.sourceId}`||typeof a.sourceId!=='string'||!a.sourceId||typeof a.branchId!=='string'||!a.branchId||seen.has(a.id)||!['interrupted','completed','cancelled'].includes(a.status)||a.paidGold!==0)throw Error('来源');seen.add(a.id);
         const start=npcMinute(a.startedAt),progress=npcMinute(a.progressedTo);
-        if(!Number.isSafeInteger(start)||!Number.isSafeInteger(a.targetAt)||a.targetAt<=start||a.targetAt-start>31*1440||progress<start||progress>now||a.remainingMinutes!==Math.max(0,a.targetAt-progress)||!Array.isArray(a.steps)||!a.steps.length||!Array.isArray(a.interruptions))throw Error('时间');
+        if(!Number.isSafeInteger(start)||!Number.isSafeInteger(a.targetAt)||a.targetAt<=start||(a.kind==='wait'?a.targetAt-start>31*1440:!validWorkDuration(a)||!LOCATION_TEMPLATES[a.locationId]||a.requestedMinutes!==a.remainingMinutes+a.minutesExecuted)||progress<start||progress>now||a.remainingMinutes!==Math.max(0,a.targetAt-progress)||!Array.isArray(a.steps)||!a.steps.length||!Array.isArray(a.interruptions))throw Error('时间');
         let last=start,minutes=0;const stepIds=new Set();
         for(const step of a.steps){const from=npcMinute(step.before),to=npcMinute(step.after);if(typeof step.sourceId!=='string'||stepIds.has(step.sourceId)||from<last||to<from||to>now||step.minutes!==to-from||!['interrupted','completed'].includes(step.status))throw Error('结算');stepIds.add(step.sourceId);minutes+=step.minutes;last=to;}
         if(last!==progress||minutes!==a.minutesExecuted||a.steps[0].sourceId!==a.sourceId||a.steps.at(-1).status!==(a.status==='cancelled'?'interrupted':a.status)||a.status==='completed'&&a.remainingMinutes!==0)throw Error('进度');
         const stops=new Set();for(const e of a.interruptions){if(['battle-started','foreground-battle'].includes(e.kind)){if(stops.has(e.id))throw Error('重复战斗打断');validateBattleInterruption(state,a,e);stops.add(e.id);continue;}if(['life-exhausted','person-death'].includes(e.kind)){if(stops.has(e.id))throw Error('重复寿命结算');validateLifeInterruption(state,a,e);stops.add(e.id);continue;}if(e.kind==='action-blocked'){if(stops.has(e.id))throw Error('重复限制打断');validateActionInterruption(state,a,e);stops.add(e.id);continue;}if(e.kind==='npc-request'){if(stops.has(e.id))throw Error('重复委托提醒');validateRequestInterruption(state,a,e);stops.add(e.id);continue;}const record=(state.人物.列表[e.personId]?.扩展?.社交约定??[]).find(r=>r.id===e.sourceId&&r.kind==='meeting'&&r.playerId===a.ownerId);if(!record||e.at>=a.targetAt||e.at>record.endsAt||!record.events.some(event=>event.status==='accepted'&&npcMinute(event.time)<=e.at)||e.id!==`meeting:${record.id}`||stops.has(e.id)||e.kind!=='meeting'||e.locationId!==record.locationId||npcMinute(e.startsAt)!==npcMinute(record.startsAt)||!a.steps.some(s=>s.sourceId===e.decisionSourceId&&s.status==='interrupted'&&npcMinute(s.after)===e.at)||npcMinute(e.time)!==e.at||typeof e.reason!=='string')throw Error('打断来源');stops.add(e.id);}
         if(a.steps.filter(s=>s.status==='interrupted').length!==stops.size)throw Error('打断记录');
-        if(a.status==='interrupted'&&(a.remainingMinutes<0||a.remainingMinutes===0&&!a.interruptions.some(e=>['life-exhausted','person-death','action-blocked','battle-started','cooperation-ended'].includes(e.kind))||++pending>1))throw Error('重复安排');
+        if(a.status==='interrupted'&&(a.remainingMinutes<0||a.remainingMinutes===0&&!a.interruptions.some(e=>['life-exhausted','person-death','action-blocked','battle-started','cooperation-ended'].includes(e.kind))||pending.has(a.kind)))throw Error('重复安排');
+        if(a.status==='interrupted')pending.add(a.kind);
         if(a.status==='cancelled'&&(typeof a.cancelledSourceId!=='string'||npcMinute(a.cancelledAt)<progress||npcMinute(a.cancelledAt)>now))throw Error('放弃来源');
       }
     }catch(error){errors.push(`长行动${error.message}无效`);}
@@ -3637,10 +3765,15 @@
     const interior=globalThis.SoulInteriorSpaces?.membership(state,playerId);
     const block=globalThis.SoulConsciousness?.originalActionReason(state,playerId)||controls.actionReason(state,playerId,'requirements',{requirements:['soul-power','focus']})||(interior&&!interior.member.limits.training?'画境内尚未开放修炼许可':'')||(!unit||unit.存活状态!=='存活'||unit.资源.生命.当前<=0||person?.status==='dead'?'当前无法行动，不能修炼':'')||worldActionBlockReason(state,{actorId:playerId,allowCaptivity:interiorTrainingAllowed(state,playerId)})||(expeditions.forActor(state,playerId)?'请回到世界场景修炼':'')||globalThis.SoulPractice.exclusiveReason(state,playerId,pending?.id)||(capacity<=0?(growth.魂力等级>=99?'已达最高等级':'当前经验已满，请先按原规则取得并吸收所需魂环'):'');
     const training=globalThis.SoulCanonicalGrowth?.trainingGate(state,playerId);
-    return {available:!block,reason:block,training,minutesPerExperience:cycle.CULTIVATION_MINUTES_PER_EXPERIENCE,carryMinutes,totalMinutes,capacity,minutesToBoundary:Math.max(0,capacity*cycle.CULTIVATION_MINUTES_PER_EXPERIENCE-carryMinutes),pendingActionId:pending?.id??null,
+    const minutesPerExperience=pending?cultivationRate(pending):newCultivationRate(state,playerId);
+    return {available:!block,reason:block,training,minutesPerExperience,carryMinutes,totalMinutes,capacity,minutesToBoundary:Math.max(0,capacity*minutesPerExperience-carryMinutes%minutesPerExperience),pendingActionId:pending?.id??null,
       level:growth.魂力等级,experience:growth.当前经验,requirement:growth.当前等级需求,bottleneck:growth.瓶颈状态,
-      meaning:'常规修炼每累计60分钟获得1点经验，不足一小时跨次保留。练满瓶颈会停下，魂环仍须按已有规则取得/吸收；不治疗、不发属性点或新魂技。等待、聊天、旅行不计修炼。'};
+      meaning:'每累计'+minutesPerExperience+'分钟修炼获得1点经验，零碎时间可累计。达到魂环瓶颈或最高等级时暂停。'};
   }
+  function newCultivationRate(state,actorId){
+    return actorId===state.角色.主控单位ID?cycle.PLAYER_CULTIVATION_MINUTES_PER_EXPERIENCE:cycle.CULTIVATION_MINUTES_PER_EXPERIENCE;
+  }
+  const cultivationRate=action=>action.minutesPerExperience??cycle.CULTIVATION_MINUTES_PER_EXPERIENCE;
   function cultivate(rawState,options={},transactionId='cultivate') {
     const guard=transactionStart(rawState,transactionId,'修炼');if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
     const state=guard.state,{days=0,hours=0,minutes=0}=options;
@@ -3649,23 +3782,23 @@
     const actorId=options.actorId??state.角色.主控单位ID,facts=cultivationFacts(state,actorId);if(!facts||!facts.available)throw new Error(facts?.reason||'请先创建角色');
     if(facts.pendingActionId)throw new Error('原修炼尚有剩余安排，请继续或放弃');
     const before=clone(state.世界.时间),action={id:`cultivation:${transactionId}`,kind:'cultivation',ownerId:actorId,sourceId:transactionId,...(options.growthRequestId?{growthRequestId:options.growthRequestId}:{}),branchId:state.扩展?.story?.branchId??'initial',startedAt:before,progressedTo:before,targetAt:npcMinute(before)+total,
-      requestedMinutes:total,remainingMinutes:total,minutesExecuted:0,paidGold:0,experienceGained:0,status:'interrupted',interruptions:[],steps:[]};
+      requestedMinutes:total,remainingMinutes:total,minutesExecuted:0,paidGold:0,...(actorId===state.角色.主控单位ID?{minutesPerExperience:newCultivationRate(state,actorId)}:{}),experienceGained:0,status:'interrupted',interruptions:[],steps:[]};
     (state.世界.longActions??=[]).push(action);return settleCultivation(state,action,transactionId);
   }
   function settleCultivation(state,action,transactionId) {
     const effectCursor=creation.eventCursor(state);
     const facts=cultivationFacts(state,action.ownerId);if(!facts?.available)throw new Error(facts?.reason||'无法修炼');
-    const before=clone(state.世界.时间),now=npcMinute(before),target=now+action.remainingMinutes,boundary=now+facts.minutesToBoundary;
+    const before=clone(state.世界.时间),now=npcMinute(before),target=now+action.remainingMinutes,boundary=now+facts.minutesToBoundary,rate=cultivationRate(action);
     // Earn each experience unit at its actual time. A lifespan tier reached
     // before expiry extends life; expiry at the same minute takes priority.
-    const progress=cycle.applyCultivationMinutes(state,0,facts.carryMinutes,action.ownerId);
+    const progress=cycle.applyCultivationMinutes(state,0,facts.carryMinutes,action.ownerId,rate);
     let interruption=null;
     while(npcMinute(state.世界.时间)<Math.min(target,boundary)){
-      const segmentEnd=Math.min(target,boundary,npcMinute(state.世界.时间)+cycle.CULTIVATION_MINUTES_PER_EXPERIENCE-progress.carryAfter);
+      const segmentEnd=Math.min(target,boundary,npcMinute(state.世界.时间)+rate-progress.carryAfter%rate);
       const advanced=advanceLongTime(state,action,segmentEnd);
       interruption=advanced.interruption;
       const activeMinutes=Math.max(0,advanced.minutes-(['life-exhausted','person-death','action-blocked','battle-started'].includes(interruption?.kind)?1:0));
-      const earned=cycle.applyCultivationMinutes(state,activeMinutes,progress.carryAfter,action.ownerId);
+      const earned=cycle.applyCultivationMinutes(state,activeMinutes,progress.carryAfter,action.ownerId,rate);
       progress.minutes+=earned.minutes;progress.experienceGained+=earned.experienceGained;progress.levelsGained+=earned.levelsGained;progress.carryAfter=earned.carryAfter;progress.after=earned.after;
       if(interruption)break;
     }
@@ -3681,11 +3814,12 @@
     const now=npcMinute(state.世界.时间),start=npcMinute(a.startedAt),progress=npcMinute(a.progressedTo);
     if(a.id!==`cultivation:${a.sourceId}`||typeof a.sourceId!=='string'||!a.sourceId||seen.has(a.id)||!state.成长.列表[a.ownerId]||typeof a.branchId!=='string'||!a.branchId||a.paidGold!==0||!['interrupted','completed','cancelled'].includes(a.status))throw Error('修炼来源');if(a.ownerId!==state.角色.主控单位ID&&!globalThis.SoulPersonGrowth.cultivationSource(state,a))throw Error('NPC修炼须有本人接受的正式成长安排');seen.add(a.id);
     if(!Number.isSafeInteger(a.requestedMinutes)||a.requestedMinutes<=0||a.requestedMinutes>31*1440||!Number.isSafeInteger(a.remainingMinutes)||a.remainingMinutes<0||a.requestedMinutes!==a.minutesExecuted+a.remainingMinutes||a.targetAt!==progress+a.remainingMinutes||progress<start||progress>now||!Array.isArray(a.steps)||!a.steps.length||!Array.isArray(a.interruptions))throw Error('修炼时间');
+    if(a.minutesPerExperience!==undefined&&(a.ownerId!==state.角色.主控单位ID||a.minutesPerExperience!==cycle.PLAYER_CULTIVATION_MINUTES_PER_EXPERIENCE))throw Error('修炼收益');
     let last=start,minutes=0,experience=0;const stepIds=new Set(),stops=new Set();
     let carry=globalThis.SoulPractice.carryAt(state,a.ownerId,start);
     for(const s of a.steps){const from=npcMinute(s.before),to=npcMinute(s.after),p=s.progress;
-      if(typeof s.sourceId!=='string'||!s.sourceId||stepIds.has(s.sourceId)||from<last||to<from||to>now||s.minutes!==to-from||!(s.position?.kind==='transit'?s.locationId===''&&ROUTE_TEMPLATES[s.position.routeId]&&s.position.elapsedMinutes>=0&&s.position.elapsedMinutes<=ROUTE_TEMPLATES[s.position.routeId].minutes:LOCATION_TEMPLATES[s.locationId]&&s.position?.locationId===s.locationId)||!['interrupted','completed'].includes(s.status)||!p||p.unitId!==a.ownerId||p.minutes!==Math.max(0,s.minutes-(a.interruptions.some(e=>['life-exhausted','person-death','action-blocked','battle-started','cooperation-ended'].includes(e.kind)&&e.decisionSourceId===s.sourceId)?1:0))||p.carryBefore!==carry||p.carryAfter!==(carry+p.minutes)%cycle.CULTIVATION_MINUTES_PER_EXPERIENCE||p.experienceGained!==Math.floor((carry+p.minutes)/cycle.CULTIVATION_MINUTES_PER_EXPERIENCE)||p.attributePointsGained!==0)throw Error('修炼结算');
-      cycle.validateCultivationProgress(p,a.ownerId);
+      if(typeof s.sourceId!=='string'||!s.sourceId||stepIds.has(s.sourceId)||from<last||to<from||to>now||s.minutes!==to-from||!(s.position?.kind==='transit'?s.locationId===''&&ROUTE_TEMPLATES[s.position.routeId]&&s.position.elapsedMinutes>=0&&s.position.elapsedMinutes<=ROUTE_TEMPLATES[s.position.routeId].minutes:LOCATION_TEMPLATES[s.locationId]&&s.position?.locationId===s.locationId)||!['interrupted','completed'].includes(s.status)||!p||p.unitId!==a.ownerId||p.minutes!==Math.max(0,s.minutes-(a.interruptions.some(e=>['life-exhausted','person-death','action-blocked','battle-started','cooperation-ended'].includes(e.kind)&&e.decisionSourceId===s.sourceId)?1:0))||p.carryBefore!==carry)throw Error('修炼结算');
+      cycle.validateCultivationProgress(p,a.ownerId,cultivationRate(a));
       stepIds.add(s.sourceId);minutes+=s.minutes;experience+=p.experienceGained;carry=p.carryAfter;last=to;
     }
     if(last!==progress||minutes!==a.minutesExecuted||experience!==a.experienceGained||a.steps[0].sourceId!==a.sourceId||a.steps.at(-1).status!==(a.status==='cancelled'?'interrupted':a.status)||a.status==='completed'&&a.remainingMinutes!==0)throw Error('修炼进度');
@@ -3720,7 +3854,7 @@
     if((state.世界.npcPlans??[]).some(p=>p.ownerId===actorId&&p.status==='travelling'))throw Error(npcActionScheduleReason(state,actorId,1));
     const transit=state.人物.列表[actorId].transit;
     if(!transit)return findPathInState(state,destinationId,mode,undefined,actorId);
-    const tail=findPathInState(state,destinationId,mode,transit.to,actorId),route=clone(ROUTE_TEMPLATES[transit.routeId]);
+    const tail=findPathInState(state,destinationId,mode,transit.to,actorId),route={...clone(ROUTE_TEMPLATES[transit.routeId]),costGold:0};
     return {...tail,from:transit.from,locationIds:[transit.from,...tail.locationIds],routeIds:[route.id,...tail.routeIds],routes:[route,...tail.routes],totalMinutes:travelCore.duration(state,route.minutes*4-transit.progressUnits,[actorId])+tail.totalMinutes,totalCostGold:tail.totalCostGold,inTransit:clone(transit)};
   }
   function travelInterruption(state,action,route,legTo) {
@@ -3765,7 +3899,7 @@
     const originalTransit=state.人物.列表[action.ownerId].transit;if(originalTransit&&companionIds.some(id=>abilities.hash(state.人物.列表[id].transit??null)!==abilities.hash(originalTransit)))throw Error('同行人员尚未完成实际道路集合，不能复制另一人的路段进度');
     const cooperationRefs=companionIds.flatMap(personId=>{const a=cooperation.agreement(state,action.ownerId,personId);return a?[{personId,cooperationId:a.id,authorityEventId:cooperation.table(state).events.filter(e=>e.agreementId===a.id).at(-1).id}]:[];});
     const path=plannedPath,wallet=travelWallet(state,action.ownerId);
-    if(!wallet||wallet.gold<path.totalCostGold)throw new Error(`旅费不足：剩余路线预计需要${formatCurrency(path.totalCostGold)}`);
+    if(!wallet)throw new Error('无法读取行囊');
     frame={version:1,state,action,effectCursor,front,from,before,companionIds,ids,observed,fieldOrderRef,cooperationRefs,path,legs:[],interruption:null,routeIndex:0,currentLeg:null};
     }
     const {effectCursor,front,from,before,companionIds,ids,observed,fieldOrderRef,cooperationRefs,path,legs}=frame;
@@ -3777,7 +3911,7 @@
       const prior=clone(state.人物.列表[action.ownerId].transit??null),legFrom=prior?.from??state.人物.列表[action.ownerId].locationId,legTo=prior?.to??(route.from===legFrom?route.to:route.from),startOffset=prior?.elapsedMinutes??0;
       const access=routeAccess(state,route,legTo,action.ownerId);if(!access.pass)throw new Error(`路线在结算时失效：${access.reasons.join('；')}`);
       if(!prior){interruption=travelInterruption(state,action,route,legTo);if(interruption)break;}
-      const legStart=npcMinute(state.世界.时间),startedAt=prior?.startedAt??legStart,chargedGold=prior?0:route.costGold,remaining=route.minutes-startOffset;
+      const legStart=npcMinute(state.世界.时间),startedAt=prior?.startedAt??legStart,chargedGold=0,remaining=route.minutes-startOffset;
       state.钱包.列表['wallet-world-transit']??={id:'wallet-world-transit',ownerEntityId:'world-transit',gold:0,扩展:{type:'travel-sink'}};
       wallet.gold-=chargedGold;state.钱包.列表['wallet-world-transit'].gold+=chargedGold;
       const run={sourceId:transactionId,routeId:route.id,from:legFrom,to:legTo,totalMinutes:route.minutes,startOffset,endOffset:startOffset,startedAt,beganAt:legStart,progressedAt:legStart,endedAt:null,personIds:clone(ids),arrived:false};
@@ -3800,6 +3934,14 @@
     action.minutesExecuted+=minutes;action.paidGold+=costGold;action.progressedTo=clone(state.世界.时间);action.currentLocationId=current;
     action.remainingMinutes=interruption?remainingTravelPath(state,action.destinationId,action.mode,action.ownerId).totalMinutes:0;action.remainingGold=path.totalCostGold-costGold;action.targetAt=npcMinute(state.世界.时间)+action.remainingMinutes;action.status=interruption?'interrupted':'completed';
     if(interruption)action.interruptions.push({...interruption,time:clone(state.世界.时间),decisionSourceId:transactionId});
+    if(front&&action.status==='completed'&&legs.some(leg=>leg.mode!=='local')){
+      for(const ref of cooperationRefs){
+        const agreement=cooperation.agreement(state,action.ownerId,ref.personId);
+        if(agreement?.basis==='voluntary'&&agreement.membership==='temporary'&&agreement.allowTravel&&agreement.allowCombat){
+          recordPlayerAttitude(state,ref.personId,`${agreement.id}:escort-completed`,'escort');
+        }
+      }
+    }
     action.steps.push({sourceId:transactionId,before,after:clone(state.世界.时间),from,to:current,plannedDestinationId:action.destinationId,minutes,costGold,legs:clone(legs),status:action.status,companionIds:clone(companionIds),cooperationRefs:clone(cooperationRefs),fieldOrderRef,remainingMinutes:action.remainingMinutes,remainingGold:action.remainingGold});
     const persisted=(state.世界.longActions??[]).some(a=>a.id===action.id);
     if(!persisted)(state.世界.longActions??=[]).push(action);
@@ -3808,7 +3950,7 @@
     const position=transit?`${LOCATION_TEMPLATES[transit.from].name}至${LOCATION_TEMPLATES[transit.to].name}途中（路段进度 ${transit.progressUnits}/${transit.totalUnits}）`:LOCATION_TEMPLATES[current].name;
     return commit(state,transactionId,'移动地点',{type:'travel-completed',...creation.eventsSince(state,effectCursor,action.ownerId),actorId:action.ownerId,from,to:current,current,position:actions.positionOf(state,action.ownerId),transit,destinationId:action.destinationId,mode:action.mode,completed:!interruption,path:clone(path),legs,minutes,costGold,castIds,companionIds,before,after:clone(state.世界.时间),interrupted:!!interruption,
       ...(persisted||interruption||path.inTransit||!front||fieldOrderRef?{longActionId:action.id,remainingMinutes:action.remainingMinutes,remainingGold:action.remainingGold}:{}),...(interruption?{interruption:clone(interruption)}:{}),
-      summary:interruption?`当前在${position}，本次经过${minutes}分钟、支付旅费${formatCurrency(costGold)}；${interruption.reason}。尚余${action.remainingMinutes}分钟、${formatCurrency(action.remainingGold)}。`:`抵达${position}，本次用时${minutes}分钟，支付旅费${formatCurrency(costGold)}。`});
+      summary:interruption?`当前在${position}，本次经过${minutes}分钟；${interruption.reason}。尚余${action.remainingMinutes}分钟。`:`抵达${position}，本次用时${minutes}分钟。`});
   }
   function travel(rawState,options,transactionId,executionContext,committed=false) {
     const journal=globalThis.SoulCalculationSlices;
@@ -3850,7 +3992,7 @@
       for(const [index,leg] of step.legs.entries()){
         travelCore.validate(state,leg,ROUTE_TEMPLATES[leg.routeId]?.mode==='sea'?[]:[a.ownerId,...step.companionIds],ROUTE_TEMPLATES[leg.routeId]?.mode==='sea'?[a.ownerId,...step.companionIds]:[]);if(leg.travel.actionId!==a.id||leg.minutes!==leg.progressedAt-leg.beganAt)throw Error('旅行共享路程来源');
         const route=ROUTE_TEMPLATES[leg.routeId],partial=leg.arrived===false;
-        if(!route||leg.index!==index+1||leg.from!==location||leg.to!==(route.from===location?route.to:route.from)||![route.from,route.to].includes(location)||!Number.isSafeInteger(leg.minutes)||leg.minutes<0||!Number.isSafeInteger(leg.startOffset*4)||leg.startOffset<0||leg.endOffset>route.minutes||!partial&&leg.endOffset!==route.minutes||leg.costGold!==(leg.resumes?0:route.costGold)||!Number.isSafeInteger(leg.startedAt)||leg.startedAt>npcMinute(step.before)+elapsed)throw Error('旅行路段');
+        if(!route||leg.index!==index+1||leg.from!==location||leg.to!==(route.from===location?route.to:route.from)||![route.from,route.to].includes(location)||!Number.isSafeInteger(leg.minutes)||leg.minutes<0||!Number.isSafeInteger(leg.startOffset*4)||leg.startOffset<0||leg.endOffset>route.minutes||!partial&&leg.endOffset!==route.minutes||![0,leg.resumes?0:route.costGold].includes(leg.costGold)||!Number.isSafeInteger(leg.startedAt)||leg.startedAt>npcMinute(step.before)+elapsed)throw Error('旅行路段');
         if(leg.resumes){
           const original=state.世界.longActions.find(r=>r.id===leg.resumes.actionId),prior=original?.steps.find(r=>r.sourceId===leg.resumes.sourceId),escortSource=transitSource(state,{actionId:leg.resumes.actionId,stepSourceId:leg.resumes.sourceId},a.ownerId),old=escortSource??prior?.legs?.at(-1),priorIds=escortSource?.personIds??(original?[original.ownerId,...prior.companionIds]:[]),priorAt=escortSource?.after??npcMinute(prior?.after??{}),keys=[a.ownerId,...step.companionIds].map(id=>`resumed:${leg.resumes.actionId}:${leg.resumes.sourceId}:${id}`);
           if(!old||old.arrived!==false||prior===step||![a.ownerId,...step.companionIds].every(id=>priorIds.includes(id))||priorAt>npcMinute(step.before)||old.routeId!==leg.routeId||old.from!==leg.from||old.to!==leg.to||old.endOffset!==leg.startOffset||old.startedAt!==leg.startedAt||keys.some(key=>seen.has(key)))throw Error('续行凭据或已付路费');keys.forEach(key=>seen.add(key));
@@ -4102,7 +4244,15 @@
     refreshUnitEquipment(state, unit.id);
     return remains;
   }
-  function settlePersonDeath(state,id){const unit=state.战斗单位.列表[id];if(!unit||unit.存活状态!=='死亡'||unit.扩展.remainsId)return null;const remains=createHumanCorpse(state,unit);if(remains)unit.扩展.remainsId=remains.id;return remains;}
+  function settlePersonDeath(state,id){const unit=state.战斗单位.列表[id];if(!unit||unit.存活状态!=='死亡'||unit.扩展.remainsId)return null;const remains=createHumanCorpse(state,unit);if(remains)state.战斗单位.列表[id].扩展.remainsId=remains.id;return remains;}
+  function recoverRevivalRemains(state,id){
+    const unit=state.战斗单位.列表[id],person=state.人物.列表[id],remains=Object.values(state.战利品.遗骸列表).find(r=>r.unitId===id&&r.type==='human-corpse'),container=state.容器.列表[remains.containerId];
+    // Move only what is still on the body. Looted items and coins are never
+    // recreated, and dropped soul bones are not automatically re-integrated.
+    for(const itemId of [...container.itemIds]){const item=state.物品.实例[itemId];if(item)transferItem(state,itemId,person.inventoryContainerId,item.quantity);}
+    state.钱包.列表[person.walletId].gold+=remains.coinGold??0;
+    delete state.容器.列表[container.id];delete state.战利品.遗骸列表[remains.id];delete unit.扩展.remainsId;
+  }
 
   function soulBoneChance(profile) {
     const years = integer(profile?.年限 ?? 1, 1);
@@ -4378,7 +4528,7 @@
     };
     payload.immutableHash = soulBonePayloadHash(payload);
     const item = createItem(state, 'soul-bone-generic', clean(options.ownerEntityId), clean(options.containerId), {
-      
+
       id: options.id,
       name: clean(options.name, `${clean(profile.名称, '无名魂兽')}${slot}`),
       type: '魂骨',
@@ -4804,6 +4954,34 @@
   function custodyGuard(state,record){
     return logistics.guardedBy(state,record).sort((a,b)=>(combat.attributeModifier(state,state.战斗单位.列表[b],'感知')+state.战斗单位.列表[b].派生.熟练加值)-(combat.attributeModifier(state,state.战斗单位.列表[a],'感知')+state.战斗单位.列表[a].派生.熟练加值))[0]??'';
   }
+  function custodyEscapeCheck(state,transactionId,choice){
+    const rng=combat.makeRng(`${state.世界.seed}:custody-escape:${transactionId}`),die=choice.dc?combat.rollDice(rng,1,20,'脱困检定').total:null;
+    return {attribute:choice.attribute,difficulty:choice.dc,modifier:choice.modifier,die,total:die===null?null:die+choice.modifier,passed:die===null||die===20||die!==1&&die+choice.modifier>=choice.dc};
+  }
+  function lockedRoomDoor(state,intent){
+    const actor=sceneActionActor(state,intent.actorId);
+    controls.assertAction(state,actor.id,'requirements',{requirements:['gesture']});
+    const room=logistics.currentRoom(state,actor.id);
+    if(!room||room.facility.id!==intent.facilityId||room.cell.id!==intent.cellId)throw Error('只能破坏本人当前房间的房门');
+    const record={personId:actor.id,arrangement:{kind:'facility',facilityId:room.facility.id,cellId:room.cell.id}};
+    const barrier=logistics.barrier(state,record);
+    if(!barrier)throw Error('当前房门已经可以通行');
+    const unit=state.战斗单位.列表[actor.id];
+    return {record,actorId:actor.id,attribute:'力量',dc:barrier.dc,modifier:combat.attributeModifier(state,unit,'力量')+unit.派生.熟练加值};
+  }
+  function breakCurrentRoomDoor(rawState,intent,id){
+    const guard=transactionStart(rawState,id,'破坏房门');
+    if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
+    const state=guard.state,choice=lockedRoomDoor(state,intent),check=custodyEscapeCheck(state,id,choice);
+    const timing=advanceActionTime(state,choice.actorId,10);
+    const room=logistics.currentRoom(state,choice.actorId);
+    const interrupted=!!timing.interruption||room?.facility.id!==intent.facilityId||room.cell.id!==intent.cellId||
+      !!worldActionBlockReason(state,{actorId:choice.actorId})||
+      !!controls.actionReason(state,choice.actorId,'requirements',{requirements:['gesture']});
+    const broken=!interrupted&&check.passed&&logistics.breakDoor(state,choice.record,id);
+    const summary=broken?'房门已破坏，可以返回公共通道。':interrupted?'破门行动被打断。':!logistics.barrier(state,choice.record)?'房门已经可以通行。':'这次未能破坏房门。';
+    return commit(state,id,'破坏房门',{type:'custody-door-break',actorId:choice.actorId,facilityId:intent.facilityId,cellId:intent.cellId,check,broken,...timing,summary});
+  }
   function escapeOptions(state,actorId=state.角色.主控单位ID){
     const record=custody.confined(state,actorId);if(!record)return [];
     const actor=state.战斗单位.列表[actorId],guardId=custodyGuard(state,record),choices=controls.breakable(state,actorId).map(s=>({kind:'break',...combat.breakFreeProfile(state,actorId,s.id),label:`挣脱${s.模板ID==='status.limb_bind'?(s.快照.参数.部位+'拘束'):'束缚'}`}));
@@ -4820,8 +4998,8 @@
     const choices=escapeOptions(state,actorId),choice=choices.find(c=>Object.hasOwn(options,'statusId')?c.statusId===options.statusId:options.attribute?c.attribute===options.attribute:c.kind==='evade')??(!Object.hasOwn(options,'statusId')&&!options.attribute?choices[0]:null);
     if(!choice)throw Error('这不是当前可用的脱困方式');
     const selectedStatus=choice.kind==='break'?clone(state.状态实例.列表[choice.statusId]):null;let removedStatus=null;
-    const authority=custody.authorityRef(record),startedOrder=people.nextEventOrder(state),guardId=custodyGuard(state,record),guardArrangement=clone(record.arrangement),before=clone(state.世界.时间),rng=combat.makeRng(`${state.世界.seed}:custody-escape:${transactionId}`),die=choice.dc?combat.rollDice(rng,1,20,'脱困检定').total:null;
-    const check={attribute:choice.attribute,difficulty:choice.dc,modifier:choice.modifier,die,total:die===null?null:die+choice.modifier,passed:die===null||die===20||die!==1&&die+choice.modifier>=choice.dc};
+    const authority=custody.authorityRef(record),startedOrder=people.nextEventOrder(state),guardId=custodyGuard(state,record),guardArrangement=clone(record.arrangement),before=clone(state.世界.时间);
+    const check=custodyEscapeCheck(state,transactionId,choice);
     const timing=advanceActionTime(state,actorId,10);let result='attempt-failed',escaped=false;
     if(timing.interruption||actions.battleOf(state,actorId)||controls.active(state,actorId).some(s=>['status.sleep','status.stun'].includes(s.模板ID)))result='interrupted';
     else if(!custody.sameAuthority(custody.currentAuthority(state,actorId),authority))result='source-ended';
@@ -4947,7 +5125,9 @@
       if(state.人物.列表[targetId].tier!=='full')promoteNpcInternal(state,targetId);
       const options={id:`duel:${transactionId}`,battleKind:'lethal',participantIds:[actorId,targetId],participantConfigs:{[actorId]:{sideId:actorId},[targetId]:{sideId:targetId}},seed:`${state.世界.seed}:${transactionId}`,force:true};
       const result=options.participantIds.includes(state.角色.主控单位ID)?combat.startBattle(state,options):combat.startBackgroundBattle(state,options);
-      state=result.state;receipt={type:'person-duel-started',battleId:options.id,actorId,targetId,battleKind:'lethal',summary:'人物死斗开始；战败后按实际结果选择放过、处决或使用工具捕获。'};
+      state=result.state;
+      if(actorId===state.角色.主控单位ID)recordPlayerAttitude(state,targetId,options.id,'attack');
+      receipt={type:'person-duel-started',battleId:options.id,actorId,targetId,battleKind:'lethal',summary:'人物死斗开始；战败后按实际结果选择放过、处决或使用工具捕获。'};
     }else if(intent.type==='request-restraint-permission'){
       receipt=custody.requestPermission(state,request,transactionId,custodyHooks());
     }else if(intent.type==='respond-restraint-permission-request'||intent.type==='decide-restraint-permission-request'){
@@ -5157,21 +5337,29 @@
       if (front&&state.杀戮场?.当前 && !['completed','failed'].includes(state.杀戮场.当前.status)) throw new Error('地狱杀戮场五场死斗期间不能离场或安全撤离');
       const mode = pendingTravel?.mode??(PATH_MODES[intent.mode] ? intent.mode : front?state.地图.扩展.路径模式:'balanced');
       const path = remainingTravelPath(state,clean(intent.destinationId),mode,actorId);
-      const wallet = travelWallet(state,actorId);
       const scheduleReason=npcActionScheduleReason(state,actorId,Math.max(1,path.totalMinutes));if(scheduleReason)throw Error(scheduleReason);
       let returnTrip;
       try {
         const returnPath = findPathInState(state,path.from,'cheapest',path.to,actorId);
-        const roundTripGold = path.totalCostGold + returnPath.totalCostGold;
-        returnTrip = {available:true,path:returnPath,destinationName:LOCATION_TEMPLATES[path.from].name,currencyText:formatCurrency(returnPath.totalCostGold),roundTripGold,affordable:Boolean(wallet && wallet.gold >= roundTripGold),shortfallGold:Math.max(0,roundTripGold-(wallet?.gold ?? 0))};
+        returnTrip = {available:true,path:returnPath,destinationName:LOCATION_TEMPLATES[path.from].name,currencyText:formatCurrency(0),roundTripGold:0,affordable:true,shortfallGold:0};
       } catch {
         returnTrip = {available:false,reason:'按当前通行条件，尚不能规划返回此地的路线'};
       }
       return {
-        type,available:Boolean(wallet&&wallet.gold>=path.totalCostGold),reason:wallet&&wallet.gold>=path.totalCostGold?'':'执行者旅费不足', ...(pendingTravel?{resumeActionId:pendingTravel.id}:{}), destinationId:intent.destinationId, destination:clone(LOCATION_TEMPLATES[intent.destinationId]), path, companionIds,
-        mode, modeName:PATH_MODES[mode].name, affordable:Boolean(wallet && wallet.gold >= path.totalCostGold),
+        type,available:true,reason:'', ...(pendingTravel?{resumeActionId:pendingTravel.id}:{}), destinationId:intent.destinationId, destination:clone(LOCATION_TEMPLATES[intent.destinationId]), path, companionIds,
+        mode, modeName:PATH_MODES[mode].name, affordable:true,
         currencyText:formatCurrency(path.totalCostGold),returnTrip
       };
+  }
+
+  function quoteIntimateCraft(state,intent,executionContext) {
+    const actor=sceneActionActor(state,intent.actorId,true,executionContext,intent),templateId=clean(intent.templateId),core=globalThis.SoulIntimateCore,device=core?.DEVICES?.[templateId];
+    if(!device||!core.ITEM_TEMPLATES[templateId])throw Error('没有这件情具的制式');
+    const wallet=state.钱包.列表[actor.walletId];
+    if(!wallet||wallet.gold<device.price)throw Error('金币不足');
+    const placement=previewItemPlacement(state,actor.inventoryContainerId,{templateId,ownerEntityId:actor.id,forceUnique:true});
+    if(!placement.pass)throw Error(placement.message);
+    return {actorId:actor.id,templateId,name:device.name,gold:device.price,minutes:5};
   }
 
   function previewIntent(rawState, intent = {},executionContext) {
@@ -5207,14 +5395,12 @@
   function previewIntentPrepared(state,intent={},executionContext){
     if(executionContext)fieldControl.assertIntent(state,executionContext,intent);
     const type = clean(intent.type);
+    if(type==='learn-preset-blueprint'){try{return globalThis.SoulExpeditionEngine.previewLearnPresetBlueprint(state,intent.itemId,intent.actorId??state.角色.主控单位ID);}catch(error){return {available:false,reason:error.message};}}
     if(type==='store-item'||type==='retrieve-item')return {type,...itemStorageAvailability(state,intent,type==='retrieve-item')};
     if(type.startsWith('device.'))return globalThis.SoulDeviceOperations.quote(state,{...intent,actorId:clean(intent.actorId,state.角色.主控单位ID)});
-    if(type==='intimate-craft'&&globalThis.SoulWearableCore?.registered(clean(intent.templateId))){
-      try{const actor=sceneActionActor(state,intent.actorId,true,executionContext,intent),templateId=clean(intent.templateId),device=globalThis.SoulIntimateCore.DEVICES[templateId],wallet=state.钱包.列表[actor.walletId];
-        if(!wallet||wallet.gold<device.price)throw Error('金币不足');
-        const placement=previewItemPlacement(state,actor.inventoryContainerId,{templateId,ownerEntityId:actor.id,forceUnique:true});if(!placement.pass)throw Error(placement.message);
-        return {type,available:true,reason:'',actorId:actor.id,templateId,gold:device.price,minutes:5};
-      }catch(error){return {type,available:false,reason:error.message};}
+    if(type==='intimate-craft'){
+      try{return {type,available:true,reason:'',...quoteIntimateCraft(state,intent,executionContext)};}
+      catch(error){return {type,available:false,reason:error.message};}
     }
     if(['intimate-equip','intimate-detach','intimate-level'].includes(type)){
       const actorId=clean(intent.actorId,state.角色.主控单位ID),q={actorId,targetId:clean(intent.targetId,actorId),itemId:clean(intent.itemId),...(intent.slot?{slot:clean(intent.slot)}:{}),level:intent.level??0,forced:intent.forced===true},operation={'intimate-equip':'equip','intimate-detach':'detach','intimate-level':'level'}[type];
@@ -5232,6 +5418,10 @@
     if(globalThis.SoulPersonContracts.INTENTS.includes(type)){try{const result=globalThis.SoulPersonContracts.execute(clone(state),{...intent,actorId:intent.actorId??state.角色.主控单位ID},'preview-contract:'+state.系统.revision);return {available:!result.receipt.sourceUnavailable,reason:result.receipt.reason??'',receipt:result.receipt};}catch(error){return {available:false,reason:error.message};}}
     if(globalThis.SoulPerformanceAgreements.INTENTS.includes(type)){try{const draft=clone(state),receipt=globalThis.SoulPerformanceAgreements.execute(draft,{...intent,actorId:intent.actorId??state.角色.主控单位ID},'preview-agreement:'+state.系统.revision);return {available:true,receipt};}catch(error){return {available:false,reason:error.message};}}
     if(globalThis.SoulResidentRealms.INTENTS.includes(type)){try{const draft=clone(state),receipt=globalThis.SoulResidentRealms.execute(draft,{...intent,actorId:intent.actorId??state.角色.主控单位ID},`preview-realm:${state.系统.revision}`);return {available:true,receipt};}catch(error){return {available:false,reason:error.message};}}
+    if(type==='break-custody-cell-door'){
+      try{const choice=lockedRoomDoor(state,intent);return {available:true,minutes:10,attribute:choice.attribute,modifier:choice.modifier,dc:choice.dc};}
+      catch(error){return {available:false,reason:error.message};}
+    }
     if(CUSTODY_INTENTS.has(type)){
       try{
         const actorId=clean(intent.actorId,state.角色.主控单位ID);
@@ -5283,7 +5473,7 @@
       catch(error){return {type,entityId,available:false,reason:error.message,free:true};}
     }
     if(type==='break-restraint'){const actor=sceneActionActor(state,intent.entityId??intent.actorId,true,null,intent);actions.resolve(state,{actorId:actor.id,battleId:null,...(sealing.isAwakeContained(state,actor.id)?{containmentAction:'struggle',requirements:[]}:{})});return {type,actorId:actor.id,minutes:10,...combat.breakFreeProfile(state,actor.id,intent.statusId,{method:intent.method,battleId:null})};}
-    if(type==='retract-martial-soul'||type==='restrain-desire'){const actor=sceneActionActor(state,intent.entityId??intent.actorId,true,null,intent);actions.resolve(state,{actorId:actor.id,battleId:null});if(type==='restrain-desire'&&!globalThis.SoulAbilityExchange.desireFacts(state,actor.id).strength)throw Error('当前没有欲火');return {type,actorId:actor.id,minutes:type==='restrain-desire'?5:1};}
+    if(type==='retract-martial-soul'||type==='restrain-desire'){const actor=sceneActionActor(state,intent.entityId??intent.actorId,true,null,intent);const soulId=state.成长.列表[actor.id]?.激活武魂ID;if(type==='retract-martial-soul'&&globalThis.SoulManifestation.hasTrait(state.武魂.列表[soulId]))return {...globalThis.SoulManifestation.quote(state,{actorId:actor.id,soulId,operation:'recall'}),minutes:0,type};actions.resolve(state,{actorId:actor.id,battleId:null});if(type==='restrain-desire'&&!globalThis.SoulAbilityExchange.desireFacts(state,actor.id).strength)throw Error('当前没有欲火');return {type,actorId:actor.id,minutes:type==='restrain-desire'?5:1};}
     if (type === 'switch-martial-soul') {
       const entityId = clean(intent.entityId, state.角色.主控单位ID);
       const actor=sceneActionActor(state,entityId,true,executionContext,intent),unit=state.战斗单位.列表[actor.id];
@@ -5401,6 +5591,7 @@
     }
     if(globalThis.SoulPerformanceAgreements.INTENTS.includes(type)){const guard=transactionStart(rawState,id,'履约协议'),request={...intent,actorId:intent.actorId??rawState.角色.主控单位ID},requestHash=abilities.hash(request);if(guard.duplicate){if(guard.receipt.requestHash!==requestHash)throw Error('操作编号不能替换原请求');return {state:guard.state,receipt:guard.receipt,idempotent:true};}const receipt=globalThis.SoulPerformanceAgreements.execute(guard.state,request,id);return commit(guard.state,id,'履约协议',{...receipt,requestHash});}
     if(globalThis.SoulResidentRealms.INTENTS.includes(type)){const guard=transactionStart(rawState,id,'画境管理'),request={...intent,actorId:intent.actorId??rawState.角色.主控单位ID},requestHash=abilities.hash(request);if(guard.duplicate){if(guard.receipt.requestHash!==requestHash)throw Error('操作编号不能替换原请求');return {state:guard.state,receipt:guard.receipt,idempotent:true};}const receipt=globalThis.SoulResidentRealms.execute(guard.state,request,id);globalThis.SoulPerformanceAgreements.advanceAt(guard.state);if(receipt.minutes)advanceActionTime(guard.state,request.actorId,receipt.minutes);return commit(guard.state,id,'画境管理',{...receipt,requestHash});}
+    if(type==='break-custody-cell-door')return breakCurrentRoomDoor(rawState,intent,id);
     if(CUSTODY_INTENTS.has(type))return settleCustodyIntent(rawState,intent,id);
     if (type === 'world-event') return completeWorldEvent(rawState,clean(intent.eventId),id);
     if (type === 'create-player') return createPlayer(rawState, intent.draft ?? {}, id);
@@ -5409,6 +5600,7 @@
     if (type === 'travel') return travel(rawState, intent, id,executionContext,committedTravel);
     if(type==='resume-travel'){if(!executionContext)throw Error('此入口需要本次实际控制命令');return resumeLongAction(rawState,intent,id,executionContext);}
     if(type==='trade-batch')return tradeBatch(rawState,intent,id);
+    if(type==='learn-preset-blueprint'){if(Object.keys(intent).some(k=>!['id','type','actorId','itemId'].includes(k)))throw Error('学习图纸只接受实际物品');return globalThis.SoulExpeditionEngine.learnPresetBlueprint(rawState,{itemId:intent.itemId},id,{actorId:intent.actorId??rawState.角色.主控单位ID});}
     if (type === 'buy') return trade(rawState, intent, id, 'buy');
     if (type === 'sell') return trade(rawState, intent, id, 'sell');
     if (type === 'equip') return equipItem(rawState, intent, id,executionContext);
@@ -5452,7 +5644,7 @@
       const result=combat.preparePrebattlePill(guard.state,actor.id,clean(intent.itemId),id,intent.modeId,clean(intent.targetId,actor.id));
       return commit(result.state,id,'战前服用丹药',result.receipt);
     }
-    if(type==='retract-martial-soul'||type==='restrain-desire'){const guard=transactionStart(rawState,id,type==='restrain-desire'?'克制欲火':'收回武魂');if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};const actor=sceneActionActor(guard.state,intent.entityId??intent.actorId,true,executionContext,intent);actions.resolve(guard.state,{actorId:actor.id,battleId:null});if(type==='retract-martial-soul')foundation.switchActiveMartialSoul(guard.state,actor.id,'',{operationId:id});if(type==='restrain-desire'&&!globalThis.SoulAbilityExchange.desireFacts(guard.state,actor.id).strength)throw Error('当前没有欲火');const startedAt=people.now(guard.state),timing=advanceActionTime(guard.state,actor.id,type==='restrain-desire'?5:1);const check=type==='restrain-desire'&&!timing.interruption&&globalThis.SoulAbilityExchange.desireFacts(guard.state,actor.id).strength?globalThis.SoulAbilityExchange.selfControl(guard.state,actor.id,'restrain',id,people.now(guard.state),{kind:'world',actorId:actor.id,operationId:id,startedAt,endedAt:people.now(guard.state)}):null;if(check){guard.state.扩展.desireActionPayments??={};guard.state.扩展.desireActionPayments[id]={checkId:check.id,proof:clone(check.paymentProof)};}return commit(guard.state,id,'武魂与自控',{type,actorId:actor.id,...timing,check,summary:type==='restrain-desire'?'已尝试克制欲火。':'已收回武魂。'});}
+    if(type==='retract-martial-soul'||type==='restrain-desire'){const guard=transactionStart(rawState,id,type==='restrain-desire'?'克制欲火':'收回武魂');if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};const actor=sceneActionActor(guard.state,intent.entityId??intent.actorId,true,executionContext,intent);const soulId=guard.state.成长.列表[actor.id]?.激活武魂ID;if(type==='retract-martial-soul'&&globalThis.SoulManifestation.hasTrait(guard.state.武魂.列表[soulId]))return globalThis.SoulManifestation.command(guard.state,{actorId:actor.id,soulId,operation:'recall'},id);actions.resolve(guard.state,{actorId:actor.id,battleId:null});if(type==='retract-martial-soul')foundation.switchActiveMartialSoul(guard.state,actor.id,'',{operationId:id});if(type==='restrain-desire'&&!globalThis.SoulAbilityExchange.desireFacts(guard.state,actor.id).strength)throw Error('当前没有欲火');const startedAt=people.now(guard.state),timing=advanceActionTime(guard.state,actor.id,type==='restrain-desire'?5:1);const check=type==='restrain-desire'&&!timing.interruption&&globalThis.SoulAbilityExchange.desireFacts(guard.state,actor.id).strength?globalThis.SoulAbilityExchange.selfControl(guard.state,actor.id,'restrain',id,people.now(guard.state),{kind:'world',actorId:actor.id,operationId:id,startedAt,endedAt:people.now(guard.state)}):null;if(check){guard.state.扩展.desireActionPayments??={};guard.state.扩展.desireActionPayments[id]={checkId:check.id,proof:clone(check.paymentProof)};}return commit(guard.state,id,'武魂与自控',{type,actorId:actor.id,...timing,check,summary:type==='restrain-desire'?'已尝试克制欲火。':'已收回武魂。'});}
     if(type==='break-restraint'){
       const guard=transactionStart(rawState,id,'日常挣脱');if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
       const state=guard.state,actor=sceneActionActor(state,intent.entityId??intent.actorId,true,executionContext,intent);actions.resolve(state,{actorId:actor.id,battleId:null,...(sealing.isAwakeContained(state,actor.id)?{containmentAction:'struggle',requirements:[]}:{})});
@@ -5467,17 +5659,14 @@
     if(type==='intimate-craft'){
       const guard=transactionStart(rawState,id,'制作情具');
       if(guard.duplicate)return {state:guard.state,receipt:guard.receipt,idempotent:true};
-      const state=guard.state,actor=sceneActionActor(state,intent.actorId,true,executionContext,intent),core=globalThis.SoulIntimateCore,device=core?.DEVICES?.[clean(intent.templateId)];
-      if(!device||!core.ITEM_TEMPLATES[clean(intent.templateId)])throw Error('没有这件情具的制式');
-      const wallet=state.钱包.列表[state.人物.列表[actor.id].walletId];
-      if(!wallet||wallet.gold<device.price)throw Error('金币不足');
-      wallet.gold-=device.price;
-      const templateId=clean(intent.templateId),neutral=globalThis.SoulWearableCore?.registered(templateId),startedAt=people.now(state);
-      const item=createItem(state,templateId,actor.id,state.人物.列表[actor.id].inventoryContainerId,{name:device.name,...(neutral?{provenance:{type:'neutral-wearable-craft',sourceId:id,actorId:actor.id,templateId}}:{})});
-      const timing=advanceActionTime(state,actor.id,5);
-      const craftSource=neutral?{version:1,sourceId:id,actorId:actor.id,templateId,price:device.price,startedAt,completedAt:people.now(state)}:null;
+      const state=guard.state,quote=quoteIntimateCraft(state,intent,executionContext),actor=state.人物.列表[quote.actorId],wallet=state.钱包.列表[actor.walletId];
+      wallet.gold-=quote.gold;
+      const templateId=quote.templateId,neutral=globalThis.SoulWearableCore?.registered(templateId),startedAt=people.now(state);
+      const item=createItem(state,templateId,actor.id,actor.inventoryContainerId,{name:quote.name,...(neutral?{provenance:{type:'neutral-wearable-craft',sourceId:id,actorId:actor.id,templateId}}:{})});
+      const timing=advanceActionTime(state,actor.id,quote.minutes);
+      const craftSource=neutral?{version:1,sourceId:id,actorId:actor.id,templateId,price:quote.gold,startedAt,completedAt:people.now(state)}:null;
       if(craftSource)globalThis.SoulWearableCore.registerCraft?.(state,item,craftSource);
-      return commit(state,id,'制作情具',{type,actorId:actor.id,itemId:item.id,name:item.name,gold:device.price,...timing,...(craftSource?{craftSource}:{})});
+      return commit(state,id,'制作情具',{type,actorId:actor.id,itemId:item.id,name:item.name,gold:quote.gold,...timing,...(craftSource?{craftSource}:{})});
     }
     if(['intimate-equip','intimate-detach','intimate-level','intimate-urinate'].includes(type)){
       const guard=transactionStart(rawState,id,'情具操作');
@@ -5567,9 +5756,12 @@
   function validateWorld(rawState,owned,alreadyNormalized=false) {
     const rawErrors=[...backgroundItems.validate(rawState),...(globalThis.SoulOpeningWorkshop?.validateState(rawState)??[]),...validateSoulBoneDrops(rawState),...cycle.validatePresetBeasts(rawState),...expeditions.validate(rawState),...cycle.validateEncounterBindings(rawState),...cycle.validateRingOperations(rawState),...expeditionValidator(rawState)];
     rawErrors.push(...validateAbilityApplications(rawState));
+    rawErrors.push(...globalThis.SoulEvolution.validate(rawState));
     rawErrors.push(...(globalThis.SoulCanonArenaEngine?.validateHistoricalProjection(rawState,validateState)??[]));
     rawErrors.push(...(globalThis.SoulCanonArenaEngine?.validateNativeOrigins(rawState)??[]));
     for(const soul of Object.values(rawState.武魂?.列表??{}))rawErrors.push(...globalThis.SoulCanonicalGrowth.validateBinding(rawState,soul),...globalThis.SoulCanonicalGrowth.validateExpression(rawState,soul));
+    const npcGender=rawState.世界?.npcGender;
+    if(npcGender!==undefined&&!['random','male','female'].includes(npcGender))rawErrors.push('随机人物性别选项无效');
     const sources=rawState.世界?.characterSources;
     if(!Array.isArray(sources)||new Set(sources).size!==sources.length||sources.some(id=>!globalThis.SoulCanonicalGrowth.sources().some(v=>v.id===id)))rawErrors.push('跨时代人物选项无效');
     for(const person of Object.values(rawState.人物?.列表??{})){
@@ -5590,7 +5782,7 @@
       if(!ring.魂技ID列表?.length||new Set(ring.魂技ID列表).size!==ring.魂技ID列表.length)rawErrors.push(`魂环${ring.id}缺少完整魂技`);
       for(const [index,id]of (ring.魂技ID列表??[]).entries()){
         const skill=rawState.技能?.列表?.[id];
-        if(!skill||!unit?.能力?.技能ID?.includes(id)||skill.持有者单位ID!==ring.持有者单位ID||(skill.sourceRingId??skill.来源魂环ID)!==ring.id||(skill.sourceMartialSoulId??skill.来源武魂ID)!==ring.武魂ID||(skill.sourceBeastProfileId??skill.来源魂兽档案ID)!==ring.来源魂兽档案ID||skill.sourceRingId&&skill.来源魂环ID&&skill.sourceRingId!==skill.来源魂环ID||skill.sourceMartialSoulId&&skill.来源武魂ID&&skill.sourceMartialSoulId!==skill.来源武魂ID||skill.immutableHash!==ring.扩展?.蓝图哈希列表?.[index])rawErrors.push(`魂环${ring.id}的魂技${id}缺少实际持有或来源不符`);
+        if(!skill||(!ring.扩展?.evolutionSealed&&!unit?.能力?.技能ID?.includes(id))||skill.持有者单位ID!==ring.持有者单位ID||(skill.sourceRingId??skill.来源魂环ID)!==ring.id||(skill.sourceMartialSoulId??skill.来源武魂ID)!==ring.武魂ID||(skill.sourceBeastProfileId??skill.来源魂兽档案ID)!==ring.来源魂兽档案ID||skill.sourceRingId&&skill.来源魂环ID&&skill.sourceRingId!==skill.来源魂环ID||skill.sourceMartialSoulId&&skill.来源武魂ID&&skill.sourceMartialSoulId!==skill.来源武魂ID||skill.immutableHash!==ring.扩展?.蓝图哈希列表?.[index])rawErrors.push(`魂环${ring.id}的魂技${id}缺少实际持有或来源不符`);
       }
     }
     for(const [id,skill] of Object.entries(rawState.技能?.列表??{})){
@@ -5802,6 +5994,7 @@
   combat.bindWorldClock(advanceTime);
 
   return Object.freeze({
+    commit,advanceLongTime,
     refreshItemActions:syncItemGrantedActions,refreshEquipment:refreshUnitEquipment,refreshEquipmentInPlace,selfCondensationPreview,condenseSelfRing,
     itemStoragePosition,storagePositionFacts,itemStorageAvailability,
     commerceHooks:()=>({spawn:spawnNpcInternal,move:movePeopleTo,logistics:logisticsHooks(),custody:custodyHooks()}),
@@ -5811,10 +6004,10 @@
     escapeOptions,escapeCaptivity,
     VERSION, pointBuyCost, attributePreset, bindExpeditionValidation, bindExpeditionSchedule, STORY_CALENDAR, storyCalendarDate, storyWorldTimeAtDate, advanceTime, ITEM_VALUE_GRADES, itemGradeFromValue, itemGrade, CURRENCY, EQUIPMENT_SLOTS, SOUL_BONE_SLOTS, SOUL_BONE_VALUE_RULES, SOUL_DEVICE_CATEGORIES, SUPPORT_CONSUMABLE_RECIPES, CREATION_RULES, MARTIAL_SOUL_TEMPLATES, ITEM_TEMPLATES, IDENTITY_ARCHETYPES, NPC_ARCHETYPES, npcMartialSoulBudget, npcMartialSoulDesignBudget, npcCreationBudget,
     LOCATION_TEMPLATES, ROUTE_TEMPLATES, INITIAL_KNOWN_LOCATION_IDS, DUNGEON_ENTRANCE_LOCATION_IDS, SAFE_RECOVERY_LOCATION_IDS, PATH_MODES, SHOP_TEMPLATES, stableHash, makeRng, allocateWholeUnitBudget, beastMaterialProfiles, structuredMaterialFingerprint, addPermanentMaterialStack, compileBudgetedSoulDevice, priceEquipment, equipmentAttributes, EQUIPMENT_ATTRIBUTE_SOURCES, EQUIPMENT_ROLE_LABELS, formatCurrency, calculateItemValue, makeInitialState, normalizeState,
-    CITY_DESTINATIONS, cityStageFacts, cityHistory, appointmentTravelAvailability, createAppointmentPlan, createPersonalPlan, createCollaborationPlan, npcGoalDestinations, npcSupplyOptions, createNpcSupplyRequest, npcRequestFacts, npcRequestOptions, respondNpcRequest, npcPlanFacts, npcActionScheduleReason, storyOpeningFacts, openingSituationFacts, settleOpeningSituation, progressOpeningSituations, creationPointLedger, validateCreationDraft, createPlayer, spawnNpc, promoteNpc, ensureLocationCast, ensurePossessionShell, generateRegisteredRings, previewItemPlacement, ensureLocationStash, storeItem, createItem, transferItem, equipmentSummary, equipmentCombatSummary, previewEquipment, equipItem, unequipItem,
+    CITY_DESTINATIONS, cityStageFacts, cityHistory, appointmentTravelAvailability, createAppointmentPlan, createPersonalPlan, createCollaborationPlan, npcGoalDestinations, npcSupplyOptions, createNpcSupplyRequest, npcRequestFacts, npcRequestOptions, respondNpcRequest, npcPlanFacts, npcActionScheduleReason, storyOpeningFacts, openingSituationFacts, settleOpeningSituation, progressOpeningSituations, creationPointLedger, validateCreationDraft, createPlayer, recordPlayerAttitude, playerAttitudeReason, setNpcGender, spawnNpc, promoteNpc, ensureLocationCast, ensurePossessionShell, generateRegisteredRings, previewItemPlacement, ensureLocationStash, storeItem, createItem, transferItem, equipmentSummary, equipmentCombatSummary, previewEquipment, equipItem, unequipItem,
     grantOpeningRingItems, openingGuidance, settleOpeningGuidance, WORLD_EVENTS, WORLD_QUALIFICATIONS, qualificationGuidance, custodyFacts, fieldControlOptions, previewCustodyDisposition, activeCaptivity, personalActionBlockReason, worldActionBlockReason, previewWorldEvent, listWorldEvents, completeWorldEvent, isCarriedItem, inspectItem,
-    isLocationKnown, locationAccess, routeAccess, findRoute, findPath, createRoutePlanner, previewIntent, previewCommittedTravel,settleCommittedTravel, intentPreviewer, intentAvailability, previewFieldIntents, previewAbilityRequests, settleIntent, travel, waitUntil, cultivate, cultivationFacts, resumeLongAction, abandonLongAction, longActionFacts, quotePrice, currentItemValue, trade, restockShop, reconcileAftermath, isExpeditionRemains, harvestBeast, lootItem, lootCoins, fuseSoulBone, createSupportConsumable, partyRecoveryPreview, recoverParty, recoverAtSafePoint,
-    settlePersonDeath, previewGift, soulBoneChance, soulBoneSkillCount, calculateSoulBoneBudget, soulBoneBlueprint, validateSoulBonePayload, isCanonicalSoulBone, applySoulBoneSkillNarrative, createSoulBoneItem, makeNarrativeProjection, validateState, validateOwnedState, validateNormalizedStoryWorld
+    isLocationKnown, locationAccess, routeAccess, findRoute, findPath, findFreightPath, createRoutePlanner, previewIntent, previewCommittedTravel,settleCommittedTravel, intentPreviewer, intentAvailability, previewFieldIntents, previewAbilityRequests, settleIntent, travel, waitUntil, work, workFacts, cultivate, cultivationFacts, resumeLongAction, abandonLongAction, longActionFacts, quotePrice, currentItemValue, trade, restockShop, reconcileAftermath, isExpeditionRemains, harvestBeast, lootItem, lootCoins, fuseSoulBone, createSupportConsumable, partyRecoveryPreview, recoverParty, recoverAtSafePoint,
+    settlePersonDeath, recoverRevivalRemains, previewGift, soulBoneChance, soulBoneSkillCount, calculateSoulBoneBudget, soulBoneBlueprint, validateSoulBonePayload, isCanonicalSoulBone, applySoulBoneSkillNarrative, createSoulBoneItem, makeNarrativeProjection, validateState, validateOwnedState, validateNormalizedStoryWorld
   });
 });
 

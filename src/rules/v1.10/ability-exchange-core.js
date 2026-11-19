@@ -235,7 +235,7 @@
     else if(code==='EXCHANGE_CONDITION_INVALID')message=`无法发动：现有${required}已失效，或没有有效的施加来源。请先获得有效的限制再试。`;
     else if(code==='EXCHANGE_IMMUNE')message=`无法发动：你免疫${required}，无法承担这项限制来换取强化。`;
     else if(code==='EXCHANGE_NO_NEW_BURDEN')message=`无法发动：当前已有${current}，再次施加${required}不能产生新的实际负担。请先解除现有限制再试。`;
-    else message=`无法发动：需要已处于${required}；当前：${current}。`;
+    else message=`无法发动：需要已处于${required}；当前：${current}。这项用法只检查发动前已有的限制。`;
     const error=Error(message);error.code=code;error.exchangeFailure=details;return error;
   }
   function matchingParameters(v,b){
@@ -275,7 +275,7 @@
       const requested=owner.source.id===source.id&&owner.contract.id===c.id;
       if(owner.source.id!==soul?.id){const skill=owner.source,unit=s.战斗单位.列表[id],sourceSoulId=skill.sourceMartialSoulId||skill.来源武魂ID,copied=['copied','summoned-copy'].includes(skill.sourceKind),item=s.物品?.实例?.[skill.sourceItemId],equipment=s.装备?.配置?.[id];
         const battleLocked=[s.战斗,...Object.values(s.世界?.backgroundBattles??{})].some(b=>b?.状态==='进行中'&&b.扩展?.成员?.[id]?.status==='active'&&b.扩展?.规则?.soulSkillsLocked)&&(skill.类型==='魂技'||skill.来源魂环ID||skill.sourceRingId||skill.sourceKind==='soul-ring');
-        const unavailable=globalThis.SoulCombatFoundation.intrinsicSoulSkillBlockReason(unit,skill)||battleLocked||globalThis.SoulControlCore.passiveReason(s,id,skill)||!copied&&sourceSoulId&&sourceSoulId!==soul?.id||!copied&&skill.sourceItemId&&(!item||item.ownerEntityId!==id||item.quantity<=0||![...Object.values(equipment?.slots??{}),...Object.values(equipment?.soulBoneSlots??{})].includes(item.id))||skill.sourceKind==='copied'&&!states(s,id).some(v=>v.扩展?.复制技能ID列表?.includes(skill.id))||skill.sourceKind==='summoned-copy'&&!(unit.扩展?.召唤?.constructId?unit.扩展.召唤.expiresAt>worldNow(s):unit.扩展?.召唤?.剩余回合>0);
+        const unavailable=globalThis.SoulCombatFoundation.intrinsicSoulSkillBlockReason(unit,skill)||battleLocked||globalThis.SoulControlCore.passiveReason(s,id,skill)||!copied&&sourceSoulId&&sourceSoulId!==soul?.id||!copied&&skill.sourceItemId&&(!item||item.ownerEntityId!==id||item.quantity<=0||![...Object.values(equipment?.slots??{}),...Object.values(equipment?.soulBoneSlots??{})].includes(item.id))||skill.sourceKind==='copied'&&!states(s,id).some(v=>v.扩展?.复制技能ID列表?.includes(skill.id))||skill.sourceKind==='summoned-copy'&&!(unit.扩展?.召唤?.constructId?(globalThis.SoulManifestation?.forUnit(s,id)?.status==='active'||unit.扩展.召唤.expiresAt>worldNow(s)):unit.扩展?.召唤?.剩余回合>0);
         if(unavailable){if(requested)return {statusIds:null,error:exchangeFailure('EXCHANGE_SOURCE_UNAVAILABLE',c.burdens[0],'能力来源不可用',{reason:'这项能力的武魂、装备或使用条件当前不可用'})};continue;}
       }
       const found=owner.contract.burdens.map(b=>matches(s,id,b,owner.contract).find(v=>!occupied.has(v.id)&&!records(s).some(r=>r.status==='active'&&r.actorId===id&&(r.sourceId!==owner.source.id||r.contract.id!==owner.contract.id)&&[...r.selfStatusIds,...r.supportingStatusIds].includes(v.id))));

@@ -1,3 +1,4 @@
+import {EVOLUTION_ACTION_FIELDS} from './story-evolution';
 import {rules} from '../rules';
 import {communicationAvailability,REMOTE_STORY_ACTIONS} from '../shared/story-communication';
 import {resolveStoryPersonName} from './story-person-names';
@@ -5,7 +6,7 @@ import {StoryPlanValidationError} from './story-plan-validation-error';
 import type {StoryPlan} from './story-turns';
 
 /** Shared interpreter/execution context. Authority stays in domain rules. */
-const LOCAL_PRIVATE_ACTIONS=new Set<string>([
+const LOCAL_PRIVATE_ACTIONS=new Set<string>([...Object.keys(EVOLUTION_ACTION_FIELDS),
  'request-person-growth',
  'respond-restraint-permission-request','respond-person-relation',
  'remember-object','resolve-object','instantiate-item','describe','clarify','resolve-person','label-person','tell-person','address-person','meet','quote-hire','bargain-hire','accept-hire-offer','person-history','inspect-person','promise-gold','promise-item','give-item','give-gold','fulfill-promise','cancel-promise','invite','invite-date','attend-invitation','ask-release','consider-person-goal','answer-person-plan','respond-npc-request','invite-realm-guest','propose-relationship','end-relationship','exchange-contact','invite-party','propose-loot','propose-loot-resolution','end-party','hire','dismiss','release-captive','search-captive','set-restraint-mode','intimate-craft','intimate-equip','intimate-detach','device.lock','device.unlock','device.suppress-lock','device.break-rule','device.analyze-lock','device.create-key','device.arcane-lock','host.set-suppression','host.set-form','host.set-appearance','detach-restraint','attach-restraint','permit-restraint','request-restraint-permission','revoke-restraint-permission','tell-custody-news','observe-custody-person','issue-field-control',
@@ -13,11 +14,18 @@ const LOCAL_PRIVATE_ACTIONS=new Set<string>([
  ...rules.custodyMarket.INTENTS,...rules.cooperation.INTENTS,...rules.preparations.INTENTS,...rules.poison.INTENTS,...rules.sealing.INTENTS,
  ...rules.personContracts.INTENTS,...rules.residentRealms.INTENTS,...rules.performanceAgreements.INTENTS,...rules.combatDeployments.INTENTS,
 ]);
-export function privateStoryActionAllowed(kind:string,remote=false){return remote?(REMOTE_STORY_ACTIONS as readonly string[]).includes(kind):LOCAL_PRIVATE_ACTIONS.has(kind);}
+type PrivateMode=ReturnType<typeof communicationAvailability>['mode']|boolean;
+const REALM_ACTIONS=new Set<string>([...REMOTE_STORY_ACTIONS,...rules.residentRealms.INTENTS,...rules.performanceAgreements.INTENTS,...rules.combatDeployments.INTENTS,'request-person-growth','use-field-ability','request-ability-use','respond-ability-use','set-restraint-mode','detach-restraint','attach-restraint','intimate-equip','intimate-detach','permit-restraint','request-restraint-permission','revoke-restraint-permission']);
+export function privateStoryActionAllowed(kind:string,mode:PrivateMode=false){
+ if(mode==='realm'||mode==='projection')return REALM_ACTIONS.has(kind);
+ return mode===true||mode==='soul-device'?(REMOTE_STORY_ACTIONS as readonly string[]).includes(kind):LOCAL_PRIVATE_ACTIONS.has(kind);
+}
 
 /** Resolve the same identity aliases as the action executor, even in a voice-only encounter. */
-export function privateStoryActionReferenceReason(state:any,personId:string,action:any,remote=false,reference=action.characterId):string{
- if(!privateStoryActionAllowed(action.kind,remote))return remote?'魂导通讯不能代替现场行动或交付，请实际到场后进行':'这项行动需要回到公共场景处理';
+export function privateStoryActionReferenceReason(state:any,personId:string,action:any,remote:PrivateMode=false,reference=action.characterId):string{
+ if(action.kind==='describe'&&action.mode==='daily'&&reference&&(remote===true||remote==='soul-device'||remote==='realm'||remote==='projection'))return '一同用餐需要双方真身在同一现场，当前可以谈论这件事';
+ if(Object.hasOwn(EVOLUTION_ACTION_FIELDS,action.kind)){const actorId=action.request?.actorId??action.actorId??(action.planId?rules.evolution.table(state).plans.find((p:any)=>p.id===action.planId)?.actorId:undefined)??state.角色.主控单位ID;if(![state.角色.主控单位ID,personId].includes(actorId))return '请与方案本人商议这次变化';}
+ if(!privateStoryActionAllowed(action.kind,remote))return remote==='realm'||remote==='projection'?'这项操作需要与本人真身在同一现场':remote===true||remote==='soul-device'?'魂导通讯不能代替现场行动或交付，请实际到场后进行':'这项行动需要回到公共场景处理';
  const person=state.人物.列表[personId],canonicalId=person?.扩展?.角色库ID??state.战斗单位?.列表?.[personId]?.扩展?.角色库ID;
  if(!rules.custodyMarket.INTENTS.includes(action.kind)&&reference!==undefined&&reference!==personId&&reference!==canonicalId)return '这项行动的对象不是当前交谈者，请回到公共场景处理';
  return '';
@@ -26,7 +34,7 @@ export function privateStoryActionReferenceReason(state:any,personId:string,acti
 /** Check a normalized, unexecuted host plan using the same channel boundary as execution. */
 export function validatePrivateStoryPlan(state:any,plan:StoryPlan,personId?:string,completedPrefix=0):void{
  if(!personId)return;
- const remote=communicationAvailability(state,personId).mode==='soul-device';
+ const remote=communicationAvailability(state,personId).mode;
  let plannedRegionId:string|undefined;
  for(const [index,{action}] of plan.segments.entries()){
   if(index<completedPrefix)continue;
@@ -39,7 +47,7 @@ export function validatePrivateStoryPlan(state:any,plan:StoryPlan,personId?:stri
   reason ||= privateStoryActionReferenceReason(state,personId,action,remote,reference)||privateStoryActionScopeReason(state,personId,action,plannedRegionId);
   if(reason)throw new StoryPlanValidationError(reason,{
    instancePath:`/segments/${index}/action`,keyword:'private-conversation-scope',submitted:action,
-   reference:{instancePath:'/conversation',value:{personId,mode:remote?'soul-device':'in-person',actions:[...LOCAL_PRIVATE_ACTIONS].filter(kind=>privateStoryActionAllowed(kind,remote))}},
+   reference:{instancePath:'/conversation',value:{personId,mode:remote,actions:[...LOCAL_PRIVATE_ACTIONS].filter(kind=>privateStoryActionAllowed(kind,remote))}},
   });
   if(action.kind==='arrange-realm-resident'&&!plan.segments[index].when)plannedRegionId=String(action.regionId);
  }
