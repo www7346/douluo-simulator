@@ -1,10 +1,12 @@
 # 斗罗大陆：武魂模拟器
 
+<img src="public/icons/icon-512.png" width="176" alt="古月娜·成年银龙王">
+
 免费的同人角色扮演游戏。你可以创建魂师、修炼成长、探索地图、参与战斗和工坊制作。
 
 ## 下载 Windows 本地版
 
-1. 从 [GitHub Releases](https://github.com/www7346/douluo-simulator/releases/latest) 下载 `Douluo-Setup-1.3.67-x64.exe`。
+1. 从 [GitHub Releases](https://github.com/www7346/douluo-simulator/releases/latest) 下载 `Douluo-Setup-1.3.68-x64.exe`。
 2. 在 Windows 10 或 11 的 64 位电脑上双击安装，从开始菜单打开「斗罗大陆：武魂模拟器」。
 3. 选「新的故事」开始，或在「读取存档」里导入之前导出的完整存档。
 

@@ -1,0 +1,5 @@
+{
+  "source": "游戏内古月娜·成年银龙王头像",
+  "master": "icon-512.png",
+  "derived": ["icon-192.png", "apple-touch-icon.png", "favicon-32.png"]
+}
