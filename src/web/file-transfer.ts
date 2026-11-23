@@ -1,5 +1,6 @@
 import {isSectionedSave,MAX_SECTIONED_SAVE_BYTES} from '../shared/save-sections';
 import {saveCodec} from '../shared/save-codec';
+import {androidSaveFile,isAndroidGame} from '../runtime/android-platform';
 
 export type PreparedDownload={blob:Blob;name:string;originalBytes:number};
 
@@ -16,7 +17,8 @@ export async function prepareJsonDownload(json:string,name:string){
 export async function downloadJson(json:string,name:string){
  return downloadPrepared(await prepareJsonDownload(json,name));
 }
-export function downloadPrepared(file:PreparedDownload){
+export async function downloadPrepared(file:PreparedDownload){
+ if(isAndroidGame){await androidSaveFile(file.blob,file.name);return file;}
  const url=URL.createObjectURL(file.blob),link=document.createElement('a');
  link.href=url;link.download=file.name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  return file;

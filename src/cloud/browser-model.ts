@@ -1,4 +1,5 @@
 import {requestCredentials} from '../runtime/desktop-model-credentials';
+import {isAndroidGame} from '../runtime/android-platform';
 import {CHATGPT_API} from '../shared/chatgpt-plan';
 import type {ModelProfile} from '../runtime/model-gateway';
 import {protocolHeaders,wireProtocol,validateHeaders} from '../runtime/model-protocol';
@@ -16,6 +17,10 @@ export class BrowserModels {
   if(profile.writer)copy.writer=await this.prepare(profile.writer as ModelProfile,signal);
   if(!profile.baseUrl?.trim())return copy;
   const plan=profile.channelMode==='chatgpt';
+  if(isAndroidGame){
+   if(plan||profile.channelMode==='vertex')throw Error('请在 Android 设置中选择 API 密钥渠道');
+   return {...await requestCredentials(copy),transport:'server'};
+  }
   if(plan&&profile.baseUrl!==CHATGPT_API)throw Error('ChatGPT 套餐需要官方模型接口');
   if(!plan&&modelRoute(profile)!=='browser')return requestCredentials(copy);
   if(!plan&&profile.generation?.protocol&&!['auto','compatible','deepseek'].includes(profile.generation.protocol))throw Error('浏览器直连请选择 OpenAI兼容接口；其他协议可在高级连接设置中使用公网通路');

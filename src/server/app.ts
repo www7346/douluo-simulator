@@ -1,6 +1,6 @@
 import {BrowserModelConnections} from './browser-model-connections';
 import {createServer,type IncomingMessage,type ServerResponse} from 'node:http';
-import {randomBytes,randomUUID} from 'node:crypto';
+import {randomBytes,randomUUID,timingSafeEqual} from 'node:crypto';
 import {gzipSync,createGunzip} from 'node:zlib';
 import {CLOUD_PROTOCOL,CloudError,CLIENT_RESULT_FAILURE_CODES,CLIENT_RESULT_FAILURE_STAGES} from '../cloud/protocol';
 import {assertJson,INPUT_LIMITS,PUBLIC_COMMANDS} from './input';
@@ -16,9 +16,10 @@ export function checkSessionRequestLimit(access:{requests:RequestWindow;reads:Re
   if(now-access[key].at>=60000)access[key]={at:now,count:0};
   if(++access[key].count>(read?960:240))throw new CloudError('rate-limit','当前旅程操作过于频繁，请稍后重试',429);
 }
-export interface CloudServerOptions {workerPath:string;modelWorkerPath?:string;workflowSecret?:string;origins:string[];buildId:string;localDesktop?:boolean;workers?:number;maxSessions?:number;sessionTtlMs?:number;diagnostics?:ServerDiagnosticSink}
+export interface CloudServerOptions {workerPath:string;modelWorkerPath?:string;workflowSecret?:string;origins:string[];buildId:string;localDesktop?:boolean;workers?:number;maxSessions?:number;sessionTtlMs?:number;diagnostics?:ServerDiagnosticSink;deviceKey?:string}
 export async function createCloudServer(options:CloudServerOptions){
   if(!options.origins.length||!options.buildId)throw new Error('需要设置站点地址与发布版本');
+  const deviceKey=options.deviceKey===undefined?undefined:Buffer.from(options.deviceKey);
   const secret=options.workflowSecret??randomBytes(32).toString('hex');
   const record:ServerDiagnosticSink=event=>{try{options.diagnostics?.(event);}catch{/* Diagnostics cannot reject a game operation. */}};
   const pool=new CalculationPool(options.workerPath,options.workers??1,32,60000,{workflowSecret:secret,localDesktop:options.localDesktop===true}),rulesetVersion=await pool.ready;
@@ -68,6 +69,13 @@ export async function createCloudServer(options:CloudServerOptions){
     res.setHeader('Content-Length',bytes.length);res.end(bytes);
   }
   const server=createServer(async(req,res)=>{
+    if(deviceKey){
+      const provided=Buffer.from(String(req.headers['x-douluo-device-key']??''));
+      if(provided.length!==deviceKey.length||!timingSafeEqual(provided,deviceKey)){
+        res.writeHead(403,{'Cache-Control':'no-store'}).end();
+        return;
+      }
+    }
     const started=Date.now(),incoming=req.headers['x-douluo-request-id'];
     const requestId=typeof incoming==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(incoming)?incoming:randomUUID();
     res.setHeader('X-Douluo-Request-Id',requestId);

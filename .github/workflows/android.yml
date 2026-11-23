@@ -1,0 +1,133 @@
+name: Android local build
+
+on:
+  push:
+    branches: [main, android-local]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+      - 'scripts/build-android.cjs'
+      - 'src/**'
+      - 'package*.json'
+      - 'vite.config.mts'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the signed Android prerelease from main after tests pass
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Install Android packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Check shared code
+        run: |
+          npm ci
+          npm ci --prefix desktop --ignore-scripts
+          npm run typecheck
+          npm test
+      - name: Get artwork from the Windows release
+        run: |
+          curl -fsSL --retry 3 https://github.com/www7346/douluo-simulator/releases/download/v1.3.68/Douluo-Setup-1.3.68-x64.exe -o "$RUNNER_TEMP/douluo.exe"
+          7z x -y "$RUNNER_TEMP/douluo.exe" "-o$RUNNER_TEMP/douluo-installer" > /dev/null
+          archive="$(find "$RUNNER_TEMP/douluo-installer" -name 'app-64.7z' -type f -print -quit)"
+          test -n "$archive"
+          7z x -y "$archive" "-o$RUNNER_TEMP/douluo-art" 'resources/game/public/*' > /dev/null
+          art="$RUNNER_TEMP/douluo-art/resources/game/public"
+          test -d "$art/media"
+          echo "DOULUO_ART_ROOT=$art" >> "$GITHUB_ENV"
+      - name: Stage Android assets and runtime
+        run: npm run build:android
+      - name: Assemble debug APK
+        run: gradle -p android --no-daemon assembleDebug
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Smoke test in Android 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          script: |
+            adb install android/app/build/outputs/apk/debug/app-debug.apk
+            node android/smoke.cjs
+      - name: Build and verify signed APK
+        if: inputs.publish && github.ref == 'refs/heads/main'
+        env:
+          KEYSTORE_B64: ${{ secrets.DOULUO_ANDROID_KEYSTORE_B64 }}
+          DOULUO_ANDROID_STORE_PASSWORD: ${{ secrets.DOULUO_ANDROID_KEY_PASSWORD }}
+          DOULUO_ANDROID_KEY_PASSWORD: ${{ secrets.DOULUO_ANDROID_KEY_PASSWORD }}
+          DOULUO_ANDROID_KEY_ALIAS: douluo
+        run: |
+          export DOULUO_ANDROID_KEYSTORE="$RUNNER_TEMP/douluo-signing.p12"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$DOULUO_ANDROID_KEYSTORE"
+          test -s "$DOULUO_ANDROID_KEYSTORE"
+          gradle -p android --no-daemon assembleRelease
+          rm -f "$DOULUO_ANDROID_KEYSTORE"
+          package="$ANDROID_HOME/build-tools/35.0.0"
+          mkdir -p output/android
+          cp android/app/build/outputs/apk/release/app-release.apk output/android/Douluo-Android-1.3.68-android.1.apk
+          "$package/apksigner" verify --verbose output/android/*.apk
+          "$package/zipalign" -c -P 16 4 output/android/*.apk
+          cd output/android
+          sha256sum *.apk > SHA256SUMS
+      - name: Upload signed APK
+        if: inputs.publish && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: output/android/
+          if-no-files-found: error
+  release:
+    if: inputs.publish && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-release
+      - name: Publish to GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## Android 本地版预览
+
+          下载 `Douluo-Android-1.3.68-android.1.apk` 安装。支持 Android 9 或更新版本，包含 arm64 和 x86_64。
+
+          规则计算、游戏资源和存档都在本机。联网的 AI 功能在「设置 → 模型与用途」中填写自己的 API。Windows 玩家可以从「读取存档」导出完整存档，再在 Android 的同一入口导入。
+
+          已在 Android 35 模拟器验证飞行模式启动、创建世界、强制停止后读取本地世界，以及加密凭据的持久化。实体机兼容性和大型存档仍需验证。
+          EOF
+          gh release create v1.3.68-android.1 ./*.apk ./SHA256SUMS --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "斗罗大陆：武魂模拟器 Android 1.3.68 预览版" --prerelease --notes-file notes.md

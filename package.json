@@ -6,10 +6,12 @@
     "dev": "vite --config vite.config.mts --host 127.0.0.1",
     "build": "tsc -b && vite build --config vite.config.mts && node scripts/build-offline.cjs",
     "build:desktop": "node scripts/build-desktop.cjs",
+    "build:android": "node scripts/build-android.cjs",
     "build:cloud-service": "node scripts/build-cloud-service.cjs",
     "build:cloud-client": "vite build --config vite.config.mts --mode cloud",
     "typecheck": "tsc -b --pretty false",
     "prebuild:desktop": "node scripts/prepare-source-art.cjs",
+    "prebuild:android": "node scripts/prepare-source-art.cjs",
     "prebuild:cloud-client": "node scripts/prepare-source-art.cjs",
     "test": "node --import tsx --test tests/*.test.cjs tests/*.test.ts"
   },

@@ -8,6 +8,7 @@ import type {ModelListResult,ModelProfile} from '../../runtime/model-gateway';
 import {PROVIDER_PRESETS,providerForConnection,OPEN_CODE_GO,vertexProject} from '../../shared/model-providers';
 import {ChatGPTPlanConnection} from './ChatGPTPlanConnection';
 import {CHATGPT_API} from '../../shared/chatgpt-plan';
+import {isAndroidGame} from '../../runtime/android-platform';
 type Profile=Omit<ModelProfile,'apiKey'>;
 export default function ModelConsole({profile,onChange,keys,onKeys,onEditPrompt}:{profile:Profile;onChange:(profile:Profile)=>void;keys:Record<string,string>;onKeys:(keys:Record<string,string>)=>void;onEditPrompt:(task:string)=>void}){
  const controller=useGameController(),models=profile.modelLibrary!,[editing,setEditing]=useState(models[0]?.id),[task,setTask]=useState('story-writer'),[removing,setRemoving]=useState(''),[replacement,setReplacement]=useState(''),[message,setMessage]=useState(''),[operation,setOperation]=useState<'list'|'test'|null>(null);
@@ -113,7 +114,7 @@ export default function ModelConsole({profile,onChange,keys,onKeys,onEditPrompt}
   <label>模型显示名称<input value={model.label} onChange={e=>patch({label:e.target.value})}/></label>
   {provider&&addressField}
   <p className="muted">使用此模型的用途：{uses(model.id).join('、')||'尚未分配'}。</p>
-  <div className="form-grid"><label>请求通路<select value={model.transport??'auto'} onChange={e=>patch({transport:e.target.value==='auto'?undefined:e.target.value as any})}><option value="auto">自动</option><option value="browser">浏览器直接连接</option><option value="server">公网连接（游戏服务器）</option></select></label>
+  <div className="form-grid">{!isAndroidGame&&<label>请求通路<select value={model.transport??'auto'} onChange={e=>patch({transport:e.target.value==='auto'?undefined:e.target.value as any})}><option value="auto">自动</option><option value="browser">浏览器直接连接</option><option value="server">公网连接（游戏服务器）</option></select></label>}
   <label>连接协议<select value={model.generation?.protocol??'auto'} onChange={e=>patch({generation:{...model.generation,protocol:e.target.value as any}})}>{[['auto','自动识别'],['compatible','OpenAI兼容'],['deepseek','DeepSeek'],['responses','Responses'],['anthropic','Anthropic Messages'],['gemini','Gemini原生']].map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
   <label>认证方式<select value={model.connection?.auth??'bearer'} onChange={e=>patch({connection:{...model.connection,auth:e.target.value as any}})}>{[['bearer','Bearer'],['x-api-key','X-API-Key'],['x-goog-api-key','Google API Key'],['header','自定义请求头'],['query','查询参数'],['auto','自动'],['none','无认证']].map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
   {['header','query'].includes(model.connection?.auth??'')&&<label>认证字段名<input value={model.connection?.authName??''} onChange={e=>patch({connection:{...model.connection,authName:e.target.value}})}/></label>}

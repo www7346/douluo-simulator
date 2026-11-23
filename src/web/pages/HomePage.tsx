@@ -8,6 +8,7 @@ import UiIcon from '../components/UiIcon';
 import DesktopUpdate from '../components/DesktopUpdate';
 import DiagnosticExportButton from '../components/DiagnosticExportButton';
 import '../title-scene.css';
+import {isAndroidGame} from '../../runtime/android-platform';
 
 export default function HomePage({onNavigate}:{onNavigate:(page:PageId)=>void}) {
   const {controller,view}=useGame();
@@ -25,8 +26,8 @@ export default function HomePage({onNavigate}:{onNavigate:(page:PageId)=>void}) 
         <Button variant="secondary" disabled={updating} onClick={()=>onNavigate('saves')}><UiIcon name="book"/>读取存档 <UiIcon name="forward"/></Button>
         <Button variant="ghost" disabled={updating} onClick={()=>onNavigate('system')}><UiIcon name="settings"/>设置 <UiIcon name="forward"/></Button>
       </div>
-      <div className="title-scene__utilities">{window.douluoDesktop?<DesktopUpdate/>:<Button variant="ghost" disabled={updating||view.busy&&!view.loadError||!!view.modelTask} onClick={()=>void update()} data-testid="manual-update">{updating?'正在准备更新…':'手动更新'}</Button>}</div>
-      {view.loadError&&<div className="diagnostic-message"><p role="alert">{view.loadError}</p><a href="/#/saves?recovery=1">打开本机存档</a>{' · '}{window.douluoDesktop?<DesktopUpdate/>:<a href="/update.html?return=%23%2Fhome" onClick={event=>{event.preventDefault();if(!updating)void update();}}>打开更新页</a>}<DiagnosticExportButton/></div>}
+      {!isAndroidGame&&<div className="title-scene__utilities">{window.douluoDesktop?<DesktopUpdate/>:<Button variant="ghost" disabled={updating||view.busy&&!view.loadError||!!view.modelTask} onClick={()=>void update()} data-testid="manual-update">{updating?'正在准备更新…':'手动更新'}</Button>}</div>}
+      {view.loadError&&<div className="diagnostic-message"><p role="alert">{view.loadError}</p><a href="/#/saves?recovery=1">打开本机存档</a>{!isAndroidGame&&<>{' · '}{window.douluoDesktop?<DesktopUpdate/>:<a href="/update.html?return=%23%2Fhome" onClick={event=>{event.preventDefault();if(!updating)void update();}}>打开更新页</a>}</>}<DiagnosticExportButton/></div>}
       {error&&!open&&<p role="alert">{error}</p>}
     </div><footer className="title-scene__footer"><span>斗罗同人 · 免费游玩</span><button className="text-link" onClick={()=>onNavigate('updates')}>更新公告与后续计划</button><span>武魂觉醒 · 秘境猎魂 · 九环登临</span></footer>
     <Modal open={open} title="开启新的故事" onClose={()=>{if(!view.busy)setOpen(false);}} actions={<><Button variant="ghost" disabled={view.busy} onClick={()=>setOpen(false)}>取消</Button><Button disabled={view.busy||!name.trim()} onClick={()=>void start()}>创建世界与角色</Button></>}>

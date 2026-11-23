@@ -1,0 +1,23 @@
+@media (max-width: 760px) {
+  .android-game .story-composer textarea {
+    font-size: 16px;
+    min-height: 4.5rem;
+  }
+
+  .android-game .story-composer__actions button,
+  .android-game .world-tabs button,
+  .android-game .menu-page__top button {
+    min-height: 44px;
+  }
+
+  .android-game .story-composer__actions {
+    align-items: center;
+  }
+}
+
+@media (max-height: 420px) and (pointer: coarse) {
+  .android-game .story-composer textarea {
+    min-height: 3rem;
+    max-height: 26dvh;
+  }
+}

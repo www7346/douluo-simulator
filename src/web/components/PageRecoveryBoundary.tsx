@@ -12,7 +12,7 @@ function RecoveryPage({resourceFailure,onOpenSaves,error}:{resourceFailure:boole
   const exportJourney=async()=>{
     setExporting(true);setMessage('');
     try {
-      downloadPrepared(await controller.exportSaveFile(undefined,'douluo-journey-backup.json'));
+      await downloadPrepared(await controller.exportSaveFile(undefined,'douluo-journey-backup.json'));
       setMessage('旅程副本已导出。');
     }catch(error){setMessage(describeError(error))}finally{setExporting(false)}
   };

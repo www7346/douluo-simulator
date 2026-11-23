@@ -6,6 +6,8 @@
 
 ## 下载 Windows 本地版
 
+同时提供 [Android 本地版预览](https://github.com/www7346/douluo-simulator/releases/tag/v1.3.68-android.1)，详见下文。
+
 1. 从 [GitHub Releases](https://github.com/www7346/douluo-simulator/releases/latest) 下载 `Douluo-Setup-1.3.68-x64.exe`。
 2. 在 Windows 10 或 11 的 64 位电脑上双击安装，从开始菜单打开「斗罗大陆：武魂模拟器」。
 3. 选「新的故事」开始，或在「读取存档」里导入之前导出的完整存档。
@@ -29,6 +31,26 @@ npm run build:desktop
 ```
 
 安装程序位于 `build/windows/`。源码构建默认使用占位美术和自定义写作配置。已有发行版素材的开发者可以将 `DOULUO_ART_ROOT` 指向自己安装目录的 `resources/game/public`，构建会使用其中匹配的图片。仓库中的原创程序包含客户端、本机计算服务和规则引擎。
+
+## Android 本地版
+
+在 [Android 发行页](https://github.com/www7346/douluo-simulator/releases/tag/v1.3.68-android.1) 下载 APK。支持 Android 9 或更新版本的 64 位设备，使用系统 Android WebView。
+
+规则计算、游戏资源和存档都在手机上。需要 AI 功能时，在「设置 → 模型与用途」填写自己的 API 地址、模型和密钥。密钥由 Android Keystore 保护。
+
+从 Windows 转移旅程时，在「读取存档」导出完整存档，把文件传到手机，再在 Android 的「读取存档 → 导入存档」选择该文件。Android 导出的完整存档也可以从 Windows 本地版导入。更换手机或卸载前，可以把完整存档导出到应用外。
+
+### 从源码构建 Android APK
+
+安装 Node.js 24、JDK 17、Gradle 8.13，以及 Android SDK Platform 35、Build Tools 35.0.0、NDK 27.2.12479018 和 CMake 3.22.1。将 `ANDROID_HOME` 指向 SDK 目录。
+
+```sh
+npm ci
+npm run build:android
+gradle -p android assembleDebug
+```
+
+调试 APK 输出到 `android/app/build/outputs/apk/debug/`。构建脚本会校验随包 Node.js Mobile SDK 的 SHA-256，也可通过 `DOULUO_ANDROID_NODE_ZIP` 使用已下载的同版本压缩包。和 Windows 构建一样，`DOULUO_ART_ROOT` 可指向现有发行版的游戏资源。签名 APK 由 GitHub Actions 构建。
 
 ## 使用自己的 ChatGPT 套餐
 

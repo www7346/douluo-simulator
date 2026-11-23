@@ -37,7 +37,7 @@ export default function SavesPage({onNavigate}:{onNavigate:(page:PageId)=>void})
     exportRead.current?.abort();
     const abort=new AbortController();exportRead.current=abort;
     const label=profiles.find(profile=>profile.slotId===slotId)?.label??view.profileLabel;
-    try{const file=await controller.exportSaveFile(slotId,`斗罗大陆-${label}.json`,abort.signal);abort.signal.throwIfAborted();downloadPrepared(file);}
+    try{const file=await controller.exportSaveFile(slotId,`斗罗大陆-${label}.json`,abort.signal);abort.signal.throwIfAborted();await downloadPrepared(file);}
     finally{if(exportRead.current===abort)exportRead.current=null;}
   };
   const busy=pending||view.busy,localBusy=pending,auto=slots.find(s=>s.slotId===view.profileId);

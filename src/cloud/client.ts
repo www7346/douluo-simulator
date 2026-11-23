@@ -10,6 +10,7 @@ import type {ModelProfile} from '../runtime/model-gateway';
 import {BrowserModels} from './browser-model';
 import {isModelObservationDetached} from '../runtime/model-task';
 import {calculationWork,type CalculationWork} from '../shared/calculation-progress';
+import {androidAccessHeader,androidAccessKey,isAndroidGame} from '../runtime/android-platform';
 
 interface ModelPointer {id:string;fingerprint:string;submissionId?:string;retryAttempt?:unknown;worldId?:string;identityVersion?:1}
 const resultMessages:Record<ModelRecoveryCategory,string>={
@@ -48,7 +49,7 @@ export class CloudClient {
         body=await new Response(new Blob([body]).stream().pipeThrough(new CompressionStream('gzip'))).blob();compressed=true;
       }
       transportSignal?.throwIfAborted();
-      response=await send(this.baseUrl+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-Douluo-Protocol':CLOUD_PROTOCOL,'X-Douluo-Build':this.buildId,'X-Douluo-Request-Id':requestId,...(token?{Authorization:'Bearer '+token}:{}),...(compressed?{'Content-Encoding':'gzip'}:{})},body,cache:'no-store',signal:transportSignal,keepalive});
+      response=await send(this.baseUrl+'/api/'+path,{method:'POST',headers:{'Content-Type':'application/json','X-Douluo-Protocol':CLOUD_PROTOCOL,'X-Douluo-Build':this.buildId,'X-Douluo-Request-Id':requestId,...(token?{Authorization:'Bearer '+token}:{}),...(compressed?{'Content-Encoding':'gzip'}:{}),...(!this.baseUrl&&androidAccessKey?{[androidAccessHeader]:androidAccessKey}:{})},body,cache:'no-store',signal:transportSignal,keepalive});
     }
     catch(error){if(path==='query'&&signal?.aborted)throw new CloudError('request-cancelled','已取消这次查看',499,error,requestId);throw new CloudError('connection-lost',deadline?.aborted?'连接计算服务超时，本机进度仍保留。可以重新连接后继续。':'网络连接中断，本次操作已保留，可以重新连接后继续',0,error,requestId);}
     finally{if(cancelNative)signal!.removeEventListener('abort',cancel);}
@@ -99,7 +100,7 @@ export class CloudClient {
     // The complete command (and any signed ticket) is sent once. Poll only its
     // owned operation id; refreshing/reconnecting reuses the durable same command.
     const deadline=Date.now()+12*60*1000;
-    let delay=typeof window!=='undefined'&&window.douluoDesktop?0:1000;
+    let delay=isAndroidGame||typeof window!=='undefined'&&window.douluoDesktop?0:1000;
     while(Date.now()<deadline){
       if(delay)await new Promise<void>(resolve=>setTimeout(resolve,delay));
       delay=Math.min(1000,Math.max(100,delay*2));
