@@ -55,6 +55,7 @@ jobs:
       - name: Get artwork from the Windows release
         run: |
           curl -fsSL --retry 3 https://github.com/www7346/douluo-simulator/releases/download/v1.3.68/Douluo-Setup-1.3.68-x64.exe -o "$RUNNER_TEMP/douluo.exe"
+          printf '%s  %s\n' '88e0bec368e4d771abc80735dd910e23a5c56464c5a091c4f6e997553be945a4' "$RUNNER_TEMP/douluo.exe" | sha256sum --check
           7z x -y "$RUNNER_TEMP/douluo.exe" "-o$RUNNER_TEMP/douluo-installer" > /dev/null
           archive="$(find "$RUNNER_TEMP/douluo-installer" -name 'app-64.7z' -type f -print -quit)"
           test -n "$archive"

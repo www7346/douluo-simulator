@@ -9,6 +9,7 @@ import {PROVIDER_PRESETS,providerForConnection,OPEN_CODE_GO,vertexProject} from 
 import {ChatGPTPlanConnection} from './ChatGPTPlanConnection';
 import {CHATGPT_API} from '../../shared/chatgpt-plan';
 import {isAndroidGame} from '../../runtime/android-platform';
+import {downloadPlainJson} from '../file-transfer';
 type Profile=Omit<ModelProfile,'apiKey'>;
 export default function ModelConsole({profile,onChange,keys,onKeys,onEditPrompt}:{profile:Profile;onChange:(profile:Profile)=>void;keys:Record<string,string>;onKeys:(keys:Record<string,string>)=>void;onEditPrompt:(task:string)=>void}){
  const controller=useGameController(),models=profile.modelLibrary!,[editing,setEditing]=useState(models[0]?.id),[task,setTask]=useState('story-writer'),[removing,setRemoving]=useState(''),[replacement,setReplacement]=useState(''),[message,setMessage]=useState(''),[operation,setOperation]=useState<'list'|'test'|null>(null);
@@ -76,7 +77,7 @@ export default function ModelConsole({profile,onChange,keys,onKeys,onEditPrompt}
   finally{if(abortRef.current===abort){abortRef.current=null;setOperation(null);}}
  };
  const cancel=()=>{abortRef.current?.abort();setMessage(operation==='list'?'已取消获取模型列表，仍可手动填写模型名。':'已取消连接测试。');};
- const exportPreset=()=>{const data={format:'douluo-model-library/1',profile:publicModelConfiguration(profile)},url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='斗罗大陆-模型用途预设.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);};
+ const exportPreset=()=>{const data={format:'douluo-model-library/1',profile:publicModelConfiguration(profile)};void downloadPlainJson(JSON.stringify(data,null,2),'斗罗大陆-模型用途预设.json').catch(error=>setMessage(error.message));};
  const importPreset=async(file:File)=>{try{const data=JSON.parse(await file.text());if(data.format!=='douluo-model-library/1')throw Error('请选择模型库用途预设');const imported=normalizeModelLibrary(adoptModelLibrary(data.profile));onChange(imported);onKeys({});setEditing(imported.modelLibrary![0].id);setMessage('预设已读入，保存后生效；预设不含密钥。');}catch(error){setMessage((error as Error).message);}};
  return <div className="model-console">
  <Panel title="模型库"><p>选择渠道并连接，获取列表后选择模型，再保存设置。</p><nav className="model-library-tabs" aria-label="模型库">{models.map(m=><Button key={m.id} variant={m.id===model.id?'primary':'secondary'} onClick={()=>setEditing(m.id)}>{m.label}</Button>)}</nav>

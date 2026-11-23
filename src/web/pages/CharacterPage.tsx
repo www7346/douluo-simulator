@@ -25,6 +25,7 @@ import GradeBadge from '../components/GradeBadge';
 import { useGame } from '../game-context';
 import {travelerArt} from '../scene-navigation';
 import {playerText,skillName} from '../../runtime/player-text';
+import {downloadPlainJson as downloadJson} from '../file-transfer';
 
 import AbilityDetails from '../components/AbilityDetails';
 import ItemDetails,{ItemActionDialog} from '../components/ItemDetails';
@@ -33,15 +34,6 @@ const sections: Record<string, CharacterSheetSection> = {
   状态:'status', 武魂与技能:'abilities', 魂骨:'bones', 装备:'equipment', 称号:'title', 天赋:'talents',
 };
 const TABS = Object.keys(sections);
-function downloadJson(serialized: string, name: string): void {
-  const url = URL.createObjectURL(new Blob([serialized], {type: 'application/json'}));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = name;
-  anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
 export default function CharacterPage({onOpenRealm,onArrange}:{onOpenRealm?:(soulId:string,personId?:string)=>void;onArrange?:(text?:string)=>void}={}) {
   const {controller, state, view} = useGame();
   const [appearanceOpen,setAppearanceOpen]=useState(false);

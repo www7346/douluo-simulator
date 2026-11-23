@@ -17,6 +17,10 @@ export async function prepareJsonDownload(json:string,name:string){
 export async function downloadJson(json:string,name:string){
  return downloadPrepared(await prepareJsonDownload(json,name));
 }
+export async function downloadPlainJson(json:string,name:string){
+ const blob=new Blob([json],{type:'application/json'});
+ return downloadPrepared({blob,name,originalBytes:blob.size});
+}
 export async function downloadPrepared(file:PreparedDownload){
  if(isAndroidGame){await androidSaveFile(file.blob,file.name);return file;}
  const url=URL.createObjectURL(file.blob),link=document.createElement('a');

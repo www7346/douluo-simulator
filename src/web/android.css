@@ -1,3 +1,15 @@
+.android-game .android-map-zoom {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding-inline: 8px;
+}
+
+.android-game .android-map-zoom button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
 @media (max-width: 760px) {
   .android-game .story-composer textarea {
     font-size: 16px;

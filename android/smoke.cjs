@@ -80,12 +80,16 @@ async function main() {
   await until(() => evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent==='创建世界与角色')?.disabled===false`), 'world creation dialog');
   await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent==='创建世界与角色').click()`);
   await until(() => evaluate("location.hash.includes('creation')"), 'new world creation');
+  await until(() => evaluate('!!document.querySelector(\'[data-testid="creation-quick"]\')'), 'rule-validated character creation');
+  await until(() => evaluate('document.querySelector(\'[data-testid="confirm-creation"]\')?.disabled===false'), 'ready opening');
+  await evaluate('document.querySelector(\'[data-testid="confirm-creation"]\').click()');
+  await until(() => evaluate("location.hash && !location.hash.includes('creation')"), 'offline journey');
   socket.close();
   adb('shell', 'am', 'force-stop', app);
   await open();
 
   await evaluate("location.hash='#/saves'");
-  await until(() => evaluate("!!document.querySelector('.world-choice')"), 'world saved across process restart');
+  await until(() => evaluate("document.querySelector('.world-choice.is-active')?.textContent.includes('新的旅程')"), 'world saved across process restart');
   const protectedOwner = {...credentialOwner, apiKey: protectedCredential.profiles[0].apiKey};
   const restored = await evaluate(`JSON.parse(DouluoAndroidNative.credentials('resolve', JSON.stringify(${JSON.stringify(protectedOwner)}))).value`);
   assert.equal(restored.apiKey, credentialOwner.apiKey);

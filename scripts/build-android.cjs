@@ -32,7 +32,11 @@ async function prepareNode() {
   }
   const extract = path.join(out, 'node-sdk');
   await fs.mkdir(extract, {recursive: true});
-  execFileSync('tar', ['-xf', zip, '-C', extract], {stdio: 'inherit'});
+  if (process.platform === 'win32') {
+    execFileSync('tar.exe', ['-xf', zip, '-C', extract], {stdio: 'inherit'});
+  } else {
+    execFileSync('unzip', ['-q', '-o', zip, '-d', extract], {stdio: 'inherit'});
+  }
   const header = (await matchingFiles(extract, 'node.h'))[0];
   if (!header) throw Error('Android Node SDK missing C++ headers');
   await fs.cp(path.dirname(header), path.join(out, 'node/include/node'), {recursive: true});

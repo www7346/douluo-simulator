@@ -13,6 +13,7 @@ import {dungeonMapLayout} from '../dungeon-map-layout';
 import {RingChoices,RingInspection} from './RingWorkbench';
 import PartyRingAllocation from './PartyRingAllocation';
 import {ExpeditionBossWarning} from './ExpeditionRisk';
+import {isAndroidGame} from '../../runtime/android-platform';
 
 const LABELS:Record<string,string>={'普通战斗':'魂兽','精英战斗':'精英','首领战斗':'首领','宝箱':'宝箱','火堆':'营火'};
 export default function ExpeditionScene({onNavigate:_onNavigate}:{onNavigate:(page:PageId)=>void}) {
@@ -24,11 +25,39 @@ export default function ExpeditionScene({onNavigate:_onNavigate}:{onNavigate:(pa
   const [departure,setDeparture]=useState<{nodeId?:string;losses:any[]}|null>(null);
   const guard=useRef(false),scroll=useRef<HTMLDivElement>(null);
   const [mapHeight,setMapHeight]=useState(0);
+  const [zoom,setZoom]=useState(1);
+  const distance=(touches:TouchList)=>Math.hypot(touches[0].clientX-touches[1].clientX,touches[0].clientY-touches[1].clientY);
+  const limitZoom=(value:number)=>Math.max(1,Math.min(2.5,value));
   useEffect(()=>{const el=scroll.current;if(!el)return;const observer=new ResizeObserver(()=>setMapHeight(el.clientHeight));observer.observe(el);return()=>observer.disconnect();},[Boolean(facts.data)]);
+  useEffect(()=>{
+    const map=scroll.current;
+    if(!isAndroidGame||!map)return;
+    let span=0;
+    const pinch=(event:TouchEvent)=>{
+      if(event.touches.length!==2){span=0;return;}
+      const next=distance(event.touches);
+      if(span&&next){
+        event.preventDefault();
+        const ratio=next/span;
+        setZoom(value=>limitZoom(value*ratio));
+      }
+      span=next;
+    };
+    map.addEventListener('touchstart',pinch,{passive:true});
+    map.addEventListener('touchmove',pinch,{passive:false});
+    map.addEventListener('touchend',pinch,{passive:true});
+    map.addEventListener('touchcancel',pinch,{passive:true});
+    return()=>{
+      map.removeEventListener('touchstart',pinch);
+      map.removeEventListener('touchmove',pinch);
+      map.removeEventListener('touchend',pinch);
+      map.removeEventListener('touchcancel',pinch);
+    };
+  },[Boolean(facts.data)]);
   const available=new Set(actions.availableNodeIds);
   const upcomingBosses=actions.availableNodeIds.map((id:string)=>expedition.map.nodes[id]).filter((node:any)=>node.type==='首领战斗');
   const {height,positions,floors}=dungeonMapLayout(expedition.map.layers,mapHeight);
-  useEffect(()=>{const point=positions.get(room?.nodeId??actions.availableNodeIds[0]);if(point&&scroll.current)scroll.current.scrollTop=Math.max(0,point.y-scroll.current.clientHeight*.65);},[expedition.id,room?.nodeId,Boolean(facts.data)]);
+  useEffect(()=>{const point=positions.get(room?.nodeId??actions.availableNodeIds[0]);if(point&&scroll.current)scroll.current.scrollTop=Math.max(0,point.y*zoom-scroll.current.clientHeight*.65);},[expedition.id,room?.nodeId,Boolean(facts.data)]);
   const run=async(type:string,payload:Record<string,unknown>={})=>{if(guard.current)return;guard.current=true;try{await controller.dispatch(type,payload);}catch{}finally{guard.current=false;}};
   const depart=async(nodeId?:string,confirmed=false)=>{
     if(guard.current)return;
@@ -45,12 +74,13 @@ export default function ExpeditionScene({onNavigate:_onNavigate}:{onNavigate:(pa
     <div className="dungeon-chart">
       <header className="dungeon-heading"><DungeonSymbol kind={room?.type??'普通战斗'}/><h1>{room?`第${room.layer}层`:'入口'} · {actions.availableNodeIds.length?'选择下一处去向':'此行的足迹'}</h1><p>森林深处，<br/>藏着更强大的魂兽，也有意想不到的机缘。</p></header>
       {upcomingBosses.map((node:any)=><ExpeditionBossWarning key={node.id} roster={node.encounter.roster} playerLevel={state.成长.列表[state.角色.主控单位ID]?.魂力等级??1} readiness={actions.readiness}/>)}
-      <div className="dungeon-map" ref={scroll} aria-label="副本分叉路线"><div className="dungeon-map__surface" style={{height}}>
-        {floors.map(floor=><div className="dungeon-floor" key={floor.layer} style={{top:floor.y}}><b>第{floor.layer}层</b><span>{floor.layer===1?'初始森林':floor.layer===expedition.map.layers.length?'深林之巅':'林间岔路'}</span></div>)}
+      {isAndroidGame&&<div className="android-map-zoom" role="group" aria-label="地图缩放"><Button variant="ghost" aria-label="缩小地图" disabled={zoom<=1} onClick={()=>setZoom(value=>limitZoom(value-.25))}>−</Button><Button variant="ghost" aria-label="放大地图" disabled={zoom>=2.5} onClick={()=>setZoom(value=>limitZoom(value+.25))}>+</Button></div>}
+      <div className="dungeon-map" ref={scroll} aria-label="副本分叉路线"><div className="dungeon-map__surface" style={{height:height*zoom,width:zoom===1?undefined:`${100*zoom}%`}}>
+        {floors.map(floor=><div className="dungeon-floor" key={floor.layer} style={{top:floor.y*zoom}}><b>第{floor.layer}层</b><span>{floor.layer===1?'初始森林':floor.layer===expedition.map.layers.length?'深林之巅':'林间岔路'}</span></div>)}
         <svg className="dungeon-routes" viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" aria-hidden="true">{expedition.map.edges.map((edge:any,index:number)=>{const a=positions.get(edge.from)!,b=positions.get(edge.to)!;return <path key={index} d={`M${a.x} ${a.y} C${a.x} ${(a.y+b.y)/2},${b.x} ${(a.y+b.y)/2},${b.x} ${b.y}`} className={available.has(edge.to)&&(expedition.completedNodeIds.includes(edge.from)||room?.nodeId===edge.from)?'is-open':expedition.completedNodeIds.includes(edge.from)&&expedition.completedNodeIds.includes(edge.to)?'is-travelled':''}/>;})}</svg>
         <svg className="dungeon-compass" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="35"/><path d="M50 2 59 41 98 50 59 59 50 98 41 59 2 50 41 41ZM50 50 50 2 41 41ZM50 50 98 50 59 41ZM50 50 50 98 59 59ZM50 50 2 50 41 59Z"/><path d="M22 22 78 78M22 78 78 22"/></svg>
-        {expedition.map.layers.flatMap((layer:any)=>layer.nodeIds.map((id:string)=>{const node=expedition.map.nodes[id],point=positions.get(id)!,enabled=available.has(id),current=room?.nodeId===id,complete=node.status==='completed';return <button key={id} style={{left:`${point.x}%`,top:point.y}} disabled={!enabled||view.busy} className={`dungeon-node${complete?' is-complete':''}${enabled?' is-open':''}${current?' is-current':''}`} onClick={()=>void depart(id)} data-testid={`route-${id}`} aria-label={`第${layer.layer}层${LABELS[node.type]}${current?'，当前位置':complete?'，已走过':enabled?'，可前往':'，暂不可前往'}`}><i><DungeonSymbol kind={complete&&!current?'completed':node.type as DungeonSymbolKind}/></i><b>{LABELS[node.type]}</b>{(current||enabled)&&<small>{current?'当前房间':'可前往'}</small>}</button>;}))}
-        <div className="dungeon-entry" style={{top:height-19}}>{facts.data.difficultyName} · 已走过 {expedition.completedNodeIds.length} 处</div>
+        {expedition.map.layers.flatMap((layer:any)=>layer.nodeIds.map((id:string)=>{const node=expedition.map.nodes[id],point=positions.get(id)!,enabled=available.has(id),current=room?.nodeId===id,complete=node.status==='completed';return <button key={id} style={{left:`${point.x}%`,top:point.y*zoom}} disabled={!enabled||view.busy} className={`dungeon-node${complete?' is-complete':''}${enabled?' is-open':''}${current?' is-current':''}`} onClick={()=>void depart(id)} data-testid={`route-${id}`} aria-label={`第${layer.layer}层${LABELS[node.type]}${current?'，当前位置':complete?'，已走过':enabled?'，可前往':'，暂不可前往'}`}><i><DungeonSymbol kind={complete&&!current?'completed':node.type as DungeonSymbolKind}/></i><b>{LABELS[node.type]}</b>{(current||enabled)&&<small>{current?'当前房间':'可前往'}</small>}</button>;}))}
+        <div className="dungeon-entry" style={{top:height*zoom-19}}>{facts.data.difficultyName} · 已走过 {expedition.completedNodeIds.length} 处</div>
       </div></div>
       <div className="dungeon-legend"><span><i className="legend-current"/>当前房间</span><span><i className="legend-open"/>可前往</span><span><i className="legend-locked"/>不可前往</span><span><DungeonSymbol kind="completed"/>已完成</span>{Object.entries(LABELS).map(([type,label])=><span key={type}><DungeonSymbol kind={type as DungeonSymbolKind}/>{label}</span>)}</div>
     </div>

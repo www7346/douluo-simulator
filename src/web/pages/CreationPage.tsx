@@ -25,14 +25,10 @@ import {CreationCharacterAdvisor} from '../CreationCharacterAdvisor';
 import {creationFigure} from '../character-figures';
 import type {PageId} from '../App';
 import GradeBadge from '../components/GradeBadge';
+import {downloadPlainJson} from '../file-transfer';
 
 
 const STEPS=['选择背景','武魂回声','能力配置','启程之前'];
-
-function downloadJson(serialized:string,name:string) {
-  const url=URL.createObjectURL(new Blob([serialized],{type:'application/json'})),anchor=document.createElement('a');
-  anchor.href=url;anchor.download=name;anchor.click();window.setTimeout(()=>URL.revokeObjectURL(url),0);
-}
 
 export default function CreationPage({onNavigate}:{onNavigate:(page:PageId)=>void}) {
   const {controller,view}=useGame();
@@ -87,8 +83,8 @@ function CreationEditor({initial,onNavigate}:{initial:CreationWorkspace;onNaviga
   };
   const exportConfig=async(soulIndex?:number)=>{
     try {
-      if(soulIndex===undefined){await flush();downloadJson(await controller.exportCharacterDraft(workbench.current().config),`斗罗大陆-${draft.name||'角色方案'}.json`);}
-      else {const soul=draft.martialSoulDrafts[soulIndex];downloadJson(await controller.exportMartialSoul(soul),`武魂-${soul.name||soulIndex+1}.json`);}
+      if(soulIndex===undefined){await flush();await downloadPlainJson(await controller.exportCharacterDraft(workbench.current().config),`斗罗大陆-${draft.name||'角色方案'}.json`);}
+      else {const soul=draft.martialSoulDrafts[soulIndex];await downloadPlainJson(await controller.exportMartialSoul(soul),`武魂-${soul.name||soulIndex+1}.json`);}
     }catch(problem){controller.notify(creationReason((problem as Error).message),'danger');}
   };
 

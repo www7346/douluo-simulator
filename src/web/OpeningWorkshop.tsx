@@ -16,6 +16,7 @@ import {ActionSection,Button,Panel,ModalActions} from './components';
 import RelicIllustration from './components/RelicIllustration';
 import AbilityDetails,{PassiveDetails} from './components/AbilityDetails';
 import {OPENING_WORKSHOP_LIBRARY_KEY,addWorkshopWork,emptyWorkshopLibrary,freshWorkshopDesign,importWorkshopWorks,loadWorkshopLibrary,saveWorkshopLibrary,type WorkshopLibrary} from './opening-workshop-library';
+import {downloadPlainJson} from './file-transfer';
 
 type Any=Record<string,any>;
 type Props={workspace:CreationWorkspace;change:(value:any)=>void;current:()=>CreationWorkspace;flush:()=>Promise<void>;disabled:boolean;onWorking:(value:boolean)=>void;onSettings:()=>void};
@@ -23,9 +24,6 @@ const copy=<T,>(v:T):T=>structuredClone(v);
 const emptySelection=()=>({version:1,designs:[] as Any[]});
 const placementLabels:Any={inventory:'随身携带',equipped:'初始装备',worn:'初始佩戴',stash:'当前地点暂存'};
 const requirements:Any={gesture:'动作',voice:'发声',movement:'移动',contact:'接触',ingest:'服用'};
-function download(name:string,text:string){const url=URL.createObjectURL(new Blob([text],{type:'application/json;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-
-
 function RestraintEditor({value,catalog,disabled,onChange}:{value:Any;catalog:Any[];disabled:boolean;onChange:(v:Any)=>void}){
  const t=catalog.find(t=>t.id===value?.templateId),binding=value?.binding,limits=value?.limits??{soulPowerPercent:0,...(t?.supportsDamage?{damagePercent:0}:{}),permission:{allowedKinds:['ordinary'],maxCastRank:0}};
  return <fieldset disabled={disabled}><legend>拘束器制式与实际限制</legend><label>制式<select value={value?.templateId??''} onChange={e=>onChange(copy(catalog.find(t=>t.id===e.target.value)?.draft))}>{catalog.map(t=><option key={t.id} value={t.id}>{t.name} · 最高{t.maxLevel}级</option>)}</select></label><label>初始模式<select value={value?.mode??''} onChange={e=>onChange({...value,mode:e.target.value,limits:e.target.value==='limited'&&t?.supportsFineLimits?limits:undefined})}>{t?.modes.map((m:any)=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>
@@ -48,6 +46,7 @@ function ActualWorkshopPreview({value,catalog}:{value:Any;catalog:Any}){
 
 export default function OpeningWorkshop({workspace,change,current,flush,disabled,onWorking,onSettings}:Props){
  const {controller,view}=useGame(),config=workspace.config,selection=config.openingWorkshop??emptySelection(),designs:Any[]=selection.designs,selected=designs.find(d=>d.id===selection.activeDesignId)??designs[0];
+ const download=(name:string,text:string)=>void downloadPlainJson(text,name).catch(error=>controller.notify(error.message,'danger'));
  const catalogQuery=useServerQuery<any>('creation.workshop-catalog',{config}),quoteQuery=useServerQuery<any>('creation.workshop',{config},{delay:120}),catalog=catalogQuery.data,quote=quoteQuery.data;
  const tab=workshopTab(selection),[template,setTemplate]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),active=useRef(false),cancelled=useRef(false),pending=useRef<AbortController|null>(null);
  const editor=useRef<HTMLDivElement|null>(null),[editorFocus,setEditorFocus]=useState<{id:string}|null>(null);
