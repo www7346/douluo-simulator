@@ -126,6 +126,7 @@ public final class GameActivity extends Activity {
             InputStream stream = getAssets().open("www" + path);
             Map<String, String> headers = new HashMap<>();
             headers.put("X-Content-Type-Options", "nosniff");
+            if (path.equals("/index.html")) headers.put("Cache-Control", "no-store");
             headers.put("Content-Security-Policy",
                     "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
                     "img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self' blob:; " +

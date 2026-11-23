@@ -2,6 +2,7 @@
 const assert = require('node:assert/strict');
 const {execFileSync} = require('node:child_process');
 const {setTimeout: wait} = require('node:timers/promises');
+const makeBattleFixture = require('./smoke-battle.cjs');
 
 const app = 'com.douluosimulator.game';
 const port = '18754';
@@ -72,6 +73,51 @@ async function main() {
   const health = await evaluate("fetch('/api/health',{headers:{'X-Douluo-Device-Key':DouluoAndroidNative.accessKey()}}).then(r=>r.json())");
   assert.equal(health.ready, true);
   console.log('Android health verified in airplane mode');
+  const wasmReady = await evaluate(`(async()=>{
+    const headers = {'Content-Type':'application/json','X-Douluo-Device-Key':DouluoAndroidNative.accessKey(),
+      'X-Douluo-Protocol':${JSON.stringify(health.protocol)},'X-Douluo-Build':${JSON.stringify(health.buildId)}};
+    const send=(path,payload)=>fetch('/api/'+path,{method:'POST',headers,body:JSON.stringify(payload)});
+    const opened=await send('session',{worldId:'profile-android-emulator-wasm'});
+    if(!opened.ok)return false;
+    const {token,snapshot}=await opened.json();
+    headers.Authorization='Bearer '+token;
+    try {
+      const reply=await send('query',{name:'world.blank',input:{type:'blueprint.craft'},revision:snapshot.revision});
+      return reply.ok&&(await reply.json()).revision===0;
+    } finally {
+      await send('close',{});
+    }
+  })()`);
+  assert.equal(wasmReady, true);
+  console.log('HiGHS WebAssembly initialized inside the embedded Android worker');
+  const {worldId,snapshot,command,player,foe,expected} = makeBattleFixture();
+  const settled = await evaluate(`(async()=>{
+    const headers = {'Content-Type':'application/json','X-Douluo-Device-Key':DouluoAndroidNative.accessKey(),
+      'X-Douluo-Protocol':${JSON.stringify(health.protocol)},'X-Douluo-Build':${JSON.stringify(health.buildId)}};
+    const send=async(path,payload)=>{
+      const response=await fetch('/api/'+path,{method:'POST',headers,body:JSON.stringify(payload)});
+      if(!response.ok)throw Error('Android battle check '+path+': '+response.status);
+      return response.json();
+    };
+    const opened=await send('session',${JSON.stringify({worldId,snapshot})});
+    headers.Authorization='Bearer '+opened.token;
+    try {
+      let receipt=await send('command',${JSON.stringify(command)});
+      for(let attempt=0;receipt.calculationPending||receipt.status==='running';attempt++){
+        if(attempt>=30)throw Error('Android battle calculation timed out');
+        await new Promise(resolve=>setTimeout(resolve,250));
+        receipt=await send('calculation',{operationId:${JSON.stringify(command.id)}});
+      }
+      receipt=receipt.receipt??receipt;
+      await send('ack',{resultId:receipt.resultId,revision:receipt.delta.revision});
+      const state=(await send('sync',{})).snapshot.state;
+      return [state.战斗,state.战斗单位.列表[${JSON.stringify(player)}],state.战斗单位.列表[${JSON.stringify(foe)}]];
+    } finally {
+      await send('close',{});
+    }
+  })()`);
+  assert.deepEqual(settled, expected);
+  console.log('Android and Windows rule engines settled the same portable battle fixture identically');
 
   const protectedCredential = await evaluate(`JSON.parse(DouluoAndroidNative.credentials('seal',
     JSON.stringify([${JSON.stringify(credentialOwner)}]))).value`);

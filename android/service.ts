@@ -20,6 +20,7 @@ async function start() {
   const recovery = join(directory, 'model-recovery');
   await mkdir(recovery, {recursive: true});
   process.env.DOULUO_MODEL_RECOVERY_DIR = recovery;
+  process.env.DOULUO_MODEL_DNS ??= 'desktop-auto';
   const journal = new ServerDiagnostics(join(directory, 'diagnostics'), id);
   const {server, close} = await createCloudServer({
     buildId: id, localDesktop: true, workflowSecret, deviceKey,

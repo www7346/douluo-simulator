@@ -83,7 +83,7 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
           script: |
             adb install android/app/build/outputs/apk/debug/app-debug.apk
-            node android/smoke.cjs
+            node --import tsx android/smoke.cjs
       - name: Build and verify signed APK
         if: inputs.publish && github.ref == 'refs/heads/main'
         env:
@@ -132,6 +132,6 @@ jobs:
 
           规则计算、游戏资源和存档都在本机。联网的 AI 功能在「设置 → 模型与用途」中填写自己的 API。Windows 玩家可以从「读取存档」导出完整存档，再在 Android 的同一入口导入。
 
-          已在 Android 35 模拟器验证飞行模式启动、创建世界、强制停止后读取本地世界，以及加密凭据的持久化。实体机兼容性和大型存档仍需验证。
+          已在 Android 35 模拟器验证飞行模式开局、战斗规则结算、工坊求解器加载、强制停止后读档和加密凭据持久化。实体机兼容性和大型存档仍需验证。
           EOF
           gh release create v1.3.68-android.1 ./*.apk ./SHA256SUMS --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "斗罗大陆：武魂模拟器 Android 1.3.68 预览版" --prerelease --notes-file notes.md
