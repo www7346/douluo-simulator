@@ -6,7 +6,7 @@
 
 ## 下载 Windows 本地版
 
-同时提供 [Android 本地版预览](https://github.com/www7346/douluo-simulator/releases/tag/v1.3.68-android.1)，详见下文。
+同时提供 [Android 本地版预览](https://github.com/www7346/douluo-simulator/releases/tag/v1.3.68-android.2)，详见下文。
 
 1. 从 [GitHub Releases](https://github.com/www7346/douluo-simulator/releases/latest) 下载 `Douluo-Setup-1.3.68-x64.exe`。
 2. 在 Windows 10 或 11 的 64 位电脑上双击安装，从开始菜单打开「斗罗大陆：武魂模拟器」。
@@ -34,7 +34,7 @@ npm run build:desktop
 
 ## Android 本地版
 
-在 [Android 发行页](https://github.com/www7346/douluo-simulator/releases/tag/v1.3.68-android.1) 下载 APK。支持 Android 9 或更新版本的 64 位设备，使用系统 Android WebView。
+在 [Android 发行页](https://github.com/www7346/douluo-simulator/releases/tag/v1.3.68-android.2) 下载 APK。支持 Android 9 或更新版本的 64 位设备，使用系统 Android WebView。
 
 规则计算、游戏资源和存档都在手机上。需要 AI 功能时，在「设置 → 模型与用途」填写自己的 API 地址、模型和密钥。密钥由 Android Keystore 保护。
 
